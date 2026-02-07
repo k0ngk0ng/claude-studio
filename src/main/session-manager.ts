@@ -119,10 +119,14 @@ class SessionManager {
       const sessions = this.listSessions(project.path);
       for (const session of sessions) {
         if (session.isSidechain) continue; // Skip sidechain sessions
+        const resolvedPath = session.projectPath || project.path;
+        const resolvedName = resolvedPath
+          ? resolvedPath.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || project.name
+          : project.name;
         allSessions.push({
           id: session.sessionId,
-          projectPath: session.projectPath || project.path,
-          projectName: project.name,
+          projectPath: resolvedPath,
+          projectName: resolvedName,
           title: session.summary || session.firstPrompt?.slice(0, 80) || 'Untitled',
           lastMessage: session.firstPrompt || '',
           updatedAt: session.modified || session.created || '',
