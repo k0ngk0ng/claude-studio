@@ -27,7 +27,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     return (
       <div className="flex justify-end">
         <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-br-md bg-user-bubble text-text-primary">
-          <div className="text-sm whitespace-pre-wrap break-words">
+          <div className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">
             {message.content}
           </div>
           <div className="text-[10px] text-text-muted mt-1.5 text-right">
@@ -58,7 +58,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div
-          className={`text-sm text-text-primary markdown-content ${
+          className={`text-[14px] leading-relaxed text-text-primary markdown-content ${
             message.isStreaming ? 'streaming-cursor' : ''
           }`}
         >

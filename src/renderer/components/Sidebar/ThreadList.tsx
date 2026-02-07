@@ -95,7 +95,7 @@ export function ThreadList() {
                   strokeWidth="1.2"
                 />
               </svg>
-              <span className="text-xs font-medium truncate flex-1 text-left">
+              <span className="text-xs font-semibold truncate flex-1 text-left">
                 {group.projectName}
               </span>
               {/* Collapse indicator + count */}

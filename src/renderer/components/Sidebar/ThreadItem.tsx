@@ -37,7 +37,7 @@ export function ThreadItem({ session, isActive, timeLabel }: ThreadItemProps) {
       `}
     >
       {/* Title */}
-      <span className="flex-1 text-sm truncate leading-snug">
+      <span className="flex-1 text-[13px] font-medium truncate leading-snug">
         {truncate(title, 50)}
       </span>
 
