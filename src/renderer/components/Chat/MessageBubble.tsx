@@ -6,9 +6,10 @@ import type { Message } from '../../types';
 
 interface MessageBubbleProps {
   message: Message;
+  hideAvatar?: boolean;
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export function MessageBubble({ message, hideAvatar }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
   const isAssistant = message.role === 'assistant';
@@ -40,20 +41,22 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
   // Assistant message
   return (
-    <div className="flex items-start gap-3">
+    <div className={`flex items-start ${hideAvatar ? '' : 'gap-3'}`}>
       {/* Avatar */}
-      <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center shrink-0 mt-0.5">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-          <path
-            d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="text-accent"
-          />
-        </svg>
-      </div>
+      {!hideAvatar && (
+        <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center shrink-0 mt-0.5">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-accent"
+            />
+          </svg>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 min-w-0">

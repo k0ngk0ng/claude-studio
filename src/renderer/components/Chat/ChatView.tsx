@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import type { ToolActivity } from '../../stores/appStore';
 import { MessageBubble } from './MessageBubble';
@@ -33,22 +33,43 @@ export function ChatView() {
           <MessageBubble key={message.id} message={message} />
         ))}
 
-        {/* Streaming content */}
-        {isStreaming && streamingContent && (
-          <MessageBubble
-            message={{
-              id: 'streaming',
-              role: 'assistant',
-              content: streamingContent,
-              timestamp: new Date().toISOString(),
-              isStreaming: true,
-            }}
-          />
-        )}
+        {/* Streaming assistant message with tool activities inline */}
+        {isStreaming && (streamingContent || toolActivities.length > 0) && (
+          <div className="flex items-start gap-3">
+            {/* Avatar */}
+            <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center shrink-0 mt-0.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="text-accent"
+                />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0 space-y-2">
+              {/* Streaming text content */}
+              {streamingContent && (
+                <MessageBubble
+                  message={{
+                    id: 'streaming',
+                    role: 'assistant',
+                    content: streamingContent,
+                    timestamp: new Date().toISOString(),
+                    isStreaming: true,
+                  }}
+                  hideAvatar
+                />
+              )}
 
-        {/* Tool activities */}
-        {isStreaming && toolActivities.length > 0 && (
-          <ToolActivitiesDisplay activities={toolActivities} />
+              {/* Tool activity cards */}
+              {toolActivities.map((activity) => (
+                <ToolActivityCard key={activity.id} activity={activity} />
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Streaming indicator when no content and no tools yet */}
@@ -92,85 +113,103 @@ export function ChatView() {
   );
 }
 
-// ─── Tool Activities Display ────────────────────────────────────────
+// ─── Tool Activity Card (matches Claude Code CLI style) ─────────────
 
-const TOOL_ICONS: Record<string, string> = {
-  Read: '📄',
-  Edit: '✏️',
-  Write: '📝',
-  Bash: '⚡',
-  Grep: '🔍',
-  Glob: '📁',
-  WebFetch: '🌐',
-  WebSearch: '🔎',
-  Task: '📋',
-  NotebookEdit: '📓',
-};
+function ToolActivityCard({ activity }: { activity: ToolActivity }) {
+  const [expanded, setExpanded] = useState(false);
+  const isRunning = activity.status === 'running';
 
-const TOOL_LABELS: Record<string, string> = {
-  Read: 'Reading',
-  Edit: 'Editing',
-  Write: 'Writing',
-  Bash: 'Running command',
-  Grep: 'Searching',
-  Glob: 'Finding files',
-  WebFetch: 'Fetching URL',
-  WebSearch: 'Searching web',
-  Task: 'Running task',
-  NotebookEdit: 'Editing notebook',
-};
-
-function ToolActivitiesDisplay({ activities }: { activities: ToolActivity[] }) {
   return (
-    <div className="flex items-start gap-3">
-      <div className="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center shrink-0 mt-0.5">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+    <div
+      className="rounded-lg bg-surface border border-border overflow-hidden"
+    >
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2.5 w-full px-3 py-2.5 text-left
+                   hover:bg-surface-hover transition-colors"
+      >
+        {/* Chevron */}
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          className={`shrink-0 text-text-muted transition-transform duration-150 ${
+            expanded ? 'rotate-90' : ''
+          }`}
+        >
           <path
-            d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"
+            d="M4.5 2.5l3.5 3.5-3.5 3.5"
             stroke="currentColor"
-            strokeWidth="2"
+            strokeWidth="1.2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="text-accent"
           />
         </svg>
-      </div>
-      <div className="flex-1 min-w-0 py-1">
-        <div className="space-y-1.5">
-          {activities.map((activity) => (
-            <div
-              key={activity.id}
-              className="flex items-center gap-2 text-xs"
+
+        {/* Spinner / checkmark */}
+        {isRunning ? (
+          <div className="w-4 h-4 shrink-0">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              className="animate-spin"
             >
-              {/* Status indicator */}
-              {activity.status === 'running' ? (
-                <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0">
-                  <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                </div>
-              ) : (
-                <div className="w-3.5 h-3.5 flex items-center justify-center shrink-0 text-success">
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M3 8.5l3.5 3.5L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              )}
+              <circle
+                cx="8"
+                cy="8"
+                r="6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                className="text-border"
+              />
+              <path
+                d="M14 8a6 6 0 00-6-6"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                className="text-accent"
+              />
+            </svg>
+          </div>
+        ) : (
+          <div className="w-4 h-4 shrink-0 text-accent">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2" />
+              <path
+                d="M5.5 8l2 2 3.5-3.5"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+        )}
 
-              {/* Tool icon */}
-              <span className="shrink-0">{TOOL_ICONS[activity.name] || '🔧'}</span>
+        {/* Tool name */}
+        <span className="text-[13px] text-text-primary font-medium">
+          {activity.name}
+        </span>
 
-              {/* Tool label + input */}
-              <span className={`${activity.status === 'running' ? 'text-text-secondary' : 'text-text-muted'}`}>
-                {TOOL_LABELS[activity.name] || `Using ${activity.name}`}
-              </span>
-              {activity.input && (
-                <span className="text-text-muted font-mono truncate max-w-[300px]" title={activity.input}>
-                  {activity.input}
-                </span>
-              )}
-            </div>
-          ))}
+        {/* Brief input (shown inline when collapsed) */}
+        {!expanded && activity.input && (
+          <span className="text-xs text-text-muted font-mono truncate ml-1">
+            {activity.input}
+          </span>
+        )}
+      </button>
+
+      {/* Expanded details */}
+      {expanded && activity.input && (
+        <div className="px-3 pb-2.5 pt-0 ml-[52px]">
+          <code className="text-xs text-text-muted font-mono break-all">
+            {activity.input}
+          </code>
         </div>
-      </div>
+      )}
     </div>
   );
 }
