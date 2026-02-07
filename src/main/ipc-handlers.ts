@@ -155,4 +155,17 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('app:getHomePath', () => {
     return os.homedir();
   });
+
+  // ─── Auto-watch sessions directory for changes ────────────────────
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  sessionManager.watchForChanges(() => {
+    // Debounce: only notify renderer after 500ms of no changes
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const wc = getWebContents();
+      if (wc) {
+        wc.send('sessions:changed');
+      }
+    }, 500);
+  });
 }

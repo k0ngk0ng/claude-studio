@@ -51,6 +51,17 @@ export default function App() {
     init();
   }, []);
 
+  // Auto-reload sessions when files change
+  useEffect(() => {
+    const handleChanged = () => {
+      loadSessions();
+    };
+    window.api.sessions.onSessionsChanged(handleChanged);
+    return () => {
+      window.api.sessions.removeSessionsChangedListener(handleChanged);
+    };
+  }, [loadSessions]);
+
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {

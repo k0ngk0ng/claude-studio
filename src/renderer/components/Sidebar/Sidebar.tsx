@@ -2,6 +2,7 @@ import React from 'react';
 import { ThreadList } from './ThreadList';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useSessions } from '../../hooks/useSessions';
 
 interface SidebarProps {
   onNewThread: () => void;
@@ -10,6 +11,7 @@ interface SidebarProps {
 export function Sidebar({ onNewThread }: SidebarProps) {
   const { platform } = useAppStore();
   const { openSettings } = useSettingsStore();
+  const { loadSessions } = useSessions();
   const isMac = platform === 'mac';
 
   return (
@@ -46,10 +48,32 @@ export function Sidebar({ onNewThread }: SidebarProps) {
 
       {/* Threads section */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="px-4 py-2">
+        <div className="flex items-center justify-between px-4 py-2">
           <span className="text-xs font-medium text-text-muted uppercase tracking-wider">
             Threads
           </span>
+          <button
+            onClick={() => loadSessions()}
+            className="p-1 rounded text-text-muted hover:text-text-primary
+                       hover:bg-surface-hover transition-colors titlebar-no-drag"
+            title="Refresh threads"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path
+                d="M13.5 8a5.5 5.5 0 01-9.27 4.01M2.5 8a5.5 5.5 0 019.27-4.01"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+              <path
+                d="M13.5 3v5h-5M2.5 13V8h5"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
         </div>
         <ThreadList />
       </div>

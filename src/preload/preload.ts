@@ -16,6 +16,8 @@ export interface SessionsAPI {
   list: () => Promise<unknown[]>;
   getMessages: (projectPath: string, sessionId: string) => Promise<unknown[]>;
   listProjects: () => Promise<unknown[]>;
+  onSessionsChanged: (callback: () => void) => void;
+  removeSessionsChangedListener: (callback: () => void) => void;
 }
 
 export interface GitAPI {
@@ -45,6 +47,7 @@ export interface AppAPI {
 
 const claudeMessageListeners = new Map<Function, (...args: any[]) => void>();
 const terminalDataListeners = new Map<Function, (...args: any[]) => void>();
+const sessionsChangedListeners = new Map<Function, (...args: any[]) => void>();
 
 contextBridge.exposeInMainWorld('api', {
   claude: {
@@ -80,6 +83,18 @@ contextBridge.exposeInMainWorld('api', {
     getMessages: (projectPath: string, sessionId: string) =>
       ipcRenderer.invoke('sessions:getMessages', projectPath, sessionId),
     listProjects: () => ipcRenderer.invoke('sessions:listProjects'),
+    onSessionsChanged: (callback: () => void) => {
+      const wrappedCallback = () => { callback(); };
+      sessionsChangedListeners.set(callback, wrappedCallback);
+      ipcRenderer.on('sessions:changed', wrappedCallback);
+    },
+    removeSessionsChangedListener: (callback: () => void) => {
+      const wrappedCallback = sessionsChangedListeners.get(callback);
+      if (wrappedCallback) {
+        ipcRenderer.removeListener('sessions:changed', wrappedCallback);
+        sessionsChangedListeners.delete(callback);
+      }
+    },
   } satisfies SessionsAPI,
 
   git: {

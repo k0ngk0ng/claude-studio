@@ -12,6 +12,8 @@ export interface SessionsAPI {
   list: () => Promise<SessionInfo[]>;
   getMessages: (projectPath: string, sessionId: string) => Promise<RawMessage[]>;
   listProjects: () => Promise<ProjectInfo[]>;
+  onSessionsChanged: (callback: () => void) => void;
+  removeSessionsChangedListener: (callback: () => void) => void;
 }
 
 export interface GitAPI {
