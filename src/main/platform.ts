@@ -94,3 +94,79 @@ export function getClaudeModel(): string {
   // 3. Fallback
   return 'claude-sonnet-4-20250514';
 }
+
+export interface DependencyStatus {
+  name: string;
+  found: boolean;
+  path?: string;
+  version?: string;
+  installHint: string;
+}
+
+/**
+ * Check if required external dependencies are available on the system.
+ */
+export function checkDependencies(): DependencyStatus[] {
+  const deps: DependencyStatus[] = [];
+
+  // Check Claude Code CLI
+  try {
+    const claudePath = getClaudeBinary();
+    const version = execSync(`"${claudePath}" --version`, {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    deps.push({
+      name: 'Claude Code CLI',
+      found: true,
+      path: claudePath,
+      version,
+      installHint: 'npm install -g @anthropic-ai/claude-code',
+    });
+  } catch {
+    deps.push({
+      name: 'Claude Code CLI',
+      found: false,
+      installHint: 'npm install -g @anthropic-ai/claude-code',
+    });
+  }
+
+  // Check Git
+  try {
+    const gitCmd = isWindows ? 'where git' : 'which git';
+    const gitPath = execSync(gitCmd, {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim().split('\n')[0];
+    const gitVersion = execSync('git --version', {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    deps.push({
+      name: 'Git',
+      found: true,
+      path: gitPath,
+      version: gitVersion.replace('git version ', ''),
+      installHint: isWindows
+        ? 'https://git-scm.com/download/win'
+        : isMac
+          ? 'xcode-select --install'
+          : 'sudo apt install git',
+    });
+  } catch {
+    deps.push({
+      name: 'Git',
+      found: false,
+      installHint: isWindows
+        ? 'https://git-scm.com/download/win'
+        : isMac
+          ? 'xcode-select --install'
+          : 'sudo apt install git',
+    });
+  }
+
+  return deps;
+}

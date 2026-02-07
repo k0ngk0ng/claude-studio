@@ -48,6 +48,7 @@ export interface AppAPI {
   getModel: () => Promise<string>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
+  checkDependencies: () => Promise<DependencyStatus[]>;
 }
 
 export interface WindowAPI {
@@ -56,6 +57,14 @@ export interface WindowAPI {
   git: GitAPI;
   terminal: TerminalAPI;
   app: AppAPI;
+}
+
+export interface DependencyStatus {
+  name: string;
+  found: boolean;
+  path?: string;
+  version?: string;
+  installHint: string;
 }
 
 declare global {

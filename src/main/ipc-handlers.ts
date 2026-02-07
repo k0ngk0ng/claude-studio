@@ -3,7 +3,7 @@ import { claudeProcessManager } from './claude-process';
 import { sessionManager } from './session-manager';
 import { gitManager } from './git-manager';
 import { terminalManager } from './terminal-manager';
-import { getPlatform, getClaudeModel } from './platform';
+import { getPlatform, getClaudeModel, checkDependencies } from './platform';
 import os from 'os';
 import { execFile } from 'child_process';
 
@@ -169,6 +169,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('app:getModel', () => {
     return getClaudeModel();
+  });
+
+  ipcMain.handle('app:checkDependencies', () => {
+    return checkDependencies();
   });
 
   ipcMain.handle('app:openInEditor', async (_event, cwd: string, editor: string) => {
