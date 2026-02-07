@@ -352,6 +352,21 @@ function CommitButton() {
     }
   };
 
+  const handlePushTags = async () => {
+    if (!currentProject.path) return;
+    setIsPushing(true);
+    setStatus(null);
+    try {
+      await window.api.git.pushTags(currentProject.path);
+      setStatus('Tags pushed!');
+      setTimeout(() => setStatus(null), 2000);
+    } catch (err: any) {
+      setStatus(`Error: ${err.message || 'Push tags failed'}`);
+    } finally {
+      setIsPushing(false);
+    }
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
@@ -454,6 +469,20 @@ function CommitButton() {
                 <path d="M3 13h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               </svg>
               <span>{isPushing && !isCommitting ? 'Pushing…' : 'Push'}</span>
+            </button>
+
+            <button
+              onClick={handlePushTags}
+              disabled={isPushing}
+              className="flex items-center gap-2 w-full px-3 py-2 text-left text-xs
+                         text-text-secondary hover:text-text-primary hover:bg-surface-hover
+                         transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-text-muted">
+                <path d="M8 12V3M5 5.5L8 2.5l3 3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                <circle cx="12" cy="11" r="2" stroke="currentColor" strokeWidth="1.2" />
+              </svg>
+              <span>{isPushing && !isCommitting ? 'Pushing…' : 'Push Tags'}</span>
             </button>
           </div>
 

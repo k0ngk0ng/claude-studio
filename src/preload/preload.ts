@@ -32,6 +32,7 @@ export interface GitAPI {
   createBranch: (cwd: string, branch: string) => Promise<string>;
   searchFiles: (cwd: string, query: string) => Promise<{ name: string; path: string }[]>;
   push: (cwd: string) => Promise<string>;
+  pushTags: (cwd: string) => Promise<string>;
 }
 
 export interface TerminalAPI {
@@ -121,6 +122,7 @@ contextBridge.exposeInMainWorld('api', {
     createBranch: (cwd: string, branch: string) => ipcRenderer.invoke('git:createBranch', cwd, branch),
     searchFiles: (cwd: string, query: string) => ipcRenderer.invoke('git:searchFiles', cwd, query),
     push: (cwd: string) => ipcRenderer.invoke('git:push', cwd),
+    pushTags: (cwd: string) => ipcRenderer.invoke('git:pushTags', cwd),
   } satisfies GitAPI,
 
   terminal: {

@@ -273,6 +273,10 @@ export function registerIpcHandlers(): void {
     return gitManager.push(cwd);
   });
 
+  ipcMain.handle('git:pushTags', async (_event, cwd: string) => {
+    return gitManager.pushTags(cwd);
+  });
+
   // ─── Auto-watch sessions directory for changes ────────────────────
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   sessionManager.watchForChanges(() => {

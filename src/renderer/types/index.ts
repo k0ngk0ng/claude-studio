@@ -28,6 +28,7 @@ export interface GitAPI {
   createBranch: (cwd: string, branch: string) => Promise<string>;
   searchFiles: (cwd: string, query: string) => Promise<{ name: string; path: string }[]>;
   push: (cwd: string) => Promise<string>;
+  pushTags: (cwd: string) => Promise<string>;
 }
 
 export interface TerminalAPI {
