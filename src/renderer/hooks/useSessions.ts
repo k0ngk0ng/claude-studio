@@ -132,6 +132,7 @@ export function useSessions() {
     setSessions,
     setCurrentSession,
     resetCurrentSession,
+    setCurrentProject,
     sessions,
     currentSession,
   } = useAppStore();
@@ -177,8 +178,20 @@ export function useSessions() {
         isStreaming: false,
         processId: null,
       });
+
+      // Switch current project to match the selected thread
+      const projectName = session.projectPath.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || session.projectName;
+      setCurrentProject({ path: session.projectPath, name: projectName });
+
+      // Update git branch for the new project
+      try {
+        const branch = await window.api.git.branch(session.projectPath);
+        setCurrentProject({ path: session.projectPath, name: projectName, branch });
+      } catch {
+        // Not a git repo
+      }
     },
-    [loadSessionMessages, setCurrentSession]
+    [loadSessionMessages, setCurrentSession, setCurrentProject]
   );
 
   const createNewSession = useCallback(
