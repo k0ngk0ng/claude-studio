@@ -54,6 +54,7 @@ class ClaudeProcessManager extends EventEmitter {
       '--input-format', 'stream-json',
       '--output-format', 'stream-json',
       '--verbose',
+      '--include-partial-messages',
     ];
 
     if (sessionId) {

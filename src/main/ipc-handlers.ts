@@ -13,44 +13,38 @@ function getWebContents(): Electron.WebContents | null {
 
 export function registerIpcHandlers(): void {
   // ─── Claude Process ───────────────────────────────────────────────
+
+  // Register global listeners ONCE — forward all events to renderer
+  claudeProcessManager.on('message', (pid: string, message: unknown) => {
+    const wc = getWebContents();
+    if (wc) {
+      wc.send('claude:message', pid, message);
+    }
+  });
+
+  claudeProcessManager.on('exit', (pid: string, code: number, signal: string) => {
+    const wc = getWebContents();
+    if (wc) {
+      wc.send('claude:message', pid, {
+        type: 'exit',
+        code,
+        signal,
+      });
+    }
+  });
+
+  claudeProcessManager.on('error', (pid: string, errorMsg: string) => {
+    const wc = getWebContents();
+    if (wc) {
+      wc.send('claude:message', pid, {
+        type: 'error',
+        message: { role: 'system', content: errorMsg },
+      });
+    }
+  });
+
   ipcMain.handle('claude:spawn', (_event, cwd: string, sessionId?: string) => {
-    const processId = claudeProcessManager.spawn(cwd, sessionId);
-
-    claudeProcessManager.on('message', (pid: string, message: unknown) => {
-      if (pid === processId) {
-        const wc = getWebContents();
-        if (wc) {
-          wc.send('claude:message', processId, message);
-        }
-      }
-    });
-
-    claudeProcessManager.on('exit', (pid: string, code: number, signal: string) => {
-      if (pid === processId) {
-        const wc = getWebContents();
-        if (wc) {
-          wc.send('claude:message', processId, {
-            type: 'exit',
-            code,
-            signal,
-          });
-        }
-      }
-    });
-
-    claudeProcessManager.on('error', (pid: string, errorMsg: string) => {
-      if (pid === processId) {
-        const wc = getWebContents();
-        if (wc) {
-          wc.send('claude:message', processId, {
-            type: 'error',
-            message: { role: 'system', content: errorMsg },
-          });
-        }
-      }
-    });
-
-    return processId;
+    return claudeProcessManager.spawn(cwd, sessionId);
   });
 
   ipcMain.handle('claude:send', (_event, processId: string, content: string) => {
