@@ -149,6 +149,88 @@ export interface ClaudeStreamEvent {
   signal?: string;
 }
 
+// ─── Settings types ─────────────────────────────────────────────────
+
+export type SettingsTab =
+  | 'general'
+  | 'model'
+  | 'permissions'
+  | 'mcp-servers'
+  | 'git'
+  | 'appearance'
+  | 'keybindings'
+  | 'archived-threads';
+
+export type ThemeMode = 'dark' | 'light' | 'system';
+export type AutoApproveLevel = 'suggest' | 'auto-edit' | 'full-auto';
+export type SendKeyMode = 'enter' | 'cmd-enter';
+
+export interface GeneralSettings {
+  sendKey: SendKeyMode;
+  autoApprove: AutoApproveLevel;
+  showCostInfo: boolean;
+  notifyOnComplete: boolean;
+  preventSleep: boolean;
+}
+
+export interface ModelSettings {
+  defaultModel: string;
+  maxTokens: number;
+  temperature: number;
+  systemPrompt: string;
+}
+
+export interface PermissionSettings {
+  allowFileWrite: boolean;
+  allowFileRead: boolean;
+  allowBash: boolean;
+  allowMcp: boolean;
+  disallowedCommands: string[];
+}
+
+export interface McpServer {
+  id: string;
+  name: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  enabled: boolean;
+}
+
+export interface GitSettings {
+  autoStage: boolean;
+  showDiffOnCommit: boolean;
+  defaultCommitPrefix: string;
+  autoPush: boolean;
+}
+
+export interface AppearanceSettings {
+  theme: ThemeMode;
+  fontSize: number;
+  fontFamily: string;
+  editorFontSize: number;
+  editorFontFamily: string;
+  showLineNumbers: boolean;
+  opaqueBackground: boolean;
+}
+
+export interface KeyBinding {
+  id: string;
+  label: string;
+  keys: string;
+  action: string;
+}
+
+export interface AppSettings {
+  general: GeneralSettings;
+  model: ModelSettings;
+  permissions: PermissionSettings;
+  mcpServers: McpServer[];
+  git: GitSettings;
+  appearance: AppearanceSettings;
+  keybindings: KeyBinding[];
+}
+
 // ─── App state ──────────────────────────────────────────────────────
 
 export interface CurrentSession {

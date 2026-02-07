@@ -1,5 +1,6 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAppStore } from './stores/appStore';
+import { useSettingsStore } from './stores/settingsStore';
 import { useSessions } from './hooks/useSessions';
 import { useClaude } from './hooks/useClaude';
 import { Sidebar } from './components/Sidebar/Sidebar';
@@ -9,10 +10,12 @@ import { InputBar } from './components/InputBar/InputBar';
 import { TerminalPanel } from './components/Terminal/TerminalPanel';
 import { DiffPanel } from './components/DiffPanel/DiffPanel';
 import { StatusBar } from './components/StatusBar/StatusBar';
+import { Settings } from './components/Settings/Settings';
 
 export default function App() {
   const { panels, togglePanel, setCurrentProject, setPlatform, currentProject } =
     useAppStore();
+  const { isOpen: settingsOpen, openSettings, closeSettings } = useSettingsStore();
   const { loadSessions } = useSessions();
   const { startSession, sendMessage, stopSession, isStreaming } = useClaude();
 
@@ -65,12 +68,18 @@ export default function App() {
       } else if (mod && e.key === 'b') {
         e.preventDefault();
         togglePanel('sidebar');
+      } else if (mod && e.key === ',') {
+        e.preventDefault();
+        openSettings();
+      } else if (e.key === 'Escape' && settingsOpen) {
+        e.preventDefault();
+        closeSettings();
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePanel]);
+  }, [togglePanel, openSettings, closeSettings, settingsOpen]);
 
   const handleNewThread = useCallback(async () => {
     await stopSession();
@@ -94,6 +103,11 @@ export default function App() {
     },
     [startSession, sendMessage, currentProject.path]
   );
+
+  // Show settings page when open
+  if (settingsOpen) {
+    return <Settings />;
+  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg">

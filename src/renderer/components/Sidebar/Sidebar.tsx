@@ -1,6 +1,7 @@
 import React from 'react';
 import { ThreadList } from './ThreadList';
 import { useAppStore } from '../../stores/appStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface SidebarProps {
   onNewThread: () => void;
@@ -8,6 +9,7 @@ interface SidebarProps {
 
 export function Sidebar({ onNewThread }: SidebarProps) {
   const { platform } = useAppStore();
+  const { openSettings } = useSettingsStore();
   const isMac = platform === 'mac';
 
   return (
@@ -55,6 +57,7 @@ export function Sidebar({ onNewThread }: SidebarProps) {
       {/* Settings link */}
       <div className="px-3 py-3 border-t border-border">
         <button
+          onClick={openSettings}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg
                      text-text-secondary hover:text-text-primary hover:bg-surface
                      text-sm transition-colors duration-150 titlebar-no-drag"
