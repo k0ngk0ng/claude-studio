@@ -16,12 +16,6 @@ import type { ContentBlock, Message } from '../types';
  * 7. {"type":"stream_event","event":{"type":"message_delta","delta":{"stop_reason":"end_turn",...}}}
  * 8. {"type":"stream_event","event":{"type":"message_stop"}}
  * 9. {"type":"result","subtype":"success","result":"full text","total_cost_usd":...,"session_id":"..."}
- *
- * For tool use:
- * - content_block_start with type:"tool_use", name:"ToolName"
- * - content_block_delta with type:"input_json_delta"
- * - assistant message with tool_use blocks
- * - result may contain tool results
  */
 
 interface StreamEvent {
@@ -79,40 +73,29 @@ function extractTextFromContent(
     .join('\n');
 }
 
-function extractToolUse(content: string | ContentBlock[] | undefined) {
-  if (!content || typeof content === 'string') return [];
-  return content
-    .filter((block) => block.type === 'tool_use')
-    .map((block) => ({
-      name: block.name || 'unknown',
-      input: block.input || {},
-    }));
-}
-
 export function useClaude() {
-  const {
-    currentSession,
-    addMessage,
-    setIsStreaming,
-    setProcessId,
-    setStreamingContent,
-    clearStreamingContent,
-    setCurrentSession,
-  } = useAppStore();
-
+  const store = useAppStore();
   const processIdRef = useRef<string | null>(null);
-  // Accumulate streaming text from deltas
   const streamingTextRef = useRef('');
-  // Track model from message_start
   const currentModelRef = useRef<string | undefined>(undefined);
 
-  const handleMessage = useCallback(
-    (processId: string, event: StreamEvent) => {
+  // Use a single stable handler registered ONCE — reads store actions via getState()
+  useEffect(() => {
+    const handler = (processId: string, raw: unknown) => {
       if (processId !== processIdRef.current) return;
+
+      const event = raw as StreamEvent;
+      const {
+        addMessage,
+        setIsStreaming,
+        setProcessId,
+        setStreamingContent,
+        clearStreamingContent,
+        setCurrentSession,
+      } = useAppStore.getState();
 
       switch (event.type) {
         case 'system': {
-          // System init message — contains session_id, tools, model info
           if (event.session_id) {
             setCurrentSession({ id: event.session_id });
           }
@@ -125,20 +108,12 @@ export function useClaude() {
 
           switch (evt.type) {
             case 'message_start': {
-              // New assistant message starting — reset accumulator
               streamingTextRef.current = '';
               currentModelRef.current = evt.message?.model;
               break;
             }
 
-            case 'content_block_start': {
-              // A new content block is starting (text or tool_use)
-              // Nothing to do yet for text blocks
-              break;
-            }
-
             case 'content_block_delta': {
-              // Streaming text delta — accumulate and display
               if (evt.delta?.type === 'text_delta' && evt.delta.text) {
                 streamingTextRef.current += evt.delta.text;
                 setStreamingContent(streamingTextRef.current);
@@ -146,20 +121,11 @@ export function useClaude() {
               break;
             }
 
-            case 'content_block_stop': {
-              // Content block finished
+            case 'content_block_start':
+            case 'content_block_stop':
+            case 'message_delta':
+            case 'message_stop':
               break;
-            }
-
-            case 'message_delta': {
-              // Message is finishing (stop_reason available)
-              break;
-            }
-
-            case 'message_stop': {
-              // Message fully complete — the 'assistant' or 'result' event follows
-              break;
-            }
 
             default:
               break;
@@ -168,8 +134,6 @@ export function useClaude() {
         }
 
         case 'assistant': {
-          // Complete assistant message snapshot (from --include-partial-messages)
-          // Update streaming content with the full text
           const text = extractTextFromContent(event.message?.content);
           if (text) {
             streamingTextRef.current = text;
@@ -179,11 +143,9 @@ export function useClaude() {
         }
 
         case 'result': {
-          // Final result — conversation turn is complete
           setIsStreaming(false);
           clearStreamingContent();
 
-          // The result text is at event.result (string), not event.result.content
           const resultText = typeof event.result === 'string'
             ? event.result
             : streamingTextRef.current;
@@ -201,16 +163,12 @@ export function useClaude() {
             addMessage(message);
           }
 
-          // Reset
           streamingTextRef.current = '';
           currentModelRef.current = undefined;
 
           if (event.session_id) {
             setCurrentSession({ id: event.session_id });
           }
-
-          // Process exits after result in --print mode
-          // processId will be cleaned up by the 'exit' event
           break;
         }
 
@@ -222,13 +180,12 @@ export function useClaude() {
             typeof event.message?.content === 'string'
               ? event.message.content
               : 'An error occurred';
-          const errorMsg: Message = {
+          addMessage({
             id: crypto.randomUUID(),
             role: 'system',
             content: `Error: ${errorText}`,
             timestamp: new Date().toISOString(),
-          };
-          addMessage(errorMsg);
+          });
           break;
         }
 
@@ -242,100 +199,79 @@ export function useClaude() {
         }
 
         case 'raw': {
-          // Non-JSON output from CLI (e.g. warnings)
           console.log('[claude raw]', event.message?.content);
           break;
         }
 
         default:
-          // Unknown event type — log for debugging
           console.log('[claude event]', event.type, event);
           break;
       }
-    },
-    [
-      addMessage,
-      setIsStreaming,
-      setProcessId,
-      setStreamingContent,
-      clearStreamingContent,
-      setCurrentSession,
-    ]
-  );
-
-  // Register/unregister message listener
-  useEffect(() => {
-    const handler = (processId: string, message: unknown) => {
-      handleMessage(processId, message as StreamEvent);
     };
 
     window.api.claude.onMessage(handler);
-
     return () => {
       window.api.claude.removeMessageListener(handler);
     };
-  }, [handleMessage]);
+  }, []); // Empty deps — handler is stable, reads from refs and getState()
 
   const startSession = useCallback(
     async (cwd: string, sessionId?: string) => {
-      // Kill existing process if any
       if (processIdRef.current) {
         await window.api.claude.kill(processIdRef.current);
         processIdRef.current = null;
       }
 
-      // Reset streaming state
       streamingTextRef.current = '';
       currentModelRef.current = undefined;
 
       const pid = await window.api.claude.spawn(cwd, sessionId);
       processIdRef.current = pid;
-      setProcessId(pid);
-      setIsStreaming(false);
+      useAppStore.getState().setProcessId(pid);
+      useAppStore.getState().setIsStreaming(false);
       return pid;
     },
-    [setProcessId, setIsStreaming]
+    []
   );
 
-  const sendMessage = useCallback(
-    async (content: string) => {
-      const pid = processIdRef.current;
-      if (!pid) return;
+  const sendMessage = useCallback(async (content: string) => {
+    const pid = processIdRef.current;
+    if (!pid) return;
 
-      // Add user message to store
-      const userMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'user',
-        content,
-        timestamp: new Date().toISOString(),
-      };
-      addMessage(userMessage);
-      setIsStreaming(true);
-      clearStreamingContent();
-      streamingTextRef.current = '';
+    const { addMessage, setIsStreaming, clearStreamingContent } =
+      useAppStore.getState();
 
-      // Send to process
-      await window.api.claude.send(pid, content);
-    },
-    [addMessage, setIsStreaming, clearStreamingContent]
-  );
+    addMessage({
+      id: crypto.randomUUID(),
+      role: 'user',
+      content,
+      timestamp: new Date().toISOString(),
+    });
+    setIsStreaming(true);
+    clearStreamingContent();
+    streamingTextRef.current = '';
+
+    await window.api.claude.send(pid, content);
+  }, []);
 
   const stopSession = useCallback(async () => {
     if (processIdRef.current) {
       await window.api.claude.kill(processIdRef.current);
       processIdRef.current = null;
+      const { setProcessId, setIsStreaming, clearStreamingContent } =
+        useAppStore.getState();
       setProcessId(null);
       setIsStreaming(false);
       clearStreamingContent();
       streamingTextRef.current = '';
     }
-  }, [setProcessId, setIsStreaming, clearStreamingContent]);
+  }, []);
 
   return {
     startSession,
     sendMessage,
     stopSession,
-    isStreaming: currentSession.isStreaming,
-    processId: currentSession.processId,
+    isStreaming: store.currentSession.isStreaming,
+    processId: store.currentSession.processId,
   };
 }
