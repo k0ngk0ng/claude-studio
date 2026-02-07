@@ -81,6 +81,43 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
     textareaRef.current?.focus();
   }, []);
 
+  // Handle paste for images (Cmd+V / Ctrl+V)
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const imageItems: DataTransferItem[] = [];
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith('image/')) {
+        imageItems.push(item);
+      }
+    }
+
+    if (imageItems.length === 0) return; // No images — let default text paste happen
+
+    e.preventDefault(); // Prevent pasting image as text
+
+    for (const item of imageItems) {
+      const file = item.getAsFile();
+      if (!file) continue;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const name = file.name || `pasted-image-${Date.now()}.png`;
+        setAttachments((prev) => [
+          ...prev,
+          {
+            name,
+            path: name,
+            type: 'image',
+            preview: reader.result as string,
+          },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
+
   // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -363,6 +400,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
             value={value}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder="Ask Claude anything, @ to add files, / for commands"
             disabled={isStreaming}
             rows={2}
