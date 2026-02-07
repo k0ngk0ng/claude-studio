@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron';
 import path from 'path';
 import { registerIpcHandlers } from './ipc-handlers';
 
@@ -58,6 +58,14 @@ function createWindow(): void {
 app.whenReady().then(() => {
   registerIpcHandlers();
   createWindow();
+
+  // Register DevTools shortcut
+  globalShortcut.register('CommandOrControl+Alt+I', () => {
+    mainWindow?.webContents.toggleDevTools();
+  });
+  globalShortcut.register('F12', () => {
+    mainWindow?.webContents.toggleDevTools();
+  });
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
