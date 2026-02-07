@@ -137,9 +137,11 @@ export function Sidebar({ onNewThread }: SidebarProps) {
       {/* Right-edge resize handle */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute top-0 right-0 w-1 h-full cursor-col-resize
-                   hover:bg-accent/40 active:bg-accent/60 transition-colors z-10"
-      />
+        className="absolute top-0 -right-[2px] w-[5px] h-full cursor-col-resize z-10 group"
+      >
+        <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2
+                        opacity-0 group-hover:opacity-100 bg-accent/50 transition-opacity" />
+      </div>
     </div>
   );
 }

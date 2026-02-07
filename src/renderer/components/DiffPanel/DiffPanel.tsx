@@ -71,15 +71,17 @@ export function DiffPanel() {
 
   return (
     <div
-      className="relative border-l border-border bg-bg flex flex-col h-full panel-transition shrink-0"
+      className="relative border-l border-border bg-bg flex flex-col h-full shrink-0"
       style={{ width: panelSizes.diff }}
     >
       {/* Left-edge resize handle */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute top-0 left-0 w-1 h-full cursor-col-resize
-                   hover:bg-accent/40 active:bg-accent/60 transition-colors z-10"
-      />
+        className="absolute top-0 -left-[2px] w-[5px] h-full cursor-col-resize z-10 group"
+      >
+        <div className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2
+                        opacity-0 group-hover:opacity-100 bg-accent/50 transition-opacity" />
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">

@@ -10,7 +10,8 @@ interface UseResizableOptions {
   minSize: number;
   /** Max size in px */
   maxSize: number;
-  /** Whether dragging from the "end" side (right edge of left panel, or bottom edge of top panel) */
+  /** Whether dragging increases size when mouse moves in positive direction
+   *  true = sidebar (drag right → bigger), false = diff/terminal (drag left/up → bigger) */
   reverse?: boolean;
   /** Called continuously during drag */
   onResize: (newSize: number) => void;
@@ -18,7 +19,7 @@ interface UseResizableOptions {
 
 /**
  * Hook that provides mouse-drag resizing for panels.
- * Returns a `handleMouseDown` to attach to the drag handle element.
+ * Fully ref-based to avoid re-renders during drag for smooth 60fps performance.
  */
 export function useResizable({
   direction,
@@ -31,67 +32,80 @@ export function useResizable({
   const draggingRef = useRef(false);
   const startPosRef = useRef(0);
   const startSizeRef = useRef(0);
+
+  // Store all options in refs so event handlers never go stale
+  const directionRef = useRef(direction);
+  const minSizeRef = useRef(minSize);
+  const maxSizeRef = useRef(maxSize);
+  const reverseRef = useRef(reverse);
+  const sizeRef = useRef(size);
   const onResizeRef = useRef(onResize);
+
+  directionRef.current = direction;
+  minSizeRef.current = minSize;
+  maxSizeRef.current = maxSize;
+  reverseRef.current = reverse;
+  sizeRef.current = size;
   onResizeRef.current = onResize;
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
+  // These handlers are stable (no deps) — they read everything from refs
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
       if (!draggingRef.current) return;
       e.preventDefault();
 
       const currentPos =
-        direction === 'horizontal' ? e.clientX : e.clientY;
+        directionRef.current === 'horizontal' ? e.clientX : e.clientY;
       const delta = currentPos - startPosRef.current;
-      const newSize = reverse
+      const newSize = reverseRef.current
         ? startSizeRef.current + delta
         : startSizeRef.current - delta;
 
-      const clamped = Math.max(minSize, Math.min(maxSize, newSize));
+      const clamped = Math.max(
+        minSizeRef.current,
+        Math.min(maxSizeRef.current, newSize)
+      );
       onResizeRef.current(clamped);
-    },
-    [direction, minSize, maxSize, reverse]
-  );
+    };
 
-  const handleMouseUp = useCallback(() => {
-    draggingRef.current = false;
-    document.body.style.cursor = '';
-    document.body.style.userSelect = '';
-    // Remove overlay that prevents iframe/xterm from stealing events
-    const overlay = document.getElementById('resize-overlay');
-    if (overlay) overlay.remove();
-  }, []);
+    const handleMouseUp = () => {
+      if (!draggingRef.current) return;
+      draggingRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      // Remove overlay
+      const overlay = document.getElementById('resize-overlay');
+      if (overlay) overlay.remove();
+    };
 
-  useEffect(() => {
-    // Always listen so we catch mouseup even if mouse leaves the handle
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [handleMouseMove, handleMouseUp]);
+  }, []); // Mount once, never re-register
 
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      draggingRef.current = true;
-      startPosRef.current =
-        direction === 'horizontal' ? e.clientX : e.clientY;
-      startSizeRef.current = size;
-      document.body.style.cursor =
-        direction === 'horizontal' ? 'col-resize' : 'row-resize';
-      document.body.style.userSelect = 'none';
+  // Stable mousedown handler — reads size from ref
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    draggingRef.current = true;
+    startPosRef.current =
+      directionRef.current === 'horizontal' ? e.clientX : e.clientY;
+    startSizeRef.current = sizeRef.current;
 
-      // Add a transparent overlay to prevent iframes/xterm from stealing mouse events
-      const overlay = document.createElement('div');
-      overlay.id = 'resize-overlay';
-      overlay.style.cssText =
-        'position:fixed;inset:0;z-index:9999;cursor:' +
-        (direction === 'horizontal' ? 'col-resize' : 'row-resize');
-      document.body.appendChild(overlay);
-    },
-    [direction, size]
-  );
+    const cursor =
+      directionRef.current === 'horizontal' ? 'col-resize' : 'row-resize';
+    document.body.style.cursor = cursor;
+    document.body.style.userSelect = 'none';
+
+    // Transparent overlay prevents iframes/xterm from stealing mouse events
+    const overlay = document.createElement('div');
+    overlay.id = 'resize-overlay';
+    overlay.style.cssText = `position:fixed;inset:0;z-index:9999;cursor:${cursor}`;
+    document.body.appendChild(overlay);
+  }, []); // Stable — never changes
 
   return { handleMouseDown };
 }

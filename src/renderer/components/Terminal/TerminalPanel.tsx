@@ -143,15 +143,17 @@ export function TerminalPanel() {
 
   return (
     <div
-      className="relative shrink-0 border-t border-border bg-bg panel-transition"
+      className="relative shrink-0 border-t border-border bg-bg"
       style={{ height: panelSizes.terminal }}
     >
       {/* Top-edge resize handle */}
       <div
         onMouseDown={handleMouseDown}
-        className="absolute top-0 left-0 right-0 h-1 cursor-row-resize
-                   hover:bg-accent/40 active:bg-accent/60 transition-colors z-10"
-      />
+        className="absolute -top-[2px] left-0 right-0 h-[5px] cursor-row-resize z-10 group"
+      >
+        <div className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2
+                        opacity-0 group-hover:opacity-100 bg-accent/50 transition-opacity" />
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-surface">
