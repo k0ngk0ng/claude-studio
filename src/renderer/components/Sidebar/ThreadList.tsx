@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ThreadItem } from './ThreadItem';
 import { useAppStore } from '../../stores/appStore';
+import { Tooltip } from '../common/Tooltip';
 import type { SessionInfo } from '../../types';
 
 interface ProjectGroup {
@@ -79,9 +80,9 @@ export function ThreadList() {
         return (
           <div key={key} className="mb-1">
             {/* Project folder header */}
+            <Tooltip text={group.projectPath}>
             <button
               onClick={() => toggleProject(key)}
-              title={group.projectPath}
               className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md
                          text-text-secondary hover:text-text-primary hover:bg-surface-hover
                          transition-colors group"
@@ -119,6 +120,7 @@ export function ThreadList() {
                 />
               </svg>
             </button>
+            </Tooltip>
 
             {/* Thread items */}
             {!isCollapsed && (
