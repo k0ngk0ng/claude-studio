@@ -14,11 +14,22 @@ export interface SessionInfo {
 }
 
 interface SessionIndexEntry {
-  session_id: string;
-  name?: string;
-  created_at?: string;
-  updated_at?: string;
-  last_message?: string;
+  sessionId: string;
+  fullPath?: string;
+  fileMtime?: number;
+  firstPrompt?: string;
+  summary?: string;
+  messageCount?: number;
+  created?: string;
+  modified?: string;
+  gitBranch?: string;
+  projectPath?: string;
+  isSidechain?: boolean;
+}
+
+interface SessionIndexFile {
+  version: number;
+  entries: SessionIndexEntry[];
 }
 
 interface MessageEntry {
@@ -85,8 +96,16 @@ class SessionManager {
 
     try {
       const content = fs.readFileSync(indexPath, 'utf-8');
-      const sessions: SessionIndexEntry[] = JSON.parse(content);
-      return sessions;
+      const parsed: SessionIndexFile = JSON.parse(content);
+      // The file format is { version: 1, entries: [...] }
+      if (parsed && Array.isArray(parsed.entries)) {
+        return parsed.entries;
+      }
+      // Fallback: if it's already an array
+      if (Array.isArray(parsed)) {
+        return parsed;
+      }
+      return [];
     } catch {
       return [];
     }
@@ -99,13 +118,14 @@ class SessionManager {
     for (const project of projects) {
       const sessions = this.listSessions(project.path);
       for (const session of sessions) {
+        if (session.isSidechain) continue; // Skip sidechain sessions
         allSessions.push({
-          id: session.session_id,
-          projectPath: project.path,
+          id: session.sessionId,
+          projectPath: session.projectPath || project.path,
           projectName: project.name,
-          title: session.name || 'Untitled',
-          lastMessage: session.last_message || '',
-          updatedAt: session.updated_at || session.created_at || '',
+          title: session.summary || session.firstPrompt?.slice(0, 80) || 'Untitled',
+          lastMessage: session.firstPrompt || '',
+          updatedAt: session.modified || session.created || '',
         });
       }
     }

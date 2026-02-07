@@ -1,22 +1,10 @@
-import { defineConfig, mergeConfig } from 'vite';
-import {
-  getBuildConfig,
-  getBuildDefine,
-  external,
-  pluginHotRestart,
-} from '@electron-forge/plugin-vite/dist/config/vite.base.config';
+import { defineConfig } from 'vite';
 
 // https://electron.forge.dev/config/plugins/vite
-export default defineConfig((env) => {
-  const forgeEnv = env as any;
-
-  return mergeConfig(getBuildConfig(forgeEnv), {
-    build: {
-      rollupOptions: {
-        external: [...external],
-      },
-    },
-    plugins: [pluginHotRestart('reload')],
-    define: getBuildDefine(forgeEnv),
-  });
-});
+// Note: forge's ViteConfig automatically wraps this with:
+//   - getBuildConfig (root, mode, outDir, watch)
+//   - rollupOptions.input from forgeConfigSelf.entry
+//   - pluginHotRestart('reload')
+//   - external: electron, node builtins
+// So we only need to add our own overrides here.
+export default defineConfig({});
