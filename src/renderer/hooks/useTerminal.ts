@@ -3,16 +3,23 @@ import { useCallback, useEffect, useRef } from 'react';
 export function useTerminal(cwd: string) {
   const terminalIdRef = useRef<string | null>(null);
   const dataCallbackRef = useRef<((id: string, data: string) => void) | null>(null);
+  const cwdRef = useRef(cwd);
+  cwdRef.current = cwd;
 
   const createTerminal = useCallback(async (): Promise<string | null> => {
+    // Kill existing PTY if any
     if (terminalIdRef.current) {
-      await window.api.terminal.kill(terminalIdRef.current);
+      try {
+        await window.api.terminal.kill(terminalIdRef.current);
+      } catch {
+        // Already dead
+      }
     }
 
-    const id = await window.api.terminal.create(cwd);
+    const id = await window.api.terminal.create(cwdRef.current);
     terminalIdRef.current = id;
     return id;
-  }, [cwd]);
+  }, []);
 
   const writeToTerminal = useCallback(async (data: string) => {
     if (!terminalIdRef.current) return;

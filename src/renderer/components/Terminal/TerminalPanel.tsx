@@ -11,10 +11,17 @@ export function TerminalPanel() {
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const initializedRef = useRef(false);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
-  const cwd = currentProject.path || process.cwd?.() || '/';
+  const cwd = currentProject.path || '/';
   const { createTerminal, writeToTerminal, resizeTerminal, onData } =
     useTerminal(cwd);
+
+  // Stable refs for callbacks so xterm wiring doesn't break
+  const writeRef = useRef(writeToTerminal);
+  const resizeRef = useRef(resizeTerminal);
+  writeRef.current = writeToTerminal;
+  resizeRef.current = resizeTerminal;
 
   const initTerminal = useCallback(async () => {
     if (!containerRef.current || initializedRef.current) return;
@@ -23,7 +30,7 @@ export function TerminalPanel() {
     const term = new Terminal({
       theme: {
         background: '#1a1a1a',
-        foreground: '#e4e4e4',
+        foreground: '#f5f5f5',
         cursor: '#e87b35',
         cursorAccent: '#1a1a1a',
         selectionBackground: 'rgba(232, 123, 53, 0.3)',
@@ -34,8 +41,8 @@ export function TerminalPanel() {
         blue: '#60a5fa',
         magenta: '#c084fc',
         cyan: '#22d3ee',
-        white: '#e4e4e4',
-        brightBlack: '#666666',
+        white: '#f5f5f5',
+        brightBlack: '#737373',
         brightRed: '#fca5a5',
         brightGreen: '#86efac',
         brightYellow: '#fde68a',
@@ -69,9 +76,9 @@ export function TerminalPanel() {
       return;
     }
 
-    // Connect xterm input → PTY
+    // Connect xterm input → PTY (use ref so it survives re-creates)
     term.onData((data) => {
-      writeToTerminal(data);
+      writeRef.current(data);
     });
 
     // Connect PTY output → xterm
@@ -81,7 +88,7 @@ export function TerminalPanel() {
 
     // Handle resize
     term.onResize(({ cols, rows }) => {
-      resizeTerminal(cols, rows);
+      resizeRef.current(cols, rows);
     });
 
     // Observe container size changes
@@ -93,16 +100,18 @@ export function TerminalPanel() {
       }
     });
     resizeObserver.observe(containerRef.current);
+    resizeObserverRef.current = resizeObserver;
+  }, []); // No dependencies — only runs once
 
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [createTerminal, writeToTerminal, resizeTerminal, onData]);
-
+  // Initialize once on mount
   useEffect(() => {
     initTerminal();
 
     return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
       if (terminalRef.current) {
         terminalRef.current.dispose();
         terminalRef.current = null;
@@ -122,6 +131,7 @@ export function TerminalPanel() {
             <line x1="8.5" y1="10" x2="11.5" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
           </svg>
           <span className="text-xs font-medium text-text-secondary">Terminal</span>
+          <span className="text-[10px] text-text-muted truncate max-w-[200px]">{cwd}</span>
         </div>
         <button
           onClick={() => togglePanel('terminal')}
