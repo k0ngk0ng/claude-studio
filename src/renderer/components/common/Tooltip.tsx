@@ -1,40 +1,54 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface TooltipProps {
   text: string;
   children: React.ReactNode;
-  position?: 'top' | 'bottom' | 'right';
 }
 
-export function Tooltip({ text, children, position = 'right' }: TooltipProps) {
+export function Tooltip({ text, children }: TooltipProps) {
   const [visible, setVisible] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
   const ref = useRef<HTMLDivElement>(null);
 
   if (!text) return <>{children}</>;
 
-  const positionClasses = {
-    top: 'bottom-full left-1/2 -translate-x-1/2 mb-1.5',
-    bottom: 'top-full left-1/2 -translate-x-1/2 mt-1.5',
-    right: 'left-full top-1/2 -translate-y-1/2 ml-2',
+  const handleMouseEnter = () => {
+    if (ref.current) {
+      const rect = ref.current.getBoundingClientRect();
+      setPos({
+        x: rect.right + 8,
+        y: rect.top + rect.height / 2,
+      });
+    }
+    setVisible(true);
   };
 
   return (
     <div
       ref={ref}
-      className="relative"
-      onMouseEnter={() => setVisible(true)}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={() => setVisible(false)}
     >
       {children}
-      {visible && (
-        <div
-          className={`absolute z-50 px-2.5 py-1.5 rounded-md bg-[#333] text-text-primary
-                      text-xs whitespace-nowrap pointer-events-none shadow-lg
-                      ${positionClasses[position]}`}
-        >
-          {text}
-        </div>
-      )}
+      {visible &&
+        createPortal(
+          <div
+            style={{
+              position: 'fixed',
+              left: pos.x,
+              top: pos.y,
+              transform: 'translateY(-50%)',
+              zIndex: 9999,
+            }}
+            className="px-2.5 py-1.5 rounded-md bg-[#333] text-text-primary
+                        text-xs whitespace-nowrap pointer-events-none shadow-lg
+                        border border-border-light"
+          >
+            {text}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
