@@ -105,6 +105,18 @@ export function registerIpcHandlers(): void {
     return gitManager.getCurrentBranch(cwd);
   });
 
+  ipcMain.handle('git:listBranches', (_event, cwd: string) => {
+    return gitManager.listBranches(cwd);
+  });
+
+  ipcMain.handle('git:checkout', (_event, cwd: string, branch: string) => {
+    return gitManager.checkout(cwd, branch);
+  });
+
+  ipcMain.handle('git:createBranch', (_event, cwd: string, branch: string) => {
+    return gitManager.createAndCheckout(cwd, branch);
+  });
+
   // ─── Terminal ─────────────────────────────────────────────────────
   ipcMain.handle('terminal:create', (_event, cwd: string) => {
     const id = terminalManager.create(cwd);

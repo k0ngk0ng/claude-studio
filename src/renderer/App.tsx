@@ -9,7 +9,6 @@ import { ChatView } from './components/Chat/ChatView';
 import { InputBar } from './components/InputBar/InputBar';
 import { TerminalPanel } from './components/Terminal/TerminalPanel';
 import { DiffPanel } from './components/DiffPanel/DiffPanel';
-import { StatusBar } from './components/StatusBar/StatusBar';
 import { Settings } from './components/Settings/Settings';
 
 export default function App() {
@@ -152,9 +151,6 @@ export default function App() {
           {/* Diff panel */}
           {panels.diff && <DiffPanel />}
         </div>
-
-        {/* Status bar */}
-        <StatusBar />
       </div>
     </div>
   );

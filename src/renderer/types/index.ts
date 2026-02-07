@@ -23,6 +23,9 @@ export interface GitAPI {
   unstage: (cwd: string, file: string) => Promise<void>;
   commit: (cwd: string, message: string) => Promise<string>;
   branch: (cwd: string) => Promise<string>;
+  listBranches: (cwd: string) => Promise<{ name: string; current: boolean }[]>;
+  checkout: (cwd: string, branch: string) => Promise<string>;
+  createBranch: (cwd: string, branch: string) => Promise<string>;
 }
 
 export interface TerminalAPI {

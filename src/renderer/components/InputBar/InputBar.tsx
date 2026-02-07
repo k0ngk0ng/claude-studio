@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useAppStore } from '../../stores/appStore';
 
 interface Attachment {
   name: string;
@@ -23,14 +24,21 @@ interface InputBarProps {
 }
 
 export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
+  const { currentProject, setBranch } = useAppStore();
   const [value, setValue] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [mode, setMode] = useState<ClaudeMode>('ask');
   const [modeOpen, setModeOpen] = useState(false);
   const [modelName, setModelName] = useState('');
+  const [branchOpen, setBranchOpen] = useState(false);
+  const [branches, setBranches] = useState<{ name: string; current: boolean }[]>([]);
+  const [newBranchName, setNewBranchName] = useState('');
+  const [showNewBranch, setShowNewBranch] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modeDropdownRef = useRef<HTMLDivElement>(null);
+  const branchDropdownRef = useRef<HTMLDivElement>(null);
+  const newBranchInputRef = useRef<HTMLInputElement>(null);
 
   // Load model name from backend
   useEffect(() => {
@@ -67,18 +75,76 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
     textareaRef.current?.focus();
   }, []);
 
-  // Close mode dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (modeDropdownRef.current && !modeDropdownRef.current.contains(e.target as Node)) {
         setModeOpen(false);
       }
+      if (branchDropdownRef.current && !branchDropdownRef.current.contains(e.target as Node)) {
+        setBranchOpen(false);
+        setShowNewBranch(false);
+        setNewBranchName('');
+      }
     }
-    if (modeOpen) {
+    if (modeOpen || branchOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [modeOpen]);
+  }, [modeOpen, branchOpen]);
+
+  // Focus new branch input when shown
+  useEffect(() => {
+    if (showNewBranch) {
+      newBranchInputRef.current?.focus();
+    }
+  }, [showNewBranch]);
+
+  // Load branches when dropdown opens
+  const loadBranches = useCallback(async () => {
+    if (!currentProject.path) return;
+    try {
+      const list = await window.api.git.listBranches(currentProject.path);
+      setBranches(list);
+    } catch {
+      setBranches([]);
+    }
+  }, [currentProject.path]);
+
+  const handleBranchToggle = useCallback(() => {
+    if (!branchOpen) {
+      loadBranches();
+    } else {
+      setShowNewBranch(false);
+      setNewBranchName('');
+    }
+    setBranchOpen(!branchOpen);
+  }, [branchOpen, loadBranches]);
+
+  const handleCheckout = useCallback(async (branchName: string) => {
+    if (!currentProject.path) return;
+    try {
+      await window.api.git.checkout(currentProject.path, branchName);
+      setBranch(branchName);
+      setBranchOpen(false);
+    } catch (err) {
+      console.error('Checkout failed:', err);
+    }
+  }, [currentProject.path, setBranch]);
+
+  const handleCreateBranch = useCallback(async () => {
+    const name = newBranchName.trim();
+    if (!name || !currentProject.path) return;
+    try {
+      await window.api.git.createBranch(currentProject.path, name);
+      setBranch(name);
+      setBranchOpen(false);
+      setShowNewBranch(false);
+      setNewBranchName('');
+    } catch (err) {
+      console.error('Create branch failed:', err);
+    }
+  }, [newBranchName, currentProject.path, setBranch]);
 
   const handleSubmit = useCallback(() => {
     const trimmed = value.trim();
@@ -145,7 +211,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
 
   const currentMode = MODE_OPTIONS.find((m) => m.value === mode)!;
 
-  // Format model name for display (e.g. "claude-opus" → "Claude Opus")
+  // Format model name for display (e.g. "claude-opus" → "Opus")
   const displayModel = modelName
     .replace(/^claude-?/i, '')
     .replace(/-(\d{8})$/, '') // remove date suffix like -20250514
@@ -270,7 +336,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
                 </svg>
               </button>
 
-              {/* Dropdown menu */}
+              {/* Mode dropdown menu */}
               {modeOpen && (
                 <div className="absolute bottom-full left-0 mb-1 w-56 bg-surface border border-border
                                 rounded-lg shadow-lg py-1 z-50">
@@ -368,14 +434,114 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
           className="hidden"
         />
 
-        {/* Bottom hint */}
+        {/* Bottom hint row */}
         <div className="flex items-center justify-between mt-1.5 px-1">
           <span className="text-[11px] text-text-muted">
-            Shift+Enter for new line
+            {value.length > 0 ? `${value.length} chars • ` : ''}Shift+Enter for new line
           </span>
-          <span className="text-[11px] text-text-muted">
-            {value.length > 0 && `${value.length} chars`}
-          </span>
+
+          {/* Git branch switcher */}
+          {currentProject.branch && (
+            <div className="relative" ref={branchDropdownRef}>
+              <button
+                onClick={handleBranchToggle}
+                className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] text-text-muted
+                           hover:text-text-primary hover:bg-surface-hover transition-colors"
+                title="Switch branch"
+              >
+                {/* Git branch icon */}
+                <svg width="11" height="11" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                  <circle cx="5" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+                  <circle cx="5" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+                  <circle cx="11" cy="7" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+                  <path d="M5 5.5v5M5 7c0-1 1.5-1.5 4.5-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+                <span className="font-mono">{currentProject.branch}</span>
+                <svg width="8" height="8" viewBox="0 0 10 10" fill="none" className={`transition-transform ${branchOpen ? 'rotate-180' : ''}`}>
+                  <path d="M2.5 3.5L5 6.5l2.5-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+
+              {/* Branch dropdown */}
+              {branchOpen && (
+                <div className="absolute bottom-full right-0 mb-1 w-64 bg-surface border border-border
+                                rounded-lg shadow-lg z-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-border">
+                    <span className="text-xs font-medium text-text-secondary">Checkout branch</span>
+                  </div>
+
+                  <div className="max-h-[240px] overflow-y-auto py-1">
+                    {branches.map((b) => (
+                      <button
+                        key={b.name}
+                        onClick={() => handleCheckout(b.name)}
+                        className={`flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs
+                                    hover:bg-surface-hover transition-colors
+                                    ${b.current ? 'text-text-primary' : 'text-text-secondary'}`}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="shrink-0 opacity-50">
+                          <circle cx="5" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+                          <circle cx="5" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+                          <circle cx="11" cy="7" r="1.5" stroke="currentColor" strokeWidth="1.2" />
+                          <path d="M5 5.5v5M5 7c0-1 1.5-1.5 4.5-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                        </svg>
+                        <span className="font-mono truncate flex-1">{b.name}</span>
+                        {b.current && (
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="shrink-0 text-accent">
+                            <path d="M3 8.5l3.5 3.5L13 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Create new branch */}
+                  <div className="border-t border-border">
+                    {!showNewBranch ? (
+                      <button
+                        onClick={() => setShowNewBranch(true)}
+                        className="flex items-center gap-2 w-full px-3 py-2 text-left text-xs
+                                   text-text-secondary hover:text-text-primary hover:bg-surface-hover transition-colors"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="shrink-0">
+                          <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                        </svg>
+                        <span>Create and checkout new branch…</span>
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-3 py-2">
+                        <input
+                          ref={newBranchInputRef}
+                          type="text"
+                          value={newBranchName}
+                          onChange={(e) => setNewBranchName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleCreateBranch();
+                            if (e.key === 'Escape') {
+                              setShowNewBranch(false);
+                              setNewBranchName('');
+                            }
+                          }}
+                          placeholder="new-branch-name"
+                          className="flex-1 bg-bg border border-border rounded px-2 py-1 text-xs
+                                     text-text-primary placeholder-text-muted outline-none
+                                     focus:border-accent"
+                        />
+                        <button
+                          onClick={handleCreateBranch}
+                          disabled={!newBranchName.trim()}
+                          className="px-2 py-1 rounded text-xs bg-accent text-white
+                                     hover:bg-accent-hover disabled:opacity-30 transition-colors"
+                        >
+                          Create
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

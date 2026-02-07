@@ -147,6 +147,64 @@ class GitManager {
     return result.stdout;
   }
 
+  async listBranches(cwd: string): Promise<{ name: string; current: boolean }[]> {
+    try {
+      const result = await this.exec(['branch', '-a', '--no-color'], cwd);
+      const branches: { name: string; current: boolean }[] = [];
+      const seen = new Set<string>();
+
+      for (const line of result.stdout.split('\n')) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        const isCurrent = line.startsWith('*');
+        let name = trimmed.replace(/^\*\s*/, '');
+
+        // Skip HEAD pointers like "remotes/origin/HEAD -> origin/main"
+        if (name.includes('->')) continue;
+
+        // Strip "remotes/origin/" prefix for remote branches
+        if (name.startsWith('remotes/origin/')) {
+          name = name.replace('remotes/origin/', '');
+        }
+
+        // Deduplicate (local and remote may have same name)
+        if (seen.has(name)) {
+          // If this is the current one, update it
+          if (isCurrent) {
+            const existing = branches.find((b) => b.name === name);
+            if (existing) existing.current = true;
+          }
+          continue;
+        }
+
+        seen.add(name);
+        branches.push({ name, current: isCurrent });
+      }
+
+      // Sort: current first, then alphabetical
+      branches.sort((a, b) => {
+        if (a.current && !b.current) return -1;
+        if (!a.current && b.current) return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      return branches;
+    } catch {
+      return [];
+    }
+  }
+
+  async checkout(cwd: string, branch: string): Promise<string> {
+    const result = await this.exec(['checkout', branch], cwd);
+    return result.stderr || result.stdout; // git checkout outputs to stderr
+  }
+
+  async createAndCheckout(cwd: string, branch: string): Promise<string> {
+    const result = await this.exec(['checkout', '-b', branch], cwd);
+    return result.stderr || result.stdout;
+  }
+
   async isGitRepo(cwd: string): Promise<boolean> {
     try {
       await this.exec(['rev-parse', '--is-inside-work-tree'], cwd);

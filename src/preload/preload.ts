@@ -27,6 +27,9 @@ export interface GitAPI {
   unstage: (cwd: string, file: string) => Promise<void>;
   commit: (cwd: string, message: string) => Promise<string>;
   branch: (cwd: string) => Promise<string>;
+  listBranches: (cwd: string) => Promise<{ name: string; current: boolean }[]>;
+  checkout: (cwd: string, branch: string) => Promise<string>;
+  createBranch: (cwd: string, branch: string) => Promise<string>;
 }
 
 export interface TerminalAPI {
@@ -109,6 +112,9 @@ contextBridge.exposeInMainWorld('api', {
     commit: (cwd: string, message: string) =>
       ipcRenderer.invoke('git:commit', cwd, message),
     branch: (cwd: string) => ipcRenderer.invoke('git:branch', cwd),
+    listBranches: (cwd: string) => ipcRenderer.invoke('git:listBranches', cwd),
+    checkout: (cwd: string, branch: string) => ipcRenderer.invoke('git:checkout', cwd, branch),
+    createBranch: (cwd: string, branch: string) => ipcRenderer.invoke('git:createBranch', cwd, branch),
   } satisfies GitAPI,
 
   terminal: {
