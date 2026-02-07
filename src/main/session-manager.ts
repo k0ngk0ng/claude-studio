@@ -57,28 +57,15 @@ class SessionManager {
       const entries = fs.readdirSync(this.sessionsDir, { withFileTypes: true });
       for (const entry of entries) {
         if (entry.isDirectory()) {
-          // The directory name is the encoded project path
           const encodedPath = entry.name;
-          // Try to decode the path back
-          // On Windows, encoded paths look like "C-Users-foo-project"
-          // On Unix, encoded paths look like "Users-foo-project"
-          let decodedPath: string;
-          if (isWindows) {
-            // Heuristic: if second segment is a single char, treat it as a drive letter
-            // e.g., "C-Users-foo" → "C:\Users\foo"
-            const parts = encodedPath.split('-');
-            if (parts.length >= 2 && parts[0].length === 1 && /^[A-Za-z]$/.test(parts[0])) {
-              decodedPath = parts[0] + ':\\' + parts.slice(1).join('\\');
-            } else {
-              decodedPath = '\\' + encodedPath.replace(/-/g, '\\');
-            }
-          } else {
-            decodedPath = '/' + encodedPath.replace(/-/g, '/');
-          }
-          const projectName = path.basename(decodedPath);
+          // We don't try to decode the path here — it's lossy (hyphens are ambiguous).
+          // The real projectPath comes from sessions-index.json entries.
+          // We just use the last segment as a display name fallback.
+          const parts = encodedPath.replace(/^-+/, '').split('-');
+          const projectName = parts[parts.length - 1] || encodedPath;
           projects.push({
             name: projectName,
-            path: decodedPath,
+            path: encodedPath, // Keep encoded — used as directory lookup key
             encodedPath,
           });
         }
@@ -90,8 +77,11 @@ class SessionManager {
     return projects;
   }
 
-  listSessions(projectPath: string): SessionIndexEntry[] {
-    const encoded = encodePath(projectPath);
+  listSessions(encodedOrPath: string): SessionIndexEntry[] {
+    // If it looks like an encoded path (starts with -), use directly; otherwise encode it
+    const encoded = encodedOrPath.startsWith('-') || encodedOrPath.startsWith('Users')
+      ? encodedOrPath
+      : encodePath(encodedOrPath);
     const indexPath = path.join(this.sessionsDir, encoded, 'sessions-index.json');
 
     try {
