@@ -45,6 +45,7 @@ function saveAllowedTools(tools: string[]) {
  * Extract a tool pattern from a denied command.
  * e.g. "git add src/foo.ts src/bar.ts" → "Bash(git add *)"
  * e.g. "git commit -m 'message'" → "Bash(git commit *)"
+ * e.g. "cd /path && git add -A" → "Bash(git add *)"
  * e.g. "npm install" → "Bash(npm install *)"
  */
 export function extractToolPattern(toolName: string, command: string): string {
@@ -52,10 +53,21 @@ export function extractToolPattern(toolName: string, command: string): string {
     return toolName;
   }
 
-  // Extract the first 1-2 words as the command prefix
-  const trimmed = command.trim();
-  const parts = trimmed.split(/\s+/);
+  // Handle chained commands: split on && or ; and find the meaningful command
+  // Skip "cd ..." prefixes which are just directory changes
+  const segments = command.split(/\s*&&\s*|\s*;\s*/).map(s => s.trim()).filter(Boolean);
+  let mainCommand = command.trim();
 
+  for (const seg of segments) {
+    const first = seg.split(/\s+/)[0];
+    // Skip cd, pushd, popd — they're just directory changes
+    if (!['cd', 'pushd', 'popd'].includes(first)) {
+      mainCommand = seg;
+      break;
+    }
+  }
+
+  const parts = mainCommand.split(/\s+/);
   if (parts.length === 0) return `Bash(*)`;
 
   // For git commands, use "git <subcommand> *"
@@ -99,6 +111,11 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
         r.id === id ? { ...r, status: 'approved' as const } : r
       ),
     });
+
+    // Notify useClaude to re-spawn the process with updated allowedTools
+    window.dispatchEvent(new CustomEvent('claude:permission-approved', {
+      detail: { pattern, allowedTools: newAllowed },
+    }));
   },
 
   denyRequest: (id) =>

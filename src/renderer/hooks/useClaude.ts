@@ -653,6 +653,59 @@ export function useClaude() {
     };
   }, []);
 
+  // Listen for permission approvals — re-spawn the CLI with updated --allowedTools
+  // and ask Claude to retry the denied command
+  useEffect(() => {
+    const handlePermissionApproved = async (e: Event) => {
+      const pid = processIdRef.current;
+      if (!pid) return;
+
+      const { currentSession } = useAppStore.getState();
+      const sessionId = currentSession.id;
+      const cwd = currentSession.projectPath;
+      if (!cwd) return;
+
+      const { allowedTools } = usePermissionStore.getState();
+      const detail = (e as CustomEvent).detail;
+      const approvedPattern = detail?.pattern || '';
+
+      debugLog('claude', `permission approved — re-spawning with allowedTools: [${allowedTools.join(', ')}]`);
+
+      // Kill current process
+      await window.api.claude.kill(pid);
+      processIdRef.current = null;
+
+      // Reset streaming state for the re-spawn
+      streamingTextRef.current = '';
+      turnCountRef.current = 0;
+      useAppStore.getState().clearStreamingContent();
+      useAppStore.getState().clearToolActivities();
+
+      // Re-spawn with same session (--resume) + updated allowedTools
+      const newPid = await window.api.claude.spawn(
+        cwd,
+        sessionId || undefined,
+        'acceptEdits',
+        allowedTools,
+      );
+      processIdRef.current = newPid;
+      useAppStore.getState().setProcessId(newPid);
+      useAppStore.getState().setIsStreaming(true);
+
+      debugLog('claude', `re-spawned with pid: ${newPid}, session: ${sessionId}, sending retry`);
+
+      // Send a message asking Claude to retry the denied command
+      await window.api.claude.send(newPid,
+        `The permission for ${approvedPattern} has been granted. Please retry the command that was just denied.`
+      );
+    };
+
+    window.addEventListener('claude:permission-approved', handlePermissionApproved);
+    return () => {
+      window.removeEventListener('claude:permission-approved', handlePermissionApproved);
+    };
+  }, []);
+
   const startSession = useCallback(
     async (cwd: string, sessionId?: string, permissionMode?: string) => {
       const mode = permissionMode || 'default';
