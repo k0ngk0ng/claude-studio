@@ -58,6 +58,25 @@ export function LogPanel() {
     });
   };
 
+  const exportLogs = () => {
+    const data = filteredLogs.map(log => ({
+      time: formatTime(log.timestamp),
+      timestamp: log.timestamp,
+      level: log.level,
+      category: log.category,
+      message: log.message,
+      ...(log.detail ? { detail: log.detail } : {}),
+    }));
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `claude-debug-logs-${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Filter bar */}
@@ -92,6 +111,18 @@ export function LogPanel() {
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
             <path d="M6 2v8M3 7l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        {/* Export */}
+        <button
+          onClick={exportLogs}
+          className="px-1.5 py-0.5 rounded text-[11px] text-text-muted hover:text-text-secondary hover:bg-surface-hover transition-colors"
+          title="Export logs as JSON"
+        >
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M6 2v6M3 6l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M2 10h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
           </svg>
         </button>
 
