@@ -149,8 +149,20 @@ class ClaudeProcessManager extends EventEmitter {
     cwd: string,
     sessionId?: string,
     permissionMode?: string,
+    envVars?: Array<{ key: string; value: string; enabled: boolean }>,
   ): Promise<string> {
-    debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode);
+    debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode, 'envVars:', envVars?.length || 0);
+
+    // Apply enabled env vars to process.env so the SDK child process inherits them
+    if (envVars && envVars.length > 0) {
+      for (const { key, value, enabled } of envVars) {
+        if (enabled && key && value) {
+          process.env[key] = value;
+          debugLog('set env:', key, '=', key.includes('KEY') || key.includes('TOKEN') ? '***' : value);
+        }
+      }
+    }
+
     const processId = randomUUID();
     const abortController = new AbortController();
 

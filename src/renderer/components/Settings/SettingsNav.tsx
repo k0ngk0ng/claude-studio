@@ -24,17 +24,17 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    id: 'model',
-    label: 'Model',
+    id: 'provider',
+    label: 'Provider',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path
-          d="M8 1.5L2 4.5v7l6 3 6-3v-7L8 1.5z"
+          d="M4 11.5a3.5 3.5 0 01-.5-6.96A4.5 4.5 0 018 1.5a4.5 4.5 0 014.5 3.04A3.5 3.5 0 0112 11.5H4z"
           stroke="currentColor"
           strokeWidth="1.3"
           strokeLinejoin="round"
         />
-        <path d="M2 4.5L8 8m0 0l6-3.5M8 8v6.5" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M6 14h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
       </svg>
     ),
   },

@@ -4,6 +4,8 @@ import type {
   SettingsTab,
   GeneralSettings,
   ModelSettings,
+  ProviderSettings,
+  ProviderEnvVar,
   PermissionSettings,
   McpServer,
   GitSettings,
@@ -22,11 +24,12 @@ const defaultSettings: AppSettings = {
     preventSleep: false,
     debugMode: false,
   },
-  model: {
+  provider: {
     defaultModel: 'claude-sonnet-4-20250514',
     maxTokens: 16384,
     temperature: 0,
     systemPrompt: '',
+    envVars: [],
   },
   permissions: {
     allowFileWrite: true,
@@ -75,10 +78,18 @@ function loadSettings(): AppSettings {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
+
+      // Migrate old 'model' key to 'provider' for backward compatibility
+      const providerSource = parsed.provider || parsed.model || {};
+
       // Deep merge with defaults to handle new settings added in updates
       const settings: AppSettings = {
         general: { ...defaultSettings.general, ...parsed.general },
-        model: { ...defaultSettings.model, ...parsed.model },
+        provider: {
+          ...defaultSettings.provider,
+          ...providerSource,
+          envVars: providerSource.envVars || defaultSettings.provider.envVars,
+        },
         permissions: { ...defaultSettings.permissions, ...parsed.permissions },
         mcpServers: parsed.mcpServers || defaultSettings.mcpServers,
         git: { ...defaultSettings.git, ...parsed.git },
@@ -121,11 +132,17 @@ interface SettingsStore {
 
   // Update settings
   updateGeneral: (updates: Partial<GeneralSettings>) => void;
-  updateModel: (updates: Partial<ModelSettings>) => void;
+  updateProvider: (updates: Partial<ProviderSettings>) => void;
   updatePermissions: (updates: Partial<PermissionSettings>) => void;
   updateGit: (updates: Partial<GitSettings>) => void;
   updateAppearance: (updates: Partial<AppearanceSettings>) => void;
   updateKeybinding: (id: string, keys: string) => void;
+
+  // Provider env vars
+  setEnvVars: (envVars: ProviderEnvVar[]) => void;
+  addEnvVar: (envVar: ProviderEnvVar) => void;
+  removeEnvVar: (key: string) => void;
+  updateEnvVar: (key: string, updates: Partial<ProviderEnvVar>) => void;
 
   // MCP Servers
   addMcpServer: (server: McpServer) => void;
@@ -158,11 +175,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
     });
   },
 
-  updateModel: (updates) => {
+  updateProvider: (updates) => {
     set((state) => {
       const newSettings = {
         ...state.settings,
-        model: { ...state.settings.model, ...updates },
+        provider: { ...state.settings.provider, ...updates },
       };
       saveSettings(newSettings);
       return { settings: newSettings };
@@ -208,6 +225,61 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         kb.id === id ? { ...kb, keys } : kb
       );
       const newSettings = { ...state.settings, keybindings: newKeybindings };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  setEnvVars: (envVars) => {
+    set((state) => {
+      const newSettings = {
+        ...state.settings,
+        provider: { ...state.settings.provider, envVars },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  addEnvVar: (envVar) => {
+    set((state) => {
+      const newSettings = {
+        ...state.settings,
+        provider: {
+          ...state.settings.provider,
+          envVars: [...state.settings.provider.envVars, envVar],
+        },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  removeEnvVar: (key) => {
+    set((state) => {
+      const newSettings = {
+        ...state.settings,
+        provider: {
+          ...state.settings.provider,
+          envVars: state.settings.provider.envVars.filter((v) => v.key !== key),
+        },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  updateEnvVar: (key, updates) => {
+    set((state) => {
+      const newSettings = {
+        ...state.settings,
+        provider: {
+          ...state.settings.provider,
+          envVars: state.settings.provider.envVars.map((v) =>
+            v.key === key ? { ...v, ...updates } : v
+          ),
+        },
+      };
       saveSettings(newSettings);
       return { settings: newSettings };
     });

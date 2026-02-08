@@ -3,7 +3,7 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { useAppStore } from '../../stores/appStore';
 import { SettingsNav } from './SettingsNav';
 import { GeneralSection } from './GeneralSection';
-import { ModelSection } from './ModelSection';
+import { ProviderSection } from './ProviderSection';
 import { PermissionsSection } from './PermissionsSection';
 import { McpServersSection } from './McpServersSection';
 import { GitSection } from './GitSection';
@@ -19,8 +19,8 @@ export function Settings() {
     switch (activeTab) {
       case 'general':
         return <GeneralSection />;
-      case 'model':
-        return <ModelSection />;
+      case 'provider':
+        return <ProviderSection />;
       case 'permissions':
         return <PermissionsSection />;
       case 'mcp-servers':

@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 export interface ClaudeAPI {
-  spawn: (cwd: string, sessionId?: string, permissionMode?: string) => Promise<string>;
+  spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>) => Promise<string>;
   send: (processId: string, content: string) => Promise<boolean>;
   kill: (processId: string) => Promise<boolean>;
   onMessage: (
@@ -81,8 +81,8 @@ const sessionsChangedListeners = new Map<Function, (...args: any[]) => void>();
 
 contextBridge.exposeInMainWorld('api', {
   claude: {
-    spawn: (cwd: string, sessionId?: string, permissionMode?: string) =>
-      ipcRenderer.invoke('claude:spawn', cwd, sessionId, permissionMode),
+    spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>) =>
+      ipcRenderer.invoke('claude:spawn', cwd, sessionId, permissionMode, envVars),
     send: (processId: string, content: string) =>
       ipcRenderer.invoke('claude:send', processId, content),
     kill: (processId: string) => ipcRenderer.invoke('claude:kill', processId),

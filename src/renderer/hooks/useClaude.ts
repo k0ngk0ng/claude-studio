@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAppStore, type ToolActivity } from '../stores/appStore';
 import { usePermissionStore } from '../stores/permissionStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { debugLog } from '../stores/debugLogStore';
 import type { ContentBlock, Message, ToolUseInfo, PermissionRequestEvent } from '../types';
 
@@ -643,10 +644,15 @@ export function useClaude() {
     async (cwd: string, sessionId?: string, permissionMode?: string) => {
       const mode = permissionMode || 'default';
 
-      debugLog('claude', `spawning SDK session — cwd: ${cwd}${sessionId ? ', resume: ' + sessionId : ''}, mode: ${mode}`, {
+      // Read env vars from provider settings to pass to the main process
+      const providerSettings = useSettingsStore.getState().settings.provider;
+      const envVars = providerSettings.envVars.filter((v) => v.enabled && v.key && v.value);
+
+      debugLog('claude', `spawning SDK session — cwd: ${cwd}${sessionId ? ', resume: ' + sessionId : ''}, mode: ${mode}, envVars: ${envVars.length}`, {
         cwd,
         sessionId,
         permissionMode: mode,
+        envVarCount: envVars.length,
       });
 
       if (processIdRef.current) {
@@ -662,7 +668,7 @@ export function useClaude() {
       // Clear any pending permission requests from previous session
       usePermissionStore.getState().clearRequests();
 
-      const pid = await window.api.claude.spawn(cwd, sessionId, mode);
+      const pid = await window.api.claude.spawn(cwd, sessionId, mode, envVars);
       processIdRef.current = pid;
       useAppStore.getState().setProcessId(pid);
       useAppStore.getState().setIsStreaming(false);

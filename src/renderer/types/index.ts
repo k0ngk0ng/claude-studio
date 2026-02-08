@@ -1,7 +1,7 @@
 // ─── API types exposed via preload ──────────────────────────────────
 
 export interface ClaudeAPI {
-  spawn: (cwd: string, sessionId?: string, permissionMode?: string) => Promise<string>;
+  spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>) => Promise<string>;
   send: (processId: string, content: string) => Promise<boolean>;
   kill: (processId: string) => Promise<boolean>;
   onMessage: (callback: (processId: string, message: ClaudeStreamEvent) => void) => void;
@@ -189,7 +189,7 @@ export interface ClaudeStreamEvent {
 
 export type SettingsTab =
   | 'general'
-  | 'model'
+  | 'provider'
   | 'permissions'
   | 'mcp-servers'
   | 'git'
@@ -215,6 +215,22 @@ export interface ModelSettings {
   maxTokens: number;
   temperature: number;
   systemPrompt: string;
+}
+
+export interface ProviderEnvVar {
+  key: string;
+  value: string;
+  enabled: boolean;
+}
+
+export interface ProviderSettings {
+  // Keep the old model fields for backward compat
+  defaultModel: string;
+  maxTokens: number;
+  temperature: number;
+  systemPrompt: string;
+  // New: environment variable overrides
+  envVars: ProviderEnvVar[];
 }
 
 export interface PermissionSettings {
@@ -260,7 +276,7 @@ export interface KeyBinding {
 
 export interface AppSettings {
   general: GeneralSettings;
-  model: ModelSettings;
+  provider: ProviderSettings;
   permissions: PermissionSettings;
   mcpServers: McpServer[];
   git: GitSettings;

@@ -54,8 +54,8 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle('claude:spawn', async (_event, cwd: string, sessionId?: string, permissionMode?: string) => {
-    return claudeProcessManager.spawn(cwd, sessionId, permissionMode);
+  ipcMain.handle('claude:spawn', async (_event, cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>) => {
+    return claudeProcessManager.spawn(cwd, sessionId, permissionMode, envVars);
   });
 
   ipcMain.handle('claude:send', (_event, processId: string, content: string) => {
