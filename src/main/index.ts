@@ -1,11 +1,80 @@
 import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron';
 import path from 'path';
+import os from 'os';
+import { execSync } from 'child_process';
 import { registerIpcHandlers } from './ipc-handlers';
 
 // Suppress macOS IMK/NSLog noise (e.g. IMKCFRunLoopWakeUpReliable)
 if (process.platform === 'darwin') {
   process.env.OS_ACTIVITY_MODE = 'disable';
 }
+
+/**
+ * Fix PATH for packaged Electron apps.
+ *
+ * When launched from Dock/Finder/Start Menu, Electron inherits a minimal PATH
+ * that doesn't include user-installed tools (node, git, claude, etc.).
+ * We fix this by:
+ * 1. Sourcing the user's shell to get the full PATH (macOS/Linux)
+ * 2. Adding common tool locations as fallback
+ */
+function fixPath() {
+  const homeDir = os.homedir();
+
+  if (process.platform === 'win32') {
+    // Windows: add common Node.js locations
+    const extraPaths = [
+      path.join(homeDir, 'AppData', 'Roaming', 'npm'),
+      path.join(homeDir, '.local', 'bin'),
+      'C:\\Program Files\\nodejs',
+      'C:\\Program Files (x86)\\nodejs',
+    ];
+    const currentPath = process.env.PATH || '';
+    for (const p of extraPaths) {
+      if (!currentPath.includes(p)) {
+        process.env.PATH = `${currentPath};${p}`;
+      }
+    }
+  } else {
+    // macOS / Linux: get the full PATH from user's login shell
+    try {
+      const shell = process.env.SHELL || '/bin/zsh';
+      const fullPath = execSync(`${shell} -ilc 'echo $PATH'`, {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+      if (fullPath) {
+        process.env.PATH = fullPath;
+      }
+    } catch {
+      // Fallback: add common paths manually
+      const extraPaths = [
+        '/usr/local/bin',
+        '/opt/homebrew/bin',
+        '/opt/homebrew/sbin',
+        path.join(homeDir, '.local', 'bin'),
+        path.join(homeDir, '.nvm', 'versions', 'node'),  // nvm
+        '/usr/local/opt/node/bin',
+        '/usr/bin',
+        '/bin',
+        '/usr/sbin',
+        '/sbin',
+      ];
+      const currentPath = process.env.PATH || '';
+      const pathSet = new Set(currentPath.split(':'));
+      for (const p of extraPaths) {
+        if (!pathSet.has(p)) {
+          pathSet.add(p);
+        }
+      }
+      process.env.PATH = Array.from(pathSet).join(':');
+    }
+  }
+}
+
+// Fix PATH before anything else
+fixPath();
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
