@@ -55,10 +55,15 @@ export interface AppAPI {
   selectDirectory: () => Promise<string | null>;
   getPlatform: () => Promise<'mac' | 'windows' | 'linux'>;
   getHomePath: () => Promise<string>;
+  getVersion: () => Promise<string>;
   getModel: () => Promise<string>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<DependencyStatus[]>;
+  checkRuntimeDeps: () => Promise<{ name: string; found: boolean; error?: string }[]>;
+  installRuntimeDeps: () => Promise<{ success: boolean; installed: string[]; error?: string }>;
+  onInstallProgress: (callback: (data: string) => void) => void;
+  removeInstallProgressListener: (callback: (data: string) => void) => void;
   toggleDevTools: () => Promise<void>;
 }
 

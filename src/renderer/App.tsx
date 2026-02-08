@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useAppStore } from './stores/appStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { debugLog } from './stores/debugLogStore';
@@ -11,8 +11,10 @@ import { InputBar } from './components/InputBar/InputBar';
 import { BottomPanel } from './components/BottomPanel/BottomPanel';
 import { DiffPanel } from './components/DiffPanel/DiffPanel';
 import { Settings } from './components/Settings/Settings';
+import { BootstrapScreen } from './components/BootstrapScreen';
 
 export default function App() {
+  const [depsReady, setDepsReady] = useState(false);
   const { panels, togglePanel, setCurrentProject, setPlatform, currentProject } =
     useAppStore();
   const { isOpen: settingsOpen, openSettings, closeSettings } = useSettingsStore();
@@ -143,6 +145,11 @@ export default function App() {
   // Show settings page when open
   if (settingsOpen) {
     return <Settings />;
+  }
+
+  // Show bootstrap screen while checking/installing dependencies
+  if (!depsReady) {
+    return <BootstrapScreen onReady={() => setDepsReady(true)} />;
   }
 
   return (

@@ -1,11 +1,13 @@
-import { ipcMain, dialog, BrowserWindow, shell } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron';
 import { claudeProcessManager } from './claude-process';
 import { sessionManager } from './session-manager';
 import { gitManager } from './git-manager';
 import { terminalManager } from './terminal-manager';
 import { getPlatform, getClaudeModel, checkDependencies } from './platform';
 import os from 'os';
-import { execFile } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import { execFile, execSync } from 'child_process';
 
 function getWebContents(): Electron.WebContents | null {
   const windows = BrowserWindow.getAllWindows();
@@ -185,6 +187,11 @@ export function registerIpcHandlers(): void {
     return os.homedir();
   });
 
+  ipcMain.handle('app:getVersion', () => {
+    const { app } = require('electron');
+    return app.getVersion();
+  });
+
   ipcMain.handle('app:getModel', () => {
     return getClaudeModel();
   });
@@ -288,6 +295,122 @@ export function registerIpcHandlers(): void {
     }
 
     return editors;
+  });
+
+  // ─── Bootstrap: check & install runtime dependencies ─────────────
+  ipcMain.handle('app:checkRuntimeDeps', async () => {
+    const results: { name: string; found: boolean; error?: string }[] = [];
+
+    // Check @anthropic-ai/claude-agent-sdk
+    try {
+      await import('@anthropic-ai/claude-agent-sdk');
+      results.push({ name: '@anthropic-ai/claude-agent-sdk', found: true });
+    } catch {
+      results.push({ name: '@anthropic-ai/claude-agent-sdk', found: false });
+    }
+
+    // Check node-pty
+    try {
+      require('node-pty');
+      results.push({ name: 'node-pty', found: true });
+    } catch {
+      results.push({ name: 'node-pty', found: false });
+    }
+
+    return results;
+  });
+
+  ipcMain.handle('app:installRuntimeDeps', async () => {
+    // Determine where to install — use app's user data directory for production
+    const isPackaged = app.isPackaged;
+    let installDir: string;
+
+    if (isPackaged) {
+      // In production: install to a writable location alongside the app
+      installDir = path.join(app.getPath('userData'), 'node_modules_runtime');
+    } else {
+      // In dev: install to project root
+      installDir = process.cwd();
+    }
+
+    // Ensure directory exists
+    if (!fs.existsSync(installDir)) {
+      fs.mkdirSync(installDir, { recursive: true });
+    }
+
+    const depsToInstall = ['@anthropic-ai/claude-agent-sdk', 'node-pty'];
+    const missing: string[] = [];
+
+    // Check which deps are actually missing
+    for (const dep of depsToInstall) {
+      try {
+        if (dep === '@anthropic-ai/claude-agent-sdk') {
+          await import(dep);
+        } else {
+          require(dep);
+        }
+      } catch {
+        missing.push(dep);
+      }
+    }
+
+    if (missing.length === 0) {
+      return { success: true, installed: [] };
+    }
+
+    // Find npm
+    const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+
+    try {
+      // For packaged app: create a minimal package.json and install there
+      if (isPackaged) {
+        const pkgJsonPath = path.join(installDir, 'package.json');
+        if (!fs.existsSync(pkgJsonPath)) {
+          fs.writeFileSync(pkgJsonPath, JSON.stringify({ name: 'claude-app-runtime', private: true }, null, 2));
+        }
+
+        // Install missing deps
+        await new Promise<void>((resolve, reject) => {
+          const child = execFile(npmCmd, ['install', ...missing, '--no-save'], {
+            cwd: installDir,
+            timeout: 120000,
+            env: { ...process.env, NODE_ENV: 'production' },
+          }, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+          child.stdout?.on('data', (data: string) => {
+            const wc = getWebContents();
+            if (wc) wc.send('app:install-progress', data.toString());
+          });
+          child.stderr?.on('data', (data: string) => {
+            const wc = getWebContents();
+            if (wc) wc.send('app:install-progress', data.toString());
+          });
+        });
+
+        // Add the runtime node_modules to Node's module search path
+        const runtimeNodeModules = path.join(installDir, 'node_modules');
+        if (!require.resolve.paths('')?.includes(runtimeNodeModules)) {
+          module.paths.unshift(runtimeNodeModules);
+        }
+      } else {
+        // Dev mode: just npm install in project root
+        await new Promise<void>((resolve, reject) => {
+          execFile(npmCmd, ['install'], {
+            cwd: installDir,
+            timeout: 120000,
+          }, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+
+      return { success: true, installed: missing };
+    } catch (err: any) {
+      return { success: false, installed: [], error: err?.message || String(err) };
+    }
   });
 
   // ─── Git push ─────────────────────────────────────────────────────

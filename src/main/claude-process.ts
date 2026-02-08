@@ -2,6 +2,8 @@ import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { createRequire } from 'module';
+import { app } from 'electron';
+import fs from 'fs';
 
 // Dynamic import for ESM module
 let queryFn: typeof import('@anthropic-ai/claude-agent-sdk').query | null = null;
@@ -17,17 +19,50 @@ async function getQuery() {
 
 function getSdkCliPath(): string {
   if (sdkCliPath) return sdkCliPath;
+
+  // Try multiple resolution strategies
+  const candidates: string[] = [];
+
+  // 1. Use createRequire to resolve from the SDK package
   try {
-    // Resolve the SDK package directory to find cli.js
     const require = createRequire(import.meta.url || __filename);
     const sdkMain = require.resolve('@anthropic-ai/claude-agent-sdk');
-    sdkCliPath = path.join(path.dirname(sdkMain), 'cli.js');
-    return sdkCliPath;
+    candidates.push(path.join(path.dirname(sdkMain), 'cli.js'));
   } catch {
-    // Fallback: try common locations
-    const fallback = path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js');
-    return fallback;
+    // SDK not resolvable via createRequire
   }
+
+  // 2. Production: unpacked alongside asar (cli.js is unpacked for execution)
+  if (app?.isPackaged) {
+    const unpackedBase = path.join(app.getAppPath() + '.unpacked', 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js');
+    candidates.push(unpackedBase);
+
+    // 3. Production: inside asar (fallback)
+    const asarBase = path.join(app.getAppPath(), 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js');
+    candidates.push(asarBase);
+
+    // 4. Production: in resources directory
+    const resourceBase = path.join(process.resourcesPath || '', 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js');
+    candidates.push(resourceBase);
+  }
+
+  // 5. Dev fallback: project root node_modules
+  candidates.push(path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js'));
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) {
+        sdkCliPath = candidate;
+        return sdkCliPath;
+      }
+    } catch {
+      // Skip inaccessible paths
+    }
+  }
+
+  // Last resort — return first candidate and let it fail with a clear error
+  sdkCliPath = candidates[0] || 'cli.js';
+  return sdkCliPath;
 }
 
 export interface ClaudeMessage {

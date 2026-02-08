@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SettingsToggle } from './controls/SettingsToggle';
 import { SettingsSelect } from './controls/SettingsSelect';
@@ -6,6 +6,11 @@ import { SettingsSelect } from './controls/SettingsSelect';
 export function GeneralSection() {
   const { settings, updateGeneral } = useSettingsStore();
   const { general } = settings;
+  const [version, setVersion] = useState('');
+
+  useEffect(() => {
+    window.api.app.getVersion().then(setVersion).catch(() => {});
+  }, []);
 
   return (
     <div>
@@ -75,6 +80,20 @@ export function GeneralSection() {
           checked={general.debugMode}
           onChange={(v) => updateGeneral({ debugMode: v })}
         />
+
+        {/* Version info */}
+        {version && (
+          <>
+            <div className="border-t border-border pt-2" />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-text-primary">Version</div>
+                <div className="text-xs text-text-muted mt-0.5">Claude App</div>
+              </div>
+              <span className="text-sm font-mono text-text-muted">{version}</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

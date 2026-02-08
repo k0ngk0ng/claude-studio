@@ -61,16 +61,22 @@ export interface AppAPI {
   selectDirectory: () => Promise<string | null>;
   getPlatform: () => Promise<'mac' | 'windows' | 'linux'>;
   getHomePath: () => Promise<string>;
+  getVersion: () => Promise<string>;
   getModel: () => Promise<string>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<{ name: string; found: boolean; path?: string; version?: string; installHint: string }[]>;
+  checkRuntimeDeps: () => Promise<{ name: string; found: boolean; error?: string }[]>;
+  installRuntimeDeps: () => Promise<{ success: boolean; installed: string[]; error?: string }>;
+  onInstallProgress: (callback: (data: string) => void) => void;
+  removeInstallProgressListener: (callback: (data: string) => void) => void;
   toggleDevTools: () => Promise<void>;
 }
 
 const claudeMessageListeners = new Map<Function, (...args: any[]) => void>();
 const claudePermissionListeners = new Map<Function, (...args: any[]) => void>();
 const terminalDataListeners = new Map<Function, (...args: any[]) => void>();
+const installProgressListeners = new Map<Function, (...args: any[]) => void>();
 const sessionsChangedListeners = new Map<Function, (...args: any[]) => void>();
 
 contextBridge.exposeInMainWorld('api', {
@@ -197,10 +203,27 @@ contextBridge.exposeInMainWorld('api', {
     selectDirectory: () => ipcRenderer.invoke('app:selectDirectory'),
     getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
     getHomePath: () => ipcRenderer.invoke('app:getHomePath'),
+    getVersion: () => ipcRenderer.invoke('app:getVersion'),
     getModel: () => ipcRenderer.invoke('app:getModel'),
     openInEditor: (cwd: string, editor: string) => ipcRenderer.invoke('app:openInEditor', cwd, editor),
     getAvailableEditors: () => ipcRenderer.invoke('app:getAvailableEditors'),
     checkDependencies: () => ipcRenderer.invoke('app:checkDependencies'),
+    checkRuntimeDeps: () => ipcRenderer.invoke('app:checkRuntimeDeps'),
+    installRuntimeDeps: () => ipcRenderer.invoke('app:installRuntimeDeps'),
+    onInstallProgress: (callback: (data: string) => void) => {
+      const wrappedCallback = (_event: Electron.IpcRendererEvent, data: string) => {
+        callback(data);
+      };
+      installProgressListeners.set(callback, wrappedCallback);
+      ipcRenderer.on('app:install-progress', wrappedCallback);
+    },
+    removeInstallProgressListener: (callback: (data: string) => void) => {
+      const wrappedCallback = installProgressListeners.get(callback);
+      if (wrappedCallback) {
+        ipcRenderer.removeListener('app:install-progress', wrappedCallback);
+        installProgressListeners.delete(callback);
+      }
+    },
     toggleDevTools: () => ipcRenderer.invoke('app:toggleDevTools'),
   } satisfies AppAPI,
 });
