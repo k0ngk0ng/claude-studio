@@ -106,6 +106,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
     sidebar: true,
     terminal: false,
     diff: false,
+    logs: false,
   },
   panelSizes: {
     sidebar: 240,

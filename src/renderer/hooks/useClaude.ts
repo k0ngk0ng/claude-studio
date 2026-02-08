@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAppStore } from '../stores/appStore';
+import { debugLog } from '../stores/debugLogStore';
 import type { ContentBlock, Message } from '../types';
 
 /**
@@ -93,7 +94,7 @@ export function useClaude() {
       const event = raw as StreamEvent;
 
       if (event.type !== 'stream_event') {
-        console.log('[claude]', event.type, event.subtype || '', event);
+        debugLog('claude', `event: ${event.type}${event.subtype ? '/' + event.subtype : ''}`, event);
       }
 
       const {
@@ -111,6 +112,7 @@ export function useClaude() {
       switch (event.type) {
         case 'system': {
           if (event.session_id) {
+            debugLog('claude', `session started: ${event.session_id}`, event);
             setCurrentSession({ id: event.session_id });
             // Trigger sessions reload — a new session may have been created
             // Use a short delay to let the JSONL file be written to disk
@@ -139,6 +141,7 @@ export function useClaude() {
                 // Tool use starting — track it
                 const toolId = evt.content_block.id || `tool-${Date.now()}`;
                 const toolName = evt.content_block.name || 'Unknown';
+                debugLog('claude', `tool_use start: ${toolName} (${toolId})`);
                 currentToolIdRef.current = toolId;
                 toolInputJsonRef.current = '';
 
@@ -281,6 +284,7 @@ export function useClaude() {
             if (updates.size > 0) {
               const { toolActivities } = useAppStore.getState();
               const knownIds = new Set(toolActivities.map(a => a.id));
+              debugLog('claude', `tool_result: ${updates.size} result(s), known tools: [${[...knownIds].join(', ')}]`, Object.fromEntries(updates));
 
               // Apply all updates in a single setState
               useAppStore.setState({
@@ -304,10 +308,16 @@ export function useClaude() {
         case 'result': {
           const resultId = (raw as any).uuid || event.session_id || processId;
           if (resultId === lastResultIdRef.current) {
-            console.log('[claude] duplicate result ignored', resultId);
+            debugLog('claude', `duplicate result ignored: ${resultId}`);
             break;
           }
           lastResultIdRef.current = resultId;
+          debugLog('claude', `result received — cost: $${event.total_cost_usd?.toFixed(4) || '?'}, duration: ${event.duration_ms || '?'}ms`, {
+            session_id: event.session_id,
+            total_cost_usd: event.total_cost_usd,
+            duration_ms: event.duration_ms,
+            num_turns: event.num_turns,
+          });
 
           setIsStreaming(false);
           clearStreamingContent();
@@ -369,6 +379,7 @@ export function useClaude() {
             typeof event.message?.content === 'string'
               ? event.message.content
               : 'An error occurred';
+          debugLog('claude', `error: ${errorText}`, event, 'error');
           addMessage({
             id: crypto.randomUUID(),
             role: 'system',
@@ -403,12 +414,12 @@ export function useClaude() {
         }
 
         case 'raw': {
-          console.log('[claude raw]', event.message?.content);
+          debugLog('claude', 'raw output', event.message?.content);
           break;
         }
 
         default:
-          console.log('[claude event]', event.type, event);
+          debugLog('claude', `unknown event: ${event.type}`, event);
           break;
       }
     };
@@ -421,6 +432,12 @@ export function useClaude() {
 
   const startSession = useCallback(
     async (cwd: string, sessionId?: string) => {
+      debugLog('claude', `spawning CLI — cwd: ${cwd}${sessionId ? ', resume: ' + sessionId : ''}`, {
+        cwd,
+        sessionId,
+        args: ['--print', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', ...(sessionId ? ['--resume', sessionId] : [])],
+      });
+
       if (processIdRef.current) {
         await window.api.claude.kill(processIdRef.current);
         processIdRef.current = null;
@@ -439,6 +456,7 @@ export function useClaude() {
   );
 
   const sendMessage = useCallback(async (content: string) => {
+    debugLog('claude', `sending message: ${content.slice(0, 100)}${content.length > 100 ? '…' : ''}`, { length: content.length });
     const { addMessage, setIsStreaming, clearStreamingContent, clearToolActivities } =
       useAppStore.getState();
 

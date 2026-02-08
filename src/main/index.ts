@@ -73,11 +73,8 @@ app.whenReady().then(() => {
   registerIpcHandlers();
   createWindow();
 
-  // Register DevTools shortcut
-  globalShortcut.register('CommandOrControl+Alt+I', () => {
-    mainWindow?.webContents.toggleDevTools();
-  });
-  globalShortcut.register('F12', () => {
+  // DevTools toggle — controlled by renderer based on debug mode setting
+  ipcMain.handle('app:toggleDevTools', () => {
     mainWindow?.webContents.toggleDevTools();
   });
 

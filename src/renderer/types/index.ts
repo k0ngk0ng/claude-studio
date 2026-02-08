@@ -49,6 +49,7 @@ export interface AppAPI {
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<DependencyStatus[]>;
+  toggleDevTools: () => Promise<void>;
 }
 
 export interface WindowAPI {
@@ -190,6 +191,7 @@ export interface GeneralSettings {
   showCostInfo: boolean;
   notifyOnComplete: boolean;
   preventSleep: boolean;
+  debugMode: boolean;
 }
 
 export interface ModelSettings {
@@ -264,6 +266,7 @@ export interface PanelState {
   sidebar: boolean;
   terminal: boolean;
   diff: boolean;
+  logs: boolean;
 }
 
 export interface PanelSizes {

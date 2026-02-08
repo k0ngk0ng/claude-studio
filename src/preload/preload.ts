@@ -53,6 +53,7 @@ export interface AppAPI {
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<{ name: string; found: boolean; path?: string; version?: string; installHint: string }[]>;
+  toggleDevTools: () => Promise<void>;
 }
 
 const claudeMessageListeners = new Map<Function, (...args: any[]) => void>();
@@ -162,5 +163,6 @@ contextBridge.exposeInMainWorld('api', {
     openInEditor: (cwd: string, editor: string) => ipcRenderer.invoke('app:openInEditor', cwd, editor),
     getAvailableEditors: () => ipcRenderer.invoke('app:getAvailableEditors'),
     checkDependencies: () => ipcRenderer.invoke('app:checkDependencies'),
+    toggleDevTools: () => ipcRenderer.invoke('app:toggleDevTools'),
   } satisfies AppAPI,
 });

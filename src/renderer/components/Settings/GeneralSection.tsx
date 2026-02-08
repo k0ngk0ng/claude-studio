@@ -63,6 +63,17 @@ export function GeneralSection() {
           checked={general.preventSleep}
           onChange={(v) => updateGeneral({ preventSleep: v })}
         />
+
+        {/* Divider */}
+        <div className="border-t border-border pt-2" />
+
+        {/* Debug mode */}
+        <SettingsToggle
+          label="Debug mode"
+          description="Enable DevTools (⌘⌥I / F12), show Debug Logs tab in the bottom panel, and log all Claude CLI communication details for troubleshooting."
+          checked={general.debugMode}
+          onChange={(v) => updateGeneral({ debugMode: v })}
+        />
       </div>
     </div>
   );

@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 export function TopBar() {
   const { currentSession, currentProject, panels, togglePanel, platform, gitStatus } =
     useAppStore();
+  const debugMode = useSettingsStore(s => s.settings.general.debugMode);
 
   const isMac = platform === 'mac';
   const title = currentSession.id
@@ -110,6 +112,31 @@ export function TopBar() {
             />
           </svg>
         </button>
+
+        {/* Debug logs toggle — only visible when debug mode is on */}
+        {debugMode && (
+          <button
+            onClick={() => {
+              // Open bottom panel with logs tab
+              const { panels } = useAppStore.getState();
+              if (!panels.logs) {
+                togglePanel('logs');
+              } else {
+                togglePanel('logs');
+              }
+            }}
+            className={`p-1.5 rounded-md transition-colors ${
+              panels.logs
+                ? 'bg-accent-muted text-accent'
+                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+            }`}
+            title="Toggle debug logs"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M2 3.5h12M2 6.5h12M2 9.5h8M2 12.5h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
 
         {/* Diff toggle */}
         <button

@@ -6,7 +6,7 @@ import { useTerminal } from '../../hooks/useTerminal';
 import { useAppStore } from '../../stores/appStore';
 import { useResizable } from '../../hooks/useResizable';
 
-export function TerminalPanel() {
+export function TerminalPanel({ bare }: { bare?: boolean } = {}) {
   const { currentProject, togglePanel, panelSizes, setPanelSize } = useAppStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -140,6 +140,16 @@ export function TerminalPanel() {
       initializedRef.current = false;
     };
   }, [initTerminal]);
+
+  // Bare mode: just the terminal container, no chrome
+  if (bare) {
+    return (
+      <div
+        ref={containerRef}
+        className="w-full h-full px-2 py-1"
+      />
+    );
+  }
 
   return (
     <div

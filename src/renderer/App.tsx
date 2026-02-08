@@ -1,13 +1,14 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAppStore } from './stores/appStore';
 import { useSettingsStore } from './stores/settingsStore';
+import { debugLog } from './stores/debugLogStore';
 import { useSessions } from './hooks/useSessions';
 import { useClaude } from './hooks/useClaude';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { TopBar } from './components/TopBar/TopBar';
 import { ChatView } from './components/Chat/ChatView';
 import { InputBar } from './components/InputBar/InputBar';
-import { TerminalPanel } from './components/Terminal/TerminalPanel';
+import { BottomPanel } from './components/BottomPanel/BottomPanel';
 import { DiffPanel } from './components/DiffPanel/DiffPanel';
 import { Settings } from './components/Settings/Settings';
 
@@ -27,6 +28,7 @@ export default function App() {
           window.api.app.getProjectPath(),
         ]);
 
+        debugLog('app', `initialized — platform: ${platform}, cwd: ${projectPath}`);
         setPlatform(platform);
 
         const projectName = projectPath.split('/').pop() || projectPath;
@@ -95,6 +97,13 @@ export default function App() {
       } else if (e.key === 'Escape' && settingsOpen) {
         e.preventDefault();
         closeSettings();
+      } else if (e.key === 'F12' || (mod && e.altKey && (e.key === 'i' || e.key === 'I'))) {
+        // DevTools — only when debug mode is on
+        const debugOn = useSettingsStore.getState().settings.general.debugMode;
+        if (debugOn) {
+          e.preventDefault();
+          window.api.app.toggleDevTools();
+        }
       }
     }
 
@@ -155,8 +164,8 @@ export default function App() {
               onStop={stopSession}
             />
 
-            {/* Terminal panel */}
-            {panels.terminal && <TerminalPanel />}
+            {/* Bottom panel (Terminal + Debug Logs tabs) */}
+            {(panels.terminal || panels.logs) && <BottomPanel />}
           </div>
 
           {/* Diff panel */}

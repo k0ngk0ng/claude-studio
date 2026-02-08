@@ -20,6 +20,7 @@ const defaultSettings: AppSettings = {
     showCostInfo: true,
     notifyOnComplete: true,
     preventSleep: false,
+    debugMode: false,
   },
   model: {
     defaultModel: 'claude-sonnet-4-20250514',

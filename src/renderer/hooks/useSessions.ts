@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useAppStore } from '../stores/appStore';
+import { debugLog } from '../stores/debugLogStore';
 import type { SessionInfo, Message, ContentBlock, ToolUseInfo } from '../types';
 
 function parseRawMessages(rawMessages: any[]): Message[] {
@@ -142,9 +143,11 @@ export function useSessions() {
   const loadSessions = useCallback(async () => {
     try {
       const allSessions = await window.api.sessions.list();
+      debugLog('session', `loaded ${allSessions.length} sessions`);
       setSessions(allSessions);
       return allSessions;
     } catch (err) {
+      debugLog('session', 'failed to load sessions', err, 'error');
       console.error('Failed to load sessions:', err);
       return [];
     }
@@ -153,12 +156,16 @@ export function useSessions() {
   const loadSessionMessages = useCallback(
     async (projectPath: string, sessionId: string): Promise<Message[]> => {
       try {
+        debugLog('session', `loading messages: ${sessionId} from ${projectPath}`);
         const rawMessages = await window.api.sessions.getMessages(
           projectPath,
           sessionId
         );
-        return parseRawMessages(rawMessages);
+        const messages = parseRawMessages(rawMessages);
+        debugLog('session', `parsed ${messages.length} messages from ${rawMessages.length} raw entries`);
+        return messages;
       } catch (err) {
+        debugLog('session', `failed to load messages: ${sessionId}`, err, 'error');
         console.error('Failed to load session messages:', err);
         return [];
       }
@@ -168,6 +175,7 @@ export function useSessions() {
 
   const selectSession = useCallback(
     async (session: SessionInfo) => {
+      debugLog('session', `switching to session: ${session.id} (${session.projectName})`);
       // Save current session's runtime state before switching
       saveCurrentRuntime();
 
