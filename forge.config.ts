@@ -5,10 +5,28 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import path from 'path';
-import fs from 'fs-extra';
+import fs from 'fs';
 
 // Externalized native/ESM modules that must be copied into the packaged app
 const EXTERNAL_MODULES = ['node-pty', '@anthropic-ai/claude-agent-sdk'];
+
+/** Recursively copy a directory (Node 16.7+ fs.cpSync) */
+function copyDirSync(src: string, dest: string) {
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else if (entry.isSymbolicLink()) {
+      // Dereference symlinks — copy the target file
+      const realPath = fs.realpathSync(srcPath);
+      fs.copyFileSync(realPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -33,8 +51,8 @@ const config: ForgeConfig = {
       for (const mod of EXTERNAL_MODULES) {
         const src = path.join(projectRoot, 'node_modules', ...mod.split('/'));
         const dest = path.join(buildPath, 'node_modules', ...mod.split('/'));
-        if (await fs.pathExists(src)) {
-          await fs.copy(src, dest, { dereference: true });
+        if (fs.existsSync(src)) {
+          copyDirSync(src, dest);
           console.log(`  ✓ Copied ${mod} to build`);
         } else {
           console.warn(`  ⚠ ${mod} not found in node_modules, skipping`);
