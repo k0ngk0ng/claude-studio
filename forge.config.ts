@@ -6,14 +6,15 @@ import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 
 // Externalized native/ESM modules that must be copied into the packaged app
 const EXTERNAL_MODULES = ['@anthropic-ai/claude-agent-sdk'];
 
 // node-pty directories/files to SKIP when copying (avoids electron-rebuild trigger)
+// NOTE: We keep 'build' because it contains the Electron-rebuilt pty.node
 const NODE_PTY_SKIP = new Set([
   'binding.gyp',  // triggers node-gyp rebuild
-  'build',        // compiled output (we use prebuilds instead)
   'deps',         // build dependencies (winpty source)
   'src',          // C++ source files
   'scripts',      // build scripts
@@ -60,7 +61,20 @@ const config: ForgeConfig = {
       // Copy externalized node_modules into the build directory so they end up in the asar
       const projectRoot = process.cwd();
 
-      // 1. Copy node-pty (skip build artifacts to prevent electron-rebuild from triggering)
+      // 0. Rebuild node-pty for Electron's Node ABI (prebuilds are for system Node.js)
+      try {
+        console.log('  ⏳ Rebuilding node-pty for Electron...');
+        execSync('npx electron-rebuild -m . -o node-pty', {
+          cwd: projectRoot,
+          stdio: 'inherit',
+          timeout: 120000,
+        });
+        console.log('  ✓ node-pty rebuilt for Electron');
+      } catch (err) {
+        console.warn('  ⚠ electron-rebuild failed, node-pty may not work:', err);
+      }
+
+      // 1. Copy node-pty (skip source/build-system files, keep build/Release with rebuilt .node)
       const ptySrc = path.join(projectRoot, 'node_modules', 'node-pty');
       const ptyDest = path.join(buildPath, 'node_modules', 'node-pty');
       if (fs.existsSync(ptySrc)) {
