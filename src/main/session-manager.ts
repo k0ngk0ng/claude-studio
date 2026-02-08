@@ -158,20 +158,40 @@ class SessionManager {
     const projectDir = path.join(this.sessionsDir, encoded);
     const indexPath = path.join(projectDir, 'sessions-index.json');
 
+    let indexEntries: SessionIndexEntry[] = [];
+
     try {
       const content = fs.readFileSync(indexPath, 'utf-8');
       const parsed: SessionIndexFile = JSON.parse(content);
       if (parsed && Array.isArray(parsed.entries)) {
-        return parsed.entries;
+        indexEntries = parsed.entries;
+      } else if (Array.isArray(parsed)) {
+        indexEntries = parsed;
       }
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-      return [];
     } catch {
-      // No sessions-index.json — fallback: scan .jsonl files
-      return this.scanJsonlFiles(projectDir);
+      // No sessions-index.json — use only JSONL scan
     }
+
+    // Always scan JSONL files and merge with index entries
+    // This catches sessions that exist on disk but aren't in the index yet
+    const scannedEntries = this.scanJsonlFiles(projectDir);
+    const indexIds = new Set(indexEntries.map(e => e.sessionId));
+
+    // Add any scanned sessions not already in the index
+    for (const scanned of scannedEntries) {
+      if (!indexIds.has(scanned.sessionId)) {
+        indexEntries.push(scanned);
+      }
+    }
+
+    // Re-sort by modified time descending
+    indexEntries.sort((a, b) => {
+      const timeA = a.modified ? new Date(a.modified).getTime() : (a.fileMtime || 0);
+      const timeB = b.modified ? new Date(b.modified).getTime() : (b.fileMtime || 0);
+      return timeB - timeA;
+    });
+
+    return indexEntries;
   }
 
   /**
@@ -190,19 +210,29 @@ class SessionManager {
 
         try {
           const stat = fs.statSync(filePath);
-          // Read first few lines to get the first user prompt
+          // Read first few lines to get the first user prompt and project path
           const fd = fs.openSync(filePath, 'r');
-          const buf = Buffer.alloc(4096);
-          const bytesRead = fs.readSync(fd, buf, 0, 4096, 0);
+          const buf = Buffer.alloc(8192);
+          const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
           fs.closeSync(fd);
 
           const head = buf.toString('utf-8', 0, bytesRead);
           const lines = head.split('\n').filter((l) => l.trim());
 
           let firstPrompt = '';
+          let projectPath = '';
+          let isSidechain = false;
           for (const line of lines) {
             try {
               const parsed = JSON.parse(line);
+              // Extract projectPath from cwd field (present in most entries)
+              if (parsed.cwd && !projectPath) {
+                projectPath = parsed.cwd;
+              }
+              // Check sidechain flag
+              if (parsed.isSidechain) {
+                isSidechain = true;
+              }
               if (parsed.type === 'user' && parsed.message?.role === 'user') {
                 const content = parsed.message.content;
                 if (typeof content === 'string') {
@@ -227,7 +257,8 @@ class SessionManager {
             messageCount: undefined,
             created: stat.birthtime.toISOString(),
             modified: stat.mtime.toISOString(),
-            isSidechain: false,
+            projectPath: projectPath || undefined,
+            isSidechain,
           });
         } catch {
           // Skip unreadable files
