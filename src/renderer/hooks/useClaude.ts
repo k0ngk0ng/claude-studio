@@ -155,9 +155,17 @@ export function useClaude() {
                 // Tool use starting — track it
                 const toolId = evt.content_block.id || `tool-${Date.now()}`;
                 const toolName = evt.content_block.name || 'Unknown';
-                debugLog('claude', `tool_use start: ${toolName} (${toolId})`);
                 currentToolIdRef.current = toolId;
                 toolInputJsonRef.current = '';
+
+                // Deduplicate: don't add if this tool already exists
+                const { toolActivities: existing } = useAppStore.getState();
+                if (existing.some(a => a.id === toolId)) {
+                  debugLog('claude', `tool_use start (dup skipped): ${toolName} (${toolId})`);
+                  break;
+                }
+
+                debugLog('claude', `tool_use start: ${toolName} (${toolId})`);
 
                 // Check if we already have a result queued for this tool
                 const pendingResult = pendingToolResultsRef.current.get(toolId);
@@ -269,15 +277,21 @@ export function useClaude() {
 
         case 'assistant': {
           // Complete assistant message snapshot — contains both text and tool_use blocks
+          // With --include-partial-messages, this fires multiple times with cumulative content
+          // across ALL turns. We must NOT overwrite streamingTextRef if we're actively
+          // accumulating deltas, as the snapshot includes text from previous turns too.
           const content = event.message?.content;
           const text = extractTextFromContent(content);
-          if (text) {
+
+          // Only use assistant snapshot text if we haven't received any deltas yet
+          // for this turn (streamingTextRef is empty). Otherwise deltas are the
+          // source of truth.
+          if (text && !streamingTextRef.current) {
             streamingTextRef.current = text;
             setStreamingContent(text);
           }
 
           // Mark any tool_use blocks in this snapshot as done
-          // The assistant event is a reliable signal that tool execution is complete
           if (Array.isArray(content)) {
             const toolUseIds: string[] = [];
             for (const block of content) {
@@ -290,7 +304,7 @@ export function useClaude() {
               const runningToolIds = new Set(toolActivities.filter(a => a.status === 'running').map(a => a.id));
               const toMark = toolUseIds.filter(id => runningToolIds.has(id));
               if (toMark.length > 0) {
-                debugLog('claude', `assistant snapshot: marking ${toMark.length} tool(s) as done from snapshot`);
+                debugLog('claude', `assistant snapshot: marking ${toMark.length} tool(s) as done`);
                 useAppStore.setState({
                   toolActivities: toolActivities.map(a =>
                     toMark.includes(a.id) ? { ...a, status: 'done' as const } : a
