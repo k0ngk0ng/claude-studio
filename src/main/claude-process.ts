@@ -23,36 +23,47 @@ function getSdkCliPath(): string {
   // Try multiple resolution strategies
   const candidates: string[] = [];
 
-  // 1. Use createRequire to resolve from the SDK package
+  if (app?.isPackaged) {
+    // In production: cli.js MUST be from the unpacked directory because
+    // it's spawned as a child process (node can't execute files inside asar)
+    // Priority: unpacked > resources
+    const unpackedBase = path.join(
+      app.getAppPath() + '.unpacked',
+      'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js'
+    );
+    candidates.push(unpackedBase);
+
+    const resourceBase = path.join(
+      process.resourcesPath || '',
+      'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js'
+    );
+    candidates.push(resourceBase);
+  }
+
+  // Dev: use createRequire to resolve from the SDK package
   try {
-    const require = createRequire(import.meta.url || __filename);
-    const sdkMain = require.resolve('@anthropic-ai/claude-agent-sdk');
-    candidates.push(path.join(path.dirname(sdkMain), 'cli.js'));
+    const req = createRequire(import.meta.url || __filename);
+    const sdkMain = req.resolve('@anthropic-ai/claude-agent-sdk');
+    const resolved = path.join(path.dirname(sdkMain), 'cli.js');
+    // If inside asar, convert to unpacked path
+    if (resolved.includes('app.asar' + path.sep)) {
+      candidates.push(resolved.replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep));
+    }
+    candidates.push(resolved);
   } catch {
     // SDK not resolvable via createRequire
   }
 
-  // 2. Production: unpacked alongside asar (cli.js is unpacked for execution)
-  if (app?.isPackaged) {
-    const unpackedBase = path.join(app.getAppPath() + '.unpacked', 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js');
-    candidates.push(unpackedBase);
-
-    // 3. Production: inside asar (fallback)
-    const asarBase = path.join(app.getAppPath(), 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js');
-    candidates.push(asarBase);
-
-    // 4. Production: in resources directory
-    const resourceBase = path.join(process.resourcesPath || '', 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js');
-    candidates.push(resourceBase);
-  }
-
-  // 5. Dev fallback: project root node_modules
+  // Dev fallback: project root node_modules
   candidates.push(path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js'));
 
   for (const candidate of candidates) {
     try {
-      if (fs.existsSync(candidate)) {
+      // Use fs.statSync on the real filesystem (not asar-patched)
+      // For unpacked paths, they exist on disk; for asar paths, they don't
+      if (fs.existsSync(candidate) && !candidate.includes('app.asar' + path.sep)) {
         sdkCliPath = candidate;
+        console.log('[claude-process] Resolved SDK cli.js:', sdkCliPath);
         return sdkCliPath;
       }
     } catch {
@@ -60,8 +71,9 @@ function getSdkCliPath(): string {
     }
   }
 
-  // Last resort — return first candidate and let it fail with a clear error
+  // Last resort — return first candidate
   sdkCliPath = candidates[0] || 'cli.js';
+  console.log('[claude-process] SDK cli.js (fallback):', sdkCliPath);
   return sdkCliPath;
 }
 
@@ -159,7 +171,13 @@ class ClaudeProcessManager extends EventEmitter {
       settingSources: ['user', 'project', 'local'],
       systemPrompt: { type: 'preset', preset: 'claude_code' },
       pathToClaudeCodeExecutable: getSdkCliPath(),
+      // Capture stderr for debugging
+      stderr: true,
     };
+
+    console.log('[claude-process] SDK cli path:', getSdkCliPath());
+    console.log('[claude-process] cwd:', managed.cwd);
+    console.log('[claude-process] PATH:', process.env.PATH?.split(':').slice(0, 10).join(':'));
 
     // Permission mode
     if (permissionMode && permissionMode !== 'default') {
@@ -265,7 +283,14 @@ class ClaudeProcessManager extends EventEmitter {
       if (err?.name === 'AbortError') {
         this.emit('exit', processId, 0, 'SIGTERM');
       } else {
-        this.emit('error', processId, err?.message || String(err));
+        const errDetail = [
+          err?.message || String(err),
+          err?.stderr ? `\nstderr: ${err.stderr}` : '',
+          err?.cause ? `\ncause: ${err.cause}` : '',
+          err?.code ? `\ncode: ${err.code}` : '',
+        ].join('');
+        console.error('[claude-process] Query error:', errDetail);
+        this.emit('error', processId, errDetail);
         this.emit('exit', processId, 1, null);
       }
     } finally {
