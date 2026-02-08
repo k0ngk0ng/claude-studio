@@ -18,9 +18,10 @@ const config: ForgeConfig = {
       // Unpack native binaries and executable files so they can be loaded/executed at runtime
       // - .node/.dll/.dylib/.so: native Node addons
       // - cli.js: SDK's CLI entry point (spawned as child process)
-      // - rg: ripgrep binary used by SDK
+      // - rg/rg.exe: ripgrep binary used by SDK
       // - .wasm: WebAssembly modules
-      unpack: '{*.node,*.dll,*.dylib,*.so,*.wasm,**/cli.js,**/vendor/ripgrep/*/rg}',
+      // - spawn-helper: node-pty Unix helper
+      unpack: '{*.node,*.dll,*.dylib,*.so,*.wasm,**/cli.js,**/vendor/ripgrep/*/rg,**/vendor/ripgrep/*/rg.exe,**/spawn-helper}',
     },
     icon: './assets/icon', // electron-packager auto-resolves .icns (macOS) / .ico (Windows)
     extraResource: ['./assets'],
