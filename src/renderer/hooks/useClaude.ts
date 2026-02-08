@@ -127,10 +127,24 @@ export function useClaude() {
           const evt = event.event;
           if (!evt) break;
 
+          // Log non-delta stream events for debugging
+          if (evt.type !== 'content_block_delta') {
+            debugLog('claude', `stream: ${evt.type}${evt.delta?.stop_reason ? ' (stop_reason=' + evt.delta.stop_reason + ')' : ''}${evt.content_block?.type ? ' [' + evt.content_block.type + (evt.content_block.name ? ':' + evt.content_block.name : '') + ']' : ''}`);
+          }
+
           switch (evt.type) {
             case 'message_start': {
+              // New turn starting — clear completed tools from previous turn
+              const { toolActivities: prevTools } = useAppStore.getState();
+              if (prevTools.length > 0) {
+                const stillRunning = prevTools.filter(a => a.status === 'running');
+                if (stillRunning.length < prevTools.length) {
+                  debugLog('claude', `message_start: clearing ${prevTools.length - stillRunning.length} completed tools, keeping ${stillRunning.length} running`);
+                  useAppStore.setState({ toolActivities: stillRunning });
+                }
+              }
               streamingTextRef.current = '';
-              currentModelRef.current = evt.message?.model;
+              currentModelRef.current = evt.message?.model || currentModelRef.current;
               currentToolIdRef.current = null;
               toolInputJsonRef.current = '';
               break;
@@ -226,8 +240,21 @@ export function useClaude() {
             }
 
             case 'message_delta': {
-              // stop_reason: "tool_use" means Claude is waiting for tool results
-              // stop_reason: "end_turn" means Claude is done
+              // stop_reason: "tool_use" means Claude finished generating tool calls,
+              // CLI will now execute them. Mark all running tools as "done" (sent to CLI).
+              // stop_reason: "end_turn" means Claude is done with this turn.
+              if (evt.delta?.stop_reason === 'tool_use') {
+                const { toolActivities } = useAppStore.getState();
+                const running = toolActivities.filter(a => a.status === 'running');
+                if (running.length > 0) {
+                  debugLog('claude', `message_delta stop_reason=tool_use: marking ${running.length} tool(s) as done`);
+                  useAppStore.setState({
+                    toolActivities: toolActivities.map(a =>
+                      a.status === 'running' ? { ...a, status: 'done' as const } : a
+                    ),
+                  });
+                }
+              }
               break;
             }
 
@@ -241,11 +268,36 @@ export function useClaude() {
         }
 
         case 'assistant': {
-          // Complete assistant message snapshot
-          const text = extractTextFromContent(event.message?.content);
+          // Complete assistant message snapshot — contains both text and tool_use blocks
+          const content = event.message?.content;
+          const text = extractTextFromContent(content);
           if (text) {
             streamingTextRef.current = text;
             setStreamingContent(text);
+          }
+
+          // Mark any tool_use blocks in this snapshot as done
+          // The assistant event is a reliable signal that tool execution is complete
+          if (Array.isArray(content)) {
+            const toolUseIds: string[] = [];
+            for (const block of content) {
+              if (block.type === 'tool_use' && (block as any).id) {
+                toolUseIds.push((block as any).id);
+              }
+            }
+            if (toolUseIds.length > 0) {
+              const { toolActivities } = useAppStore.getState();
+              const runningToolIds = new Set(toolActivities.filter(a => a.status === 'running').map(a => a.id));
+              const toMark = toolUseIds.filter(id => runningToolIds.has(id));
+              if (toMark.length > 0) {
+                debugLog('claude', `assistant snapshot: marking ${toMark.length} tool(s) as done from snapshot`);
+                useAppStore.setState({
+                  toolActivities: toolActivities.map(a =>
+                    toMark.includes(a.id) ? { ...a, status: 'done' as const } : a
+                  ),
+                });
+              }
+            }
           }
           break;
         }
@@ -284,15 +336,18 @@ export function useClaude() {
             if (updates.size > 0) {
               const { toolActivities } = useAppStore.getState();
               const knownIds = new Set(toolActivities.map(a => a.id));
-              debugLog('claude', `tool_result: ${updates.size} result(s), known tools: [${[...knownIds].join(', ')}]`, Object.fromEntries(updates));
+              const matchedCount = [...updates.keys()].filter(id => knownIds.has(id)).length;
+              debugLog('claude', `tool_result: ${updates.size} result(s), matched ${matchedCount}/${toolActivities.length} known tools, ids: [${[...updates.keys()].join(', ')}]`, Object.fromEntries(updates));
 
-              // Apply all updates in a single setState
-              useAppStore.setState({
-                toolActivities: toolActivities.map(a => {
-                  const update = updates.get(a.id);
-                  return update ? { ...a, ...update } : a;
-                }),
-              });
+              if (toolActivities.length > 0) {
+                // Apply all updates in a single setState
+                useAppStore.setState({
+                  toolActivities: toolActivities.map(a => {
+                    const update = updates.get(a.id);
+                    return update ? { ...a, ...update } : a;
+                  }),
+                });
+              }
 
               // Queue any results for tools not yet in the activities list
               for (const [toolId, update] of updates) {
@@ -312,11 +367,19 @@ export function useClaude() {
             break;
           }
           lastResultIdRef.current = resultId;
-          debugLog('claude', `result received — cost: $${event.total_cost_usd?.toFixed(4) || '?'}, duration: ${event.duration_ms || '?'}ms`, {
+
+          const resultText = typeof event.result === 'string'
+            ? event.result
+            : streamingTextRef.current;
+
+          debugLog('claude', `result received — cost: $${event.total_cost_usd?.toFixed(4) || '?'}, duration: ${event.duration_ms || '?'}ms, text length: ${resultText?.length || 0}, event.result type: ${typeof event.result}`, {
             session_id: event.session_id,
             total_cost_usd: event.total_cost_usd,
             duration_ms: event.duration_ms,
             num_turns: event.num_turns,
+            hasEventResult: event.result !== undefined,
+            hasStreamingText: streamingTextRef.current.length > 0,
+            resultPreview: resultText ? resultText.slice(0, 200) : '(empty)',
           });
 
           setIsStreaming(false);
@@ -333,10 +396,6 @@ export function useClaude() {
           }
           clearToolActivities();
 
-          const resultText = typeof event.result === 'string'
-            ? event.result
-            : streamingTextRef.current;
-
           if (resultText) {
             const message: Message = {
               id: crypto.randomUUID(),
@@ -348,6 +407,8 @@ export function useClaude() {
               durationMs: event.duration_ms,
             };
             addMessage(message);
+          } else {
+            debugLog('claude', 'result had no text — no message added', undefined, 'warn');
           }
 
           streamingTextRef.current = '';
@@ -445,6 +506,7 @@ export function useClaude() {
 
       streamingTextRef.current = '';
       currentModelRef.current = undefined;
+      lastResultIdRef.current = null;
 
       const pid = await window.api.claude.spawn(cwd, sessionId);
       processIdRef.current = pid;
