@@ -654,55 +654,67 @@ export function useClaude() {
   }, []);
 
   // Listen for permission approvals — re-spawn the CLI with updated --allowedTools
-  // and ask Claude to retry the denied command
+  // and ask Claude to retry the denied command.
+  // Debounced: if multiple approvals come in quickly (e.g. "Allow All"), only re-spawn once.
   useEffect(() => {
-    const handlePermissionApproved = async (e: Event) => {
-      const pid = processIdRef.current;
-      if (!pid) return;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let latestPattern = '';
 
-      const { currentSession } = useAppStore.getState();
-      const sessionId = currentSession.id;
-      const cwd = currentSession.projectPath;
-      if (!cwd) return;
-
-      const { allowedTools } = usePermissionStore.getState();
+    const handlePermissionApproved = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      const approvedPattern = detail?.pattern || '';
+      latestPattern = detail?.pattern || '';
 
-      debugLog('claude', `permission approved — re-spawning with allowedTools: [${allowedTools.join(', ')}]`);
+      // Debounce: wait 300ms for more approvals before re-spawning
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        debounceTimer = null;
 
-      // Kill current process
-      await window.api.claude.kill(pid);
-      processIdRef.current = null;
+        const pid = processIdRef.current;
+        if (!pid) return;
 
-      // Reset streaming state for the re-spawn
-      streamingTextRef.current = '';
-      turnCountRef.current = 0;
-      useAppStore.getState().clearStreamingContent();
-      useAppStore.getState().clearToolActivities();
+        const { currentSession } = useAppStore.getState();
+        const sessionId = currentSession.id;
+        const cwd = currentSession.projectPath;
+        if (!cwd) return;
 
-      // Re-spawn with same session (--resume) + updated allowedTools
-      const newPid = await window.api.claude.spawn(
-        cwd,
-        sessionId || undefined,
-        'acceptEdits',
-        allowedTools,
-      );
-      processIdRef.current = newPid;
-      useAppStore.getState().setProcessId(newPid);
-      useAppStore.getState().setIsStreaming(true);
+        const { allowedTools } = usePermissionStore.getState();
 
-      debugLog('claude', `re-spawned with pid: ${newPid}, session: ${sessionId}, sending retry`);
+        debugLog('claude', `permission approved — re-spawning with allowedTools: [${allowedTools.join(', ')}]`);
 
-      // Send a message asking Claude to retry the denied command
-      await window.api.claude.send(newPid,
-        `The permission for ${approvedPattern} has been granted. Please retry the command that was just denied.`
-      );
+        // Kill current process
+        await window.api.claude.kill(pid);
+        processIdRef.current = null;
+
+        // Reset streaming state for the re-spawn
+        streamingTextRef.current = '';
+        turnCountRef.current = 0;
+        useAppStore.getState().clearStreamingContent();
+        useAppStore.getState().clearToolActivities();
+
+        // Re-spawn with same session (--resume) + updated allowedTools
+        const newPid = await window.api.claude.spawn(
+          cwd,
+          sessionId || undefined,
+          'acceptEdits',
+          allowedTools,
+        );
+        processIdRef.current = newPid;
+        useAppStore.getState().setProcessId(newPid);
+        useAppStore.getState().setIsStreaming(true);
+
+        debugLog('claude', `re-spawned with pid: ${newPid}, session: ${sessionId}, sending retry`);
+
+        // Send a message asking Claude to retry the denied command
+        await window.api.claude.send(newPid,
+          `The permission for ${latestPattern} has been granted. Please retry the command that was just denied.`
+        );
+      }, 300);
     };
 
     window.addEventListener('claude:permission-approved', handlePermissionApproved);
     return () => {
       window.removeEventListener('claude:permission-approved', handlePermissionApproved);
+      if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, []);
 
