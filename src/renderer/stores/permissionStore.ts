@@ -20,6 +20,7 @@ interface PermissionStore {
   // Actions
   addRequest: (request: PermissionRequest) => void;
   approveRequest: (id: string) => void;
+  approveAllPending: () => void;
   denyRequest: (id: string) => void;
   clearRequests: () => void;
   addAllowedTool: (pattern: string) => void;
@@ -112,18 +113,59 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       ),
     });
 
+    // Remove from list after a brief flash so user sees the confirmation
+    setTimeout(() => {
+      set((s) => ({
+        pendingRequests: s.pendingRequests.filter(r => r.id !== id),
+      }));
+    }, 1500);
+
     // Notify useClaude to re-spawn the process with updated allowedTools
     window.dispatchEvent(new CustomEvent('claude:permission-approved', {
       detail: { pattern, allowedTools: newAllowed },
     }));
   },
 
-  denyRequest: (id) =>
+  denyRequest: (id) => {
+    // Remove immediately — no need to show denied state
     set((state) => ({
+      pendingRequests: state.pendingRequests.filter(r => r.id !== id),
+    }));
+  },
+
+  approveAllPending: () => {
+    const state = get();
+    const pending = state.pendingRequests.filter(r => r.status === 'pending');
+    if (pending.length === 0) return;
+
+    // Collect all unique patterns
+    const newPatterns = new Set(state.allowedTools);
+    for (const req of pending) {
+      newPatterns.add(req.toolPattern);
+    }
+    const newAllowed = [...newPatterns];
+    saveAllowedTools(newAllowed);
+
+    // Mark all as approved
+    set({
+      allowedTools: newAllowed,
       pendingRequests: state.pendingRequests.map(r =>
-        r.id === id ? { ...r, status: 'denied' as const } : r
+        r.status === 'pending' ? { ...r, status: 'approved' as const } : r
       ),
-    })),
+    });
+
+    // Remove all after brief flash
+    setTimeout(() => {
+      set((s) => ({
+        pendingRequests: s.pendingRequests.filter(r => r.status === 'pending'),
+      }));
+    }, 1500);
+
+    // Single re-spawn event with all patterns
+    window.dispatchEvent(new CustomEvent('claude:permission-approved', {
+      detail: { pattern: pending.map(r => r.toolPattern).join(', '), allowedTools: newAllowed },
+    }));
+  },
 
   clearRequests: () => set({ pendingRequests: [] }),
 

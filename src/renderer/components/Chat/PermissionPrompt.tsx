@@ -7,7 +7,7 @@ interface PermissionPromptProps {
 }
 
 export function PermissionPrompt({ request }: PermissionPromptProps) {
-  const { approveRequest, denyRequest } = usePermissionStore();
+  const { approveRequest, denyRequest, approveAllPending } = usePermissionStore();
   const isPending = request.status === 'pending';
   const isApproved = request.status === 'approved';
   const isDenied = request.status === 'denied';
@@ -100,13 +100,7 @@ export function PermissionPrompt({ request }: PermissionPromptProps) {
               Deny
             </button>
             <button
-              onClick={() => {
-                // Approve all pending requests
-                const { pendingRequests, approveRequest: approve } = usePermissionStore.getState();
-                pendingRequests
-                  .filter(r => r.status === 'pending')
-                  .forEach(r => approve(r.id));
-              }}
+              onClick={() => approveAllPending()}
               className="px-3 py-1 rounded-md text-xs font-medium
                 text-text-muted hover:text-text-secondary hover:bg-surface-hover transition-colors ml-auto"
             >
