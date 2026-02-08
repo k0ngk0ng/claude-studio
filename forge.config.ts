@@ -8,12 +8,23 @@ import path from 'path';
 import fs from 'fs';
 
 // Externalized native/ESM modules that must be copied into the packaged app
-const EXTERNAL_MODULES = ['node-pty', '@anthropic-ai/claude-agent-sdk'];
+const EXTERNAL_MODULES = ['@anthropic-ai/claude-agent-sdk'];
 
-/** Recursively copy a directory (Node 16.7+ fs.cpSync) */
-function copyDirSync(src: string, dest: string) {
+// node-pty directories/files to SKIP when copying (avoids electron-rebuild trigger)
+const NODE_PTY_SKIP = new Set([
+  'binding.gyp',  // triggers node-gyp rebuild
+  'build',        // compiled output (we use prebuilds instead)
+  'deps',         // build dependencies (winpty source)
+  'src',          // C++ source files
+  'scripts',      // build scripts
+  'node-addon-api', // build dependency
+]);
+
+/** Recursively copy a directory, with optional skip set */
+function copyDirSync(src: string, dest: string, skip?: Set<string>) {
   fs.mkdirSync(dest, { recursive: true });
   for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    if (skip?.has(entry.name)) continue;
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
     if (entry.isDirectory()) {
@@ -39,7 +50,7 @@ const config: ForgeConfig = {
       // - rg/rg.exe: ripgrep binary used by SDK
       // - .wasm: WebAssembly modules
       // - spawn-helper: node-pty Unix helper
-      unpack: '{*.node,*.dll,*.dylib,*.so,*.wasm,**/cli.js,**/vendor/ripgrep/*/rg,**/vendor/ripgrep/*/rg.exe,**/spawn-helper}',
+      unpack: '{*.node,*.dll,*.dylib,*.so,*.wasm,*.exe,**/cli.js,**/vendor/ripgrep/*/rg,**/spawn-helper}',
     },
     icon: './assets/icon', // electron-packager auto-resolves .icns (macOS) / .ico (Windows)
     extraResource: ['./assets'],
@@ -48,6 +59,18 @@ const config: ForgeConfig = {
     packageAfterCopy: async (_config, buildPath) => {
       // Copy externalized node_modules into the build directory so they end up in the asar
       const projectRoot = process.cwd();
+
+      // 1. Copy node-pty (skip build artifacts to prevent electron-rebuild from triggering)
+      const ptySrc = path.join(projectRoot, 'node_modules', 'node-pty');
+      const ptyDest = path.join(buildPath, 'node_modules', 'node-pty');
+      if (fs.existsSync(ptySrc)) {
+        copyDirSync(ptySrc, ptyDest, NODE_PTY_SKIP);
+        console.log('  ✓ Copied node-pty to build (runtime files only)');
+      } else {
+        console.warn('  ⚠ node-pty not found in node_modules, skipping');
+      }
+
+      // 2. Copy other externalized modules
       for (const mod of EXTERNAL_MODULES) {
         const src = path.join(projectRoot, 'node_modules', ...mod.split('/'));
         const dest = path.join(buildPath, 'node_modules', ...mod.split('/'));
