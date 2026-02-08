@@ -14,7 +14,7 @@ type ClaudeMode = 'default' | 'acceptEdits' | 'plan' | 'bypassPermissions' | 'do
 
 const MODE_OPTIONS: { value: ClaudeMode; label: string; description: string }[] = [
   { value: 'acceptEdits', label: 'Accept edits', description: 'Auto-approve file edits, prompt for bash commands' },
-  { value: 'bypassPermissions', label: 'Full auto', description: 'Full autonomy — skip all permission prompts' },
+  { value: 'bypassPermissions', label: 'Bypass permissions', description: 'Skip all permission prompts (⚠️ use in safe environments only)' },
   { value: 'plan', label: 'Plan mode', description: 'Analyze only — no file modifications or commands' },
   { value: 'dontAsk', label: "Don't ask", description: 'Auto-deny tools unless pre-approved in permissions' },
 ];
