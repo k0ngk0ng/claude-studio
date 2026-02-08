@@ -1,8 +1,11 @@
 import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
+import path from 'path';
+import { createRequire } from 'module';
 
 // Dynamic import for ESM module
 let queryFn: typeof import('@anthropic-ai/claude-agent-sdk').query | null = null;
+let sdkCliPath: string | undefined;
 
 async function getQuery() {
   if (!queryFn) {
@@ -10,6 +13,21 @@ async function getQuery() {
     queryFn = sdk.query;
   }
   return queryFn;
+}
+
+function getSdkCliPath(): string {
+  if (sdkCliPath) return sdkCliPath;
+  try {
+    // Resolve the SDK package directory to find cli.js
+    const require = createRequire(import.meta.url || __filename);
+    const sdkMain = require.resolve('@anthropic-ai/claude-agent-sdk');
+    sdkCliPath = path.join(path.dirname(sdkMain), 'cli.js');
+    return sdkCliPath;
+  } catch {
+    // Fallback: try common locations
+    const fallback = path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js');
+    return fallback;
+  }
 }
 
 export interface ClaudeMessage {
@@ -104,6 +122,7 @@ class ClaudeProcessManager extends EventEmitter {
       includePartialMessages: true,
       settingSources: ['user', 'project', 'local'],
       systemPrompt: { type: 'preset', preset: 'claude_code' },
+      pathToClaudeCodeExecutable: getSdkCliPath(),
     };
 
     // Permission mode

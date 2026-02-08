@@ -11,7 +11,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   build: {
     rollupOptions: {
-      external: ['node-pty'],
+      external: ['node-pty', '@anthropic-ai/claude-agent-sdk'],
     },
   },
   resolve: {
