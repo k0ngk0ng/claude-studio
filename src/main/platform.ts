@@ -48,9 +48,9 @@ export function getHomePath(): string {
 }
 
 export function encodePath(absolutePath: string): string {
-  // Claude CLI encodes project paths by replacing /, \, :, . with hyphens.
+  // Claude CLI encodes project paths by replacing /, \, :, ., and spaces with hyphens.
   // The leading slash becomes a leading hyphen (e.g. /Users/foo → -Users-foo).
-  return absolutePath.replace(/[/\\:.]/g, '-');
+  return absolutePath.replace(/[/\\:.\s]/g, '-');
 }
 
 export function getDefaultShell(): string {

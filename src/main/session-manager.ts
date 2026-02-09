@@ -126,6 +126,26 @@ class SessionManager {
     this.sessionsDir = getSessionsDir();
   }
 
+  /**
+   * Clean up IDE-generated prompts like <ide_opened_file>...</ide_opened_file>
+   * Extract a meaningful title from the content.
+   */
+  private cleanPrompt(prompt: string): string {
+    if (!prompt) return '';
+    // Strip <ide_opened_file>...</ide_opened_file> tags
+    let cleaned = prompt.replace(/<ide_opened_file>[\s\S]*?<\/ide_opened_file>/g, '').trim();
+    // If the entire prompt was an IDE tag (unclosed), extract the filename
+    if (!cleaned && prompt.includes('<ide_opened_file>')) {
+      const match = prompt.match(/opened the file\s+(\S+)/);
+      if (match) {
+        const filename = match[1].split('/').pop() || match[1];
+        return `Opened ${filename}`;
+      }
+      return 'IDE session';
+    }
+    return cleaned || prompt;
+  }
+
   listAllProjects(): { name: string; path: string; encodedPath: string }[] {
     const projects: { name: string; path: string; encodedPath: string }[] = [];
 
@@ -235,13 +255,21 @@ class SessionManager {
               }
               if (parsed.type === 'user' && parsed.message?.role === 'user') {
                 const content = parsed.message.content;
+                let text = '';
                 if (typeof content === 'string') {
-                  firstPrompt = content.slice(0, 200);
+                  text = content.slice(0, 200);
                 } else if (Array.isArray(content)) {
                   const textBlock = content.find((b: any) => b.type === 'text' && b.text);
-                  if (textBlock) firstPrompt = textBlock.text.slice(0, 200);
+                  if (textBlock) text = textBlock.text.slice(0, 200);
                 }
-                break;
+                // Skip IDE-only prompts, try to find a real user message
+                if (text && !text.startsWith('<ide_opened_file>')) {
+                  firstPrompt = text;
+                  break;
+                } else if (!firstPrompt) {
+                  // Keep as fallback if no better prompt found
+                  firstPrompt = text;
+                }
               }
             } catch {
               // skip malformed line
@@ -291,8 +319,8 @@ class SessionManager {
           id: session.sessionId,
           projectPath: resolvedPath,
           projectName: resolvedName,
-          title: session.summary || session.firstPrompt?.slice(0, 80) || 'Untitled',
-          lastMessage: session.firstPrompt || '',
+          title: this.cleanPrompt(session.summary || session.firstPrompt?.slice(0, 80) || 'Untitled'),
+          lastMessage: this.cleanPrompt(session.firstPrompt || ''),
           updatedAt: session.modified || session.created || '',
         });
       }
