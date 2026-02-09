@@ -3,7 +3,7 @@ import { claudeProcessManager } from './claude-process';
 import { sessionManager } from './session-manager';
 import { gitManager } from './git-manager';
 import { terminalManager } from './terminal-manager';
-import { getPlatform, getClaudeModel, checkDependencies, readClaudeConfig, writeClaudeConfig } from './platform';
+import { getPlatform, getClaudeBinary, getClaudeModel, checkDependencies, readClaudeConfig, writeClaudeConfig } from './platform';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
@@ -204,6 +204,38 @@ export function registerIpcHandlers(): void {
     } catch {
       return 'not installed';
     }
+  });
+
+  ipcMain.handle('app:getClaudeCodeVersion', () => {
+    // Try 1: run `claude --version` from the global CLI
+    try {
+      const claudePath = getClaudeBinary();
+      const version = execSync(`${claudePath} --version`, {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+      if (version) return version;
+    } catch {
+      // fall through
+    }
+    // Try 2: read version from SDK's manifest.json
+    try {
+      const manifestPath = require.resolve('@anthropic-ai/claude-agent-sdk/manifest.json');
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+      if (manifest.version) return manifest.version;
+    } catch {
+      // fall through
+    }
+    // Try 3: read claudeCodeVersion from SDK's package.json
+    try {
+      const sdkPkgPath = require.resolve('@anthropic-ai/claude-agent-sdk/package.json');
+      const sdkPkg = JSON.parse(fs.readFileSync(sdkPkgPath, 'utf-8'));
+      if (sdkPkg.claudeCodeVersion) return sdkPkg.claudeCodeVersion;
+    } catch {
+      // fall through
+    }
+    return 'not found';
   });
 
   ipcMain.handle('app:checkForUpdates', async () => {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { debugLog } from '../../stores/debugLogStore';
 
 interface ReleaseInfo {
   version: string;
@@ -43,6 +44,7 @@ function getPlatformAsset(assets: ReleaseInfo['assets'], platform: string): Rele
 export function AboutSection() {
   const [version, setVersion] = useState('');
   const [sdkVersion, setSdkVersion] = useState('');
+  const [claudeCodeVersion, setClaudeCodeVersion] = useState('');
   const [platform, setPlatform] = useState('');
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
   const [downloadFilePath, setDownloadFilePath] = useState('');
@@ -50,6 +52,7 @@ export function AboutSection() {
   useEffect(() => {
     window.api.app.getVersion().then(setVersion).catch(() => {});
     window.api.app.getAgentSdkVersion().then(setSdkVersion).catch(() => {});
+    window.api.app.getClaudeCodeVersion().then(setClaudeCodeVersion).catch(() => {});
     window.api.app.getPlatform().then(setPlatform).catch(() => {});
   }, []);
 
@@ -71,9 +74,15 @@ export function AboutSection() {
 
   const handleCheckForUpdates = useCallback(async () => {
     setUpdateStatus({ state: 'checking' });
+    debugLog('app', 'Checking for updates...');
+    console.log('[update] Checking for updates...');
     try {
       const release = await window.api.app.checkForUpdates();
+      console.log('[update] Latest release:', release.version, release.tagName);
+      debugLog('app', `Latest release: ${release.version} (${release.tagName})`, release);
       if (!release.version || release.version === version) {
+        console.log('[update] Already up to date:', version);
+        debugLog('app', `Already up to date: ${version}`);
         setUpdateStatus({ state: 'up-to-date' });
       } else {
         // Compare versions
@@ -85,12 +94,18 @@ export function AboutSection() {
           if ((latest[i] || 0) < (current[i] || 0)) break;
         }
         if (isNewer) {
+          console.log('[update] New version available:', version, '->', release.version);
+          debugLog('app', `New version available: ${version} → ${release.version}`);
           setUpdateStatus({ state: 'available', release });
         } else {
+          console.log('[update] Already up to date:', version, '>=', release.version);
+          debugLog('app', `Already up to date: ${version} >= ${release.version}`);
           setUpdateStatus({ state: 'up-to-date' });
         }
       }
     } catch (err: any) {
+      console.error('[update] Check failed:', err);
+      debugLog('app', `Update check failed: ${err?.message}`, err, 'error');
       setUpdateStatus({ state: 'error', message: err?.message || 'Failed to check for updates' });
     }
   }, [version]);
@@ -100,15 +115,23 @@ export function AboutSection() {
     const { release } = updateStatus;
     const asset = getPlatformAsset(release.assets, platform);
     if (!asset) {
+      console.error('[update] No asset found for platform:', platform, 'assets:', release.assets);
+      debugLog('app', `No download asset for ${platform}`, release.assets, 'error');
       setUpdateStatus({ state: 'error', message: `No download available for ${platform}. Visit the release page to download manually.` });
       return;
     }
+    console.log('[update] Downloading:', asset.name, formatBytes(asset.size), asset.downloadUrl);
+    debugLog('app', `Downloading: ${asset.name} (${formatBytes(asset.size)})`, asset);
     setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size });
     try {
       const filePath = await window.api.app.downloadUpdate(asset.downloadUrl, asset.name);
+      console.log('[update] Download complete:', filePath);
+      debugLog('app', `Download complete: ${filePath}`);
       setDownloadFilePath(filePath);
       setUpdateStatus({ state: 'downloaded', filePath });
     } catch (err: any) {
+      console.error('[update] Download failed:', err);
+      debugLog('app', `Download failed: ${err?.message}`, err, 'error');
       setUpdateStatus({ state: 'error', message: err?.message || 'Download failed' });
     }
   }, [updateStatus, platform]);
@@ -160,7 +183,15 @@ export function AboutSection() {
 
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-text-primary">Agent SDK</div>
+              <div className="text-sm font-medium text-text-primary">Claude Code</div>
+              <div className="text-xs text-text-muted mt-0.5">@anthropic-ai/claude-code</div>
+            </div>
+            <span className="text-sm font-mono text-text-muted">{claudeCodeVersion || '...'}</span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-text-primary">Claude Agent SDK</div>
               <div className="text-xs text-text-muted mt-0.5">@anthropic-ai/claude-agent-sdk</div>
             </div>
             <span className="text-sm font-mono text-text-muted">{sdkVersion || '...'}</span>

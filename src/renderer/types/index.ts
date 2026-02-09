@@ -59,6 +59,7 @@ export interface AppAPI {
   getVersion: () => Promise<string>;
   getModel: () => Promise<string>;
   getAgentSdkVersion: () => Promise<string>;
+  getClaudeCodeVersion: () => Promise<string>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<DependencyStatus[]>;
