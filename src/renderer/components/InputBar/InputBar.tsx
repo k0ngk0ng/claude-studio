@@ -56,29 +56,31 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
   const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    dragRef.current = { startY: e.clientY, startHeight: inputHeight };
-    document.body.style.cursor = 'row-resize';
-    document.body.style.userSelect = 'none';
+    const startY = e.clientY;
+    const startHeight = inputHeight;
+    console.log('[resize] start', { startY, startHeight });
 
     const handleMouseMove = (ev: MouseEvent) => {
-      if (!dragRef.current) return;
       ev.preventDefault();
-      const delta = dragRef.current.startY - ev.clientY; // up = positive = grow
+      const delta = startY - ev.clientY;
       const maxH = Math.floor(window.innerHeight * 0.5);
-      const newHeight = Math.max(64, Math.min(maxH, dragRef.current.startHeight + delta));
+      const newHeight = Math.max(64, Math.min(maxH, startHeight + delta));
+      console.log('[resize] move', { clientY: ev.clientY, delta, newHeight });
       setInputHeight(newHeight);
     };
 
     const handleMouseUp = () => {
-      dragRef.current = null;
+      console.log('[resize] end');
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
     };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
   }, [inputHeight]);
 
   // Load model name from backend
