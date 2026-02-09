@@ -54,7 +54,7 @@ const defaultSettings: AppSettings = {
     editorFontFamily: '"SF Mono", "Fira Code", "Fira Mono", Menlo, monospace',
     showLineNumbers: true,
     opaqueBackground: false,
-    chatLayout: 'full-width',
+    chatLayout: 'centered',
   },
   keybindings: [
     { id: 'new-thread', label: 'New Thread', keys: '⌘N', action: 'newThread' },
