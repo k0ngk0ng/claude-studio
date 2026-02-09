@@ -196,6 +196,16 @@ export function registerIpcHandlers(): void {
     return app.getVersion();
   });
 
+  ipcMain.handle('app:getAgentSdkVersion', () => {
+    try {
+      const sdkPkgPath = require.resolve('@anthropic-ai/claude-agent-sdk/package.json');
+      const sdkPkg = JSON.parse(fs.readFileSync(sdkPkgPath, 'utf-8'));
+      return sdkPkg.version || 'unknown';
+    } catch {
+      return 'not installed';
+    }
+  });
+
   ipcMain.handle('app:getModel', () => {
     return getClaudeModel();
   });

@@ -58,6 +58,7 @@ export interface AppAPI {
   getHomePath: () => Promise<string>;
   getVersion: () => Promise<string>;
   getModel: () => Promise<string>;
+  getAgentSdkVersion: () => Promise<string>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<DependencyStatus[]>;

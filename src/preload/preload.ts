@@ -74,6 +74,7 @@ export interface AppAPI {
   getHomePath: () => Promise<string>;
   getVersion: () => Promise<string>;
   getModel: () => Promise<string>;
+  getAgentSdkVersion: () => Promise<string>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<{ name: string; found: boolean; path?: string; version?: string; installHint: string }[]>;
@@ -219,6 +220,7 @@ contextBridge.exposeInMainWorld('api', {
     getHomePath: () => ipcRenderer.invoke('app:getHomePath'),
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     getModel: () => ipcRenderer.invoke('app:getModel'),
+    getAgentSdkVersion: () => ipcRenderer.invoke('app:getAgentSdkVersion'),
     openInEditor: (cwd: string, editor: string) => ipcRenderer.invoke('app:openInEditor', cwd, editor),
     getAvailableEditors: () => ipcRenderer.invoke('app:getAvailableEditors'),
     checkDependencies: () => ipcRenderer.invoke('app:checkDependencies'),
