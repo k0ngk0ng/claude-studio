@@ -128,22 +128,16 @@ class SessionManager {
 
   /**
    * Clean up IDE-generated prompts like <ide_opened_file>...</ide_opened_file>
-   * Extract a meaningful title from the content.
+   * Also handles unclosed/truncated tags.
+   * Returns empty string if the entire content is IDE tags.
    */
   private cleanPrompt(prompt: string): string {
     if (!prompt) return '';
-    // Strip <ide_opened_file>...</ide_opened_file> tags
+    // Strip complete <ide_opened_file>...</ide_opened_file> tags
     let cleaned = prompt.replace(/<ide_opened_file>[\s\S]*?<\/ide_opened_file>/g, '').trim();
-    // If the entire prompt was an IDE tag (unclosed), extract the filename
-    if (!cleaned && prompt.includes('<ide_opened_file>')) {
-      const match = prompt.match(/opened the file\s+(\S+)/);
-      if (match) {
-        const filename = match[1].split('/').pop() || match[1];
-        return `Opened ${filename}`;
-      }
-      return 'IDE session';
-    }
-    return cleaned || prompt;
+    // Strip unclosed/truncated <ide_opened_file>... (no closing tag)
+    cleaned = cleaned.replace(/<ide_opened_file>[\s\S]*/g, '').trim();
+    return cleaned;
   }
 
   listAllProjects(): { name: string; path: string; encodedPath: string }[] {
@@ -322,20 +316,20 @@ class SessionManager {
   }
 
   /**
-   * Read the first user prompt from a JSONL file (first 8KB).
-   * Skips <ide_opened_file> prompts if a real user message follows.
+   * Read the first meaningful user prompt from a JSONL file (first 16KB).
+   * Strips <ide_opened_file> tags from text blocks.
+   * If a message is entirely IDE tags, continues to the next user message.
    */
   private readFirstPromptFromJsonl(jsonlPath: string): string {
     try {
       const fd = fs.openSync(jsonlPath, 'r');
-      const buf = Buffer.alloc(8192);
-      const bytesRead = fs.readSync(fd, buf, 0, 8192, 0);
+      const buf = Buffer.alloc(16384);
+      const bytesRead = fs.readSync(fd, buf, 0, 16384, 0);
       fs.closeSync(fd);
 
       const head = buf.toString('utf-8', 0, bytesRead);
       const lines = head.split('\n').filter((l) => l.trim());
 
-      let firstPrompt = '';
       for (const line of lines) {
         try {
           const parsed = JSON.parse(line);
@@ -343,23 +337,26 @@ class SessionManager {
             const content = parsed.message.content;
             let text = '';
             if (typeof content === 'string') {
-              text = content.slice(0, 200);
+              text = content;
             } else if (Array.isArray(content)) {
-              const textBlock = content.find((b: any) => b.type === 'text' && b.text);
-              if (textBlock) text = textBlock.text.slice(0, 200);
+              // Collect all text blocks
+              text = content
+                .filter((b: any) => b.type === 'text' && b.text)
+                .map((b: any) => b.text)
+                .join('\n');
             }
-            // Skip IDE-only prompts, try to find a real user message
-            if (text && !text.startsWith('<ide_opened_file>')) {
-              return text;
-            } else if (!firstPrompt) {
-              firstPrompt = text;
+            // Strip IDE tags
+            const cleaned = this.cleanPrompt(text);
+            if (cleaned) {
+              return cleaned.slice(0, 200);
             }
+            // If empty after cleaning, continue to next user message
           }
         } catch {
           // skip malformed line
         }
       }
-      return firstPrompt || '';
+      return '';
     } catch {
       return '';
     }
