@@ -190,6 +190,7 @@ export function useSessions() {
         setCurrentSession({
           id: session.id,
           projectPath: session.projectPath,
+          title: session.title || session.lastMessage || '',
           messages: [],
           isStreaming: false,
           processId: null,
@@ -209,6 +210,7 @@ export function useSessions() {
           setCurrentSession({
             id: session.id,
             projectPath: session.projectPath,
+            title: session.title || session.lastMessage || '',
             messages,
             isStreaming: false,
             processId: null,

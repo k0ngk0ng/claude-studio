@@ -95,6 +95,7 @@ const defaultSession: CurrentSession = {
   id: null,
   processId: null,
   projectPath: '',
+  title: '',
   messages: [],
   isStreaming: false,
 };

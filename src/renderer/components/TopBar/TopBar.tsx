@@ -8,8 +8,9 @@ export function TopBar() {
   const debugMode = useSettingsStore(s => s.settings.general.debugMode);
 
   const isMac = platform === 'mac';
+  const threadTitle = currentSession.title || 'Thread';
   const title = currentSession.id
-    ? `${currentProject.name} — Thread`
+    ? `${currentProject.name} — ${threadTitle}`
     : currentProject.name || 'Claude App';
 
   return (

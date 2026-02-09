@@ -296,6 +296,7 @@ export interface CurrentSession {
   id: string | null;
   processId: string | null;
   projectPath: string;
+  title: string;
   messages: Message[];
   isStreaming: boolean;
 }
