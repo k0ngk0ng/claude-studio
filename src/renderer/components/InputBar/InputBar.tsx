@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useResizable } from '../../hooks/useResizable';
 import { FileSearchPopup } from './FileSearchPopup';
 
 interface Attachment {
@@ -49,6 +50,18 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const newBranchInputRef = useRef<HTMLInputElement>(null);
 
+  // Resizable input area — drag top edge to resize, max 50% of window height
+  const [inputHeight, setInputHeight] = useState(64);
+  const maxInputHeight = Math.floor(window.innerHeight * 0.5);
+  const { handleMouseDown: handleResizeMouseDown } = useResizable({
+    direction: 'vertical',
+    size: inputHeight,
+    minSize: 64,
+    maxSize: maxInputHeight,
+    reverse: false,
+    onResize: (size) => setInputHeight(size),
+  });
+
   // Load model name from backend
   useEffect(() => {
     window.api.app.getModel().then((model) => {
@@ -58,13 +71,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
     });
   }, []);
 
-  // Auto-resize textarea
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = Math.min(textarea.scrollHeight, 300) + 'px';
-  }, [value]);
+  // No auto-resize — height is controlled by drag handle, textarea scrolls on overflow
 
   // Listen for suggestion card selections
   useEffect(() => {
@@ -284,9 +291,8 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
     onSend(message, mode);
     setValue('');
     setAttachments([]);
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
+    // Reset to default height after sending
+    setInputHeight(64);
   }, [value, attachments, isStreaming, onSend, fileSearchVisible]);
 
   const handleKeyDown = useCallback(
@@ -353,6 +359,13 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
     <div className="shrink-0 bg-bg px-4 py-3">
       <div className={chatLayout === 'full-width' ? 'w-full px-2' : 'max-w-3xl mx-auto'}>
         <div className="relative flex flex-col bg-surface rounded-xl border border-border focus-within:border-border-light transition-colors">
+          {/* Top-edge resize handle */}
+          <div
+            onMouseDown={handleResizeMouseDown}
+            className="absolute top-0 left-4 right-4 h-[6px] -translate-y-1/2 cursor-row-resize z-10 group flex items-center justify-center"
+          >
+            <div className="w-8 h-[3px] rounded-full bg-border opacity-0 group-hover:opacity-100 transition-opacity" />
+          </div>
           {/* @ File search popup */}
           <FileSearchPopup
             query={fileSearchQuery}
@@ -405,9 +418,10 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             placeholder="Ask Claude anything, @ to add files, / for commands"
-            rows={4}
+            rows={2}
+            style={{ height: `${inputHeight}px` }}
             className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted
-                       px-3 py-2.5 resize-none outline-none min-h-[120px] max-h-[300px]"
+                       px-3 py-2.5 resize-none outline-none overflow-y-auto"
           />
 
           {/* Toolbar row — below textarea */}
