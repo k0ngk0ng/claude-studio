@@ -446,6 +446,21 @@ export function registerIpcHandlers(): void {
     return gitManager.pushTags(cwd);
   });
 
+  // ─── File operations ─────────────────────────────────────────────
+  ipcMain.handle('app:showItemInFolder', (_event, fullPath: string) => {
+    shell.showItemInFolder(fullPath);
+    return true;
+  });
+
+  ipcMain.handle('app:openFile', async (_event, fullPath: string) => {
+    try {
+      await shell.openPath(fullPath);
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
   // ─── Auto-watch sessions directory for changes ────────────────────
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   sessionManager.watchForChanges(() => {

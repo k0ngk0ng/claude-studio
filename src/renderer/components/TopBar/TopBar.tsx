@@ -1,17 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
-import { useSettingsStore } from '../../stores/settingsStore';
 
 export function TopBar() {
   const { currentSession, currentProject, panels, togglePanel, platform, gitStatus } =
     useAppStore();
-  const debugMode = useSettingsStore(s => s.settings.general.debugMode);
 
   const isMac = platform === 'mac';
   const threadTitle = currentSession.title || 'Thread';
   const title = currentSession.id
     ? `${currentProject.name} — ${threadTitle}`
     : currentProject.name || 'Claude App';
+
+  const isBottomOpen = panels.terminal || panels.logs;
+
+  const handleToggleBottom = () => {
+    // If any bottom panel is open, close all; otherwise open terminal
+    if (isBottomOpen) {
+      if (panels.terminal) togglePanel('terminal');
+      if (panels.logs) togglePanel('logs');
+    } else {
+      togglePanel('terminal');
+    }
+  };
 
   return (
     <div
@@ -21,36 +31,8 @@ export function TopBar() {
         ${isMac && !panels.sidebar ? 'pl-20' : ''}
       `}
     >
-      {/* Left: sidebar toggle + title */}
+      {/* Left: title */}
       <div className="flex items-center gap-3 min-w-0">
-        {/* Sidebar toggle */}
-        <button
-          onClick={() => togglePanel('sidebar')}
-          className="titlebar-no-drag p-1.5 rounded-md hover:bg-surface-hover
-                     text-text-secondary hover:text-text-primary transition-colors"
-          title="Toggle sidebar (⌘B)"
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <rect
-              x="1.5"
-              y="2.5"
-              width="13"
-              height="11"
-              rx="1.5"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-            <line
-              x1="5.5"
-              y1="2.5"
-              x2="5.5"
-              y2="13.5"
-              stroke="currentColor"
-              strokeWidth="1.2"
-            />
-          </svg>
-        </button>
-
         {/* Title */}
         <h1 className="text-sm font-medium text-text-primary truncate">
           {title}
@@ -64,7 +46,7 @@ export function TopBar() {
         )}
       </div>
 
-      {/* Right: action buttons */}
+      {/* Right: action buttons + panel toggles */}
       <div className="flex items-center gap-2 titlebar-no-drag">
         {/* Open button */}
         <OpenButton />
@@ -75,81 +57,52 @@ export function TopBar() {
         {/* Separator */}
         <div className="w-px h-5 bg-border mx-0.5" />
 
-        {/* Terminal toggle — mutually exclusive with logs */}
+        {/* VSCode-style panel toggle buttons */}
+        {/* Left sidebar toggle */}
         <button
-          onClick={() => {
-            if (panels.terminal) {
-              // Currently on → turn off
-              togglePanel('terminal');
-            } else {
-              // Turn on terminal, turn off logs if open
-              togglePanel('terminal');
-              if (panels.logs) togglePanel('logs');
-            }
-          }}
+          onClick={() => togglePanel('sidebar')}
           className={`p-1.5 rounded-md transition-colors ${
-            panels.terminal
+            panels.sidebar
               ? 'bg-accent-muted text-accent'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
           }`}
-          title="Toggle terminal (⌘T)"
+          title="Toggle sidebar (⌘B)"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
             <rect
-              x="1.5"
-              y="2.5"
-              width="13"
-              height="11"
-              rx="1.5"
-              stroke="currentColor"
-              strokeWidth="1.2"
+              x="1.5" y="2.5" width="4" height="11" rx="0"
+              fill={panels.sidebar ? 'currentColor' : 'none'}
+              fillOpacity={panels.sidebar ? 0.25 : 0}
+              stroke="none"
             />
-            <path
-              d="M4.5 6l2.5 2-2.5 2"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <line
-              x1="8.5"
-              y1="10"
-              x2="11.5"
-              y2="10"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
-            />
+            <line x1="5.5" y1="2.5" x2="5.5" y2="13.5" stroke="currentColor" strokeWidth="1.2" />
           </svg>
         </button>
 
-        {/* Debug logs toggle — mutually exclusive with terminal */}
-        {debugMode && (
-          <button
-            onClick={() => {
-              if (panels.logs) {
-                // Currently on → turn off
-                togglePanel('logs');
-              } else {
-                // Turn on logs, turn off terminal if open
-                togglePanel('logs');
-                if (panels.terminal) togglePanel('terminal');
-              }
-            }}
-            className={`p-1.5 rounded-md transition-colors ${
-              panels.logs
-                ? 'bg-accent-muted text-accent'
-                : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
-            }`}
-            title="Toggle debug logs"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M2 3.5h12M2 6.5h12M2 9.5h8M2 12.5h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-            </svg>
-          </button>
-        )}
+        {/* Bottom panel toggle */}
+        <button
+          onClick={handleToggleBottom}
+          className={`p-1.5 rounded-md transition-colors ${
+            isBottomOpen
+              ? 'bg-accent-muted text-accent'
+              : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
+          }`}
+          title="Toggle bottom panel (⌘T)"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+            <rect
+              x="1.5" y="9.5" width="13" height="4" rx="0"
+              fill={isBottomOpen ? 'currentColor' : 'none'}
+              fillOpacity={isBottomOpen ? 0.25 : 0}
+              stroke="none"
+            />
+            <line x1="1.5" y1="9.5" x2="14.5" y2="9.5" stroke="currentColor" strokeWidth="1.2" />
+          </svg>
+        </button>
 
-        {/* Diff toggle */}
+        {/* Right panel toggle */}
         <button
           onClick={() => togglePanel('diff')}
           className={`p-1.5 rounded-md transition-colors ${
@@ -157,18 +110,17 @@ export function TopBar() {
               ? 'bg-accent-muted text-accent'
               : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
           }`}
-          title="Toggle changes (⌘D)"
+          title="Toggle right panel (⌘D)"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <circle cx="4.5" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.2" />
-            <circle cx="11.5" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.2" />
-            <circle cx="4.5" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.2" />
-            <path
-              d="M4.5 5.5v5M11.5 5.5C11.5 8.5 4.5 7 4.5 10"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              strokeLinecap="round"
+            <rect x="1.5" y="2.5" width="13" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+            <rect
+              x="10.5" y="2.5" width="4" height="11" rx="0"
+              fill={panels.diff ? 'currentColor' : 'none'}
+              fillOpacity={panels.diff ? 0.25 : 0}
+              stroke="none"
             />
+            <line x1="10.5" y1="2.5" x2="10.5" y2="13.5" stroke="currentColor" strokeWidth="1.2" />
           </svg>
         </button>
       </div>

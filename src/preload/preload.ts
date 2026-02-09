@@ -77,6 +77,8 @@ export interface AppAPI {
   onInstallProgress: (callback: (data: string) => void) => void;
   removeInstallProgressListener: (callback: (data: string) => void) => void;
   toggleDevTools: () => Promise<void>;
+  showItemInFolder: (fullPath: string) => void;
+  openFile: (fullPath: string) => Promise<boolean>;
 }
 
 const claudeMessageListeners = new Map<Function, (...args: any[]) => void>();
@@ -232,6 +234,8 @@ contextBridge.exposeInMainWorld('api', {
       }
     },
     toggleDevTools: () => ipcRenderer.invoke('app:toggleDevTools'),
+    showItemInFolder: (fullPath: string) => ipcRenderer.invoke('app:showItemInFolder', fullPath),
+    openFile: (fullPath: string) => ipcRenderer.invoke('app:openFile', fullPath),
   } satisfies AppAPI,
 
   claudeConfig: {

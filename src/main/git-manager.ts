@@ -233,7 +233,7 @@ class GitManager {
       const isGit = await this.isGitRepo(cwd);
 
       if (isGit) {
-        const result = await this.exec(['ls-files', '--cached', '--others', '--exclude-standard'], cwd);
+        const result = await this.exec(['-c', 'core.quotepath=false', 'ls-files', '--cached', '--others', '--exclude-standard'], cwd);
         stdout = result.stdout;
       } else {
         const result = await execFileAsync('find', [
@@ -267,7 +267,7 @@ class GitManager {
 
       if (isGit) {
         // Use git ls-files for tracked files (fast, respects .gitignore)
-        const result = await this.exec(['ls-files', '--cached', '--others', '--exclude-standard'], cwd);
+        const result = await this.exec(['-c', 'core.quotepath=false', 'ls-files', '--cached', '--others', '--exclude-standard'], cwd);
         stdout = result.stdout;
       } else {
         // Fallback: find files (exclude common dirs)

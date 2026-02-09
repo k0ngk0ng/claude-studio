@@ -110,11 +110,12 @@ export default function App() {
       } else if (mod && e.key === 't') {
         e.preventDefault();
         const { panels: p } = useAppStore.getState();
-        if (p.terminal) {
-          togglePanel('terminal');
+        // Toggle bottom panel: if any bottom panel is open, close all; otherwise open terminal
+        if (p.terminal || p.logs) {
+          if (p.terminal) togglePanel('terminal');
+          if (p.logs) togglePanel('logs');
         } else {
           togglePanel('terminal');
-          if (p.logs) togglePanel('logs');
         }
       } else if (mod && e.key === 'd') {
         e.preventDefault();
