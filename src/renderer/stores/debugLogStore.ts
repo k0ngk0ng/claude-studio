@@ -51,8 +51,7 @@ export const useDebugLogStore = create<DebugLogStore>((set) => ({
 
 /**
  * Global debug logger — call from anywhere.
- * Always collects logs into the store. The debug panel visibility
- * is controlled by the debugMode setting in the UI.
+ * Only logs when debug mode is enabled in settings.
  */
 export function debugLog(
   category: LogCategory,
@@ -60,6 +59,15 @@ export function debugLog(
   detail?: unknown,
   level: 'info' | 'warn' | 'error' = 'info'
 ) {
+  // Check if debug mode is enabled
+  try {
+    const { useSettingsStore } = require('./settingsStore');
+    const debugMode = useSettingsStore.getState().settings.general.debugMode;
+    if (!debugMode) return;
+  } catch {
+    return;
+  }
+
   const detailStr = detail !== undefined
     ? (typeof detail === 'string' ? detail : JSON.stringify(detail, null, 2))
     : undefined;
@@ -71,15 +79,7 @@ export function debugLog(
     level,
   });
 
-  // Also log to browser console when debug mode is enabled
-  try {
-    const { useSettingsStore } = require('./settingsStore');
-    const debugMode = useSettingsStore.getState().settings.general.debugMode;
-    if (!debugMode) return;
-  } catch {
-    return;
-  }
-
+  // Also log to browser console
   const prefix = `[debug:${category}]`;
   if (level === 'error') {
     console.error(prefix, message, detail ?? '');

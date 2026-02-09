@@ -372,4 +372,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 // Async initialization: load settings from file (migrating from localStorage if needed)
 loadSettingsFromFile().then((settings) => {
   useSettingsStore.setState({ settings });
+
+  // Once settings are loaded, emit an initial debug log so the panel isn't empty
+  if (settings.general.debugMode) {
+    // Import lazily to avoid circular dependency
+    const { debugLog } = require('./debugLogStore');
+    debugLog('app', 'Debug mode enabled — settings loaded from file');
+  }
 });
