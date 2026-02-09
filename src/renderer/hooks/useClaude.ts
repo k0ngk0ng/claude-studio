@@ -129,11 +129,82 @@ export function useClaude() {
   // Queue for tool results that arrive before the tool activity is added
   const pendingToolResultsRef = useRef<Map<string, { status: 'done'; output: string }>>(new Map());
 
+  // Sync processIdRef when currentSession.processId changes (e.g., after restoreRuntime)
+  useEffect(() => {
+    processIdRef.current = store.currentSession.processId;
+  }, [store.currentSession.processId]);
+
+  /**
+   * Handle events from background (non-current) processes.
+   * Updates the cached sessionRuntime so messages aren't lost.
+   */
+  const handleBackgroundEvent = useCallback((processId: string, event: StreamEvent) => {
+    const { updateBackgroundRuntime, findSessionKeyByProcessId } = useAppStore.getState();
+    const sessionKey = findSessionKeyByProcessId(processId);
+    if (!sessionKey) return; // orphan process, ignore
+
+    // Handle key event types for background sessions
+    if (event.type === 'assistant' && event.message) {
+      const text = extractTextFromContent(event.message.content);
+      if (text) {
+        updateBackgroundRuntime(processId, (rt) => ({
+          ...rt,
+          streamingContent: text,
+          isStreaming: true,
+        }));
+      }
+    } else if (event.type === 'result') {
+      // Session finished — commit final message and mark as not streaming
+      const text = extractTextFromContent(event.message?.content);
+      updateBackgroundRuntime(processId, (rt) => {
+        const finalText = text || rt.streamingContent;
+        const newMessages = finalText
+          ? [...rt.messages, {
+              id: crypto.randomUUID(),
+              role: 'assistant' as const,
+              content: finalText,
+              timestamp: new Date().toISOString(),
+            }]
+          : rt.messages;
+        return {
+          ...rt,
+          messages: newMessages,
+          isStreaming: false,
+          streamingContent: '',
+        };
+      });
+    } else if (event.type === 'error' || event.type === 'exit') {
+      // Process ended — mark as not streaming, clear processId
+      updateBackgroundRuntime(processId, (rt) => ({
+        ...rt,
+        isStreaming: false,
+        processId: null,
+        streamingContent: '',
+      }));
+    } else if (event.session_id) {
+      // System event with session_id — re-key the runtime if needed
+      const state = useAppStore.getState();
+      const oldKey = sessionKey;
+      const newKey = event.session_id;
+      if (oldKey !== newKey && state.sessionRuntimes.has(oldKey)) {
+        const runtime = state.sessionRuntimes.get(oldKey)!;
+        const runtimes = new Map(state.sessionRuntimes);
+        runtimes.delete(oldKey);
+        runtimes.set(newKey, runtime);
+        useAppStore.setState({ sessionRuntimes: runtimes });
+      }
+    }
+  }, []);
+
   useEffect(() => {
     const handler = (processId: string, raw: unknown) => {
-      if (processId !== processIdRef.current) return;
-
       const event = raw as StreamEvent;
+
+      // If this message is NOT for the current session, route to background runtime
+      if (processId !== processIdRef.current) {
+        handleBackgroundEvent(processId, event);
+        return;
+      }
 
       // Subagent events (Task tool children) — extract progress info for the parent tool card
       // instead of silently skipping everything.
@@ -723,8 +794,10 @@ export function useClaude() {
         envVarCount: envVars.length,
       });
 
+      // Save current process to background runtime before starting new one
+      // (don't kill it — let it continue running)
       if (processIdRef.current) {
-        await window.api.claude.kill(processIdRef.current);
+        useAppStore.getState().saveCurrentRuntime();
         processIdRef.current = null;
       }
 

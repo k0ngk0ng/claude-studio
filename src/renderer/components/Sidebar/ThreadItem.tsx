@@ -5,6 +5,7 @@ import type { SessionInfo } from '../../types';
 interface ThreadItemProps {
   session: SessionInfo;
   isActive: boolean;
+  isRunning?: boolean;
   timeLabel?: string;
 }
 
@@ -14,7 +15,7 @@ function truncate(str: string, maxLen: number): string {
   return str.slice(0, maxLen).trimEnd() + '…';
 }
 
-export function ThreadItem({ session, isActive, timeLabel }: ThreadItemProps) {
+export function ThreadItem({ session, isActive, isRunning, timeLabel }: ThreadItemProps) {
   const { selectSession } = useSessions();
 
   const handleClick = useCallback(() => {
@@ -36,6 +37,14 @@ export function ThreadItem({ session, isActive, timeLabel }: ThreadItemProps) {
         }
       `}
     >
+      {/* Running indicator */}
+      {isRunning && (
+        <span className="shrink-0 relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
+        </span>
+      )}
+
       {/* Title */}
       <span className="flex-1 text-[13px] font-medium truncate leading-snug">
         {truncate(title, 50)}

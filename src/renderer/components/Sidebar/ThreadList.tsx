@@ -54,8 +54,24 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 export function ThreadList() {
-  const { sessions, currentSession, currentProject } = useAppStore();
+  const { sessions, currentSession, currentProject, sessionRuntimes } = useAppStore();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+
+  // Which sessions have active running processes
+  const runningIds = useMemo(() => {
+    const ids: string[] = [];
+    // Current session
+    if (currentSession.processId && currentSession.id) {
+      ids.push(currentSession.id);
+    }
+    // Background runtimes
+    for (const [key, runtime] of sessionRuntimes) {
+      if (runtime.processId && !ids.includes(key)) {
+        ids.push(key);
+      }
+    }
+    return ids;
+  }, [currentSession.processId, currentSession.id, sessionRuntimes]);
 
   // Whether we have an unsaved new thread (no session_id yet)
   const hasUntitledThread = currentSession.id === null;
@@ -155,6 +171,13 @@ export function ThreadList() {
                     className="flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-md mb-0.5
                                bg-surface-active text-text-primary transition-colors duration-150"
                   >
+                    {/* Running indicator for untitled thread */}
+                    {currentSession.processId && (
+                      <span className="shrink-0 relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500" />
+                      </span>
+                    )}
                     <span className="flex-1 text-[13px] font-medium truncate leading-snug italic opacity-70">
                       Untitled
                     </span>
@@ -168,6 +191,7 @@ export function ThreadList() {
                     key={session.id}
                     session={session}
                     isActive={currentSession.id === session.id}
+                    isRunning={runningIds.includes(session.id)}
                     timeLabel={formatRelativeTime(session.updatedAt)}
                   />
                 ))}

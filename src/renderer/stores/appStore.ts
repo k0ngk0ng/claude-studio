@@ -80,6 +80,9 @@ interface AppStore {
   saveCurrentRuntime: () => void;
   restoreRuntime: (sessionKey: string) => boolean;
   removeRuntime: (sessionKey: string) => void;
+  updateBackgroundRuntime: (processId: string, updater: (runtime: SessionRuntime) => SessionRuntime) => void;
+  getRunningSessionIds: () => string[];
+  findSessionKeyByProcessId: (processId: string) => string | null;
 
   // Loading
   setIsLoadingSession: (loading: boolean) => void;
@@ -265,6 +268,54 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const runtimes = new Map(state.sessionRuntimes);
     runtimes.delete(sessionKey);
     set({ sessionRuntimes: runtimes });
+  },
+
+  updateBackgroundRuntime: (processId: string, updater: (runtime: SessionRuntime) => SessionRuntime) => {
+    const state = get();
+    // Find which session key owns this processId
+    let targetKey: string | null = null;
+    for (const [key, runtime] of state.sessionRuntimes) {
+      if (runtime.processId === processId) {
+        targetKey = key;
+        break;
+      }
+    }
+    if (!targetKey) return;
+    const runtime = state.sessionRuntimes.get(targetKey)!;
+    const runtimes = new Map(state.sessionRuntimes);
+    runtimes.set(targetKey, updater(runtime));
+    set({ sessionRuntimes: runtimes });
+  },
+
+  getRunningSessionIds: () => {
+    const state = get();
+    const running: string[] = [];
+    // Check current session
+    if (state.currentSession.processId) {
+      if (state.currentSession.id) running.push(state.currentSession.id);
+    }
+    // Check cached runtimes
+    for (const [key, runtime] of state.sessionRuntimes) {
+      if (runtime.processId && !running.includes(key)) {
+        running.push(key);
+      }
+    }
+    return running;
+  },
+
+  findSessionKeyByProcessId: (processId: string) => {
+    const state = get();
+    // Check current session first
+    if (state.currentSession.processId === processId) {
+      return state.currentSession.id;
+    }
+    // Check cached runtimes
+    for (const [key, runtime] of state.sessionRuntimes) {
+      if (runtime.processId === processId) {
+        return key;
+      }
+    }
+    return null;
   },
 
   // Loading
