@@ -35,7 +35,7 @@ export function ChatView() {
       ref={scrollRef}
       className="flex-1 overflow-y-auto px-4 py-4"
     >
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className="w-full px-2 space-y-4">
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
@@ -141,7 +141,7 @@ export function ChatView() {
 function LoadingSkeleton() {
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4">
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="w-full px-2 space-y-6">
         {/* Simulated user message skeleton */}
         <div className="flex justify-end">
           <div className="max-w-[60%] space-y-2">

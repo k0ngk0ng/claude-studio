@@ -350,7 +350,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
 
   return (
     <div className="shrink-0 bg-bg px-4 py-3">
-      <div className="max-w-3xl mx-auto">
+      <div className="w-full px-2">
         <div className="relative flex flex-col bg-surface rounded-xl border border-border focus-within:border-border-light transition-colors">
           {/* @ File search popup */}
           <FileSearchPopup
