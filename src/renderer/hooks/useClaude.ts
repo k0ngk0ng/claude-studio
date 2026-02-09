@@ -188,7 +188,13 @@ export function useClaude() {
         return;
       }
 
-      if (event.type !== 'stream_event') {
+      // Log all incoming events (except high-frequency content_block_delta)
+      if (event.type === 'stream_event') {
+        const evtType = event.event?.type || '';
+        if (evtType !== 'content_block_delta') {
+          debugLog('claude', `stream: ${evtType}${event.event?.content_block?.type ? ' [' + event.event.content_block.type + (event.event.content_block.name ? ':' + event.event.content_block.name : '') + ']' : ''}${event.event?.delta?.stop_reason ? ' stop=' + event.event.delta.stop_reason : ''}`);
+        }
+      } else {
         debugLog('claude', `event: ${event.type}${event.subtype ? '/' + event.subtype : ''}`, event);
       }
 
@@ -221,11 +227,6 @@ export function useClaude() {
         case 'stream_event': {
           const evt = event.event;
           if (!evt) break;
-
-          // Log non-delta stream events for debugging
-          if (evt.type !== 'content_block_delta') {
-            debugLog('claude', `stream: ${evt.type}${evt.delta?.stop_reason ? ' (stop_reason=' + evt.delta.stop_reason + ')' : ''}${evt.content_block?.type ? ' [' + evt.content_block.type + (evt.content_block.name ? ':' + evt.content_block.name : '') + ']' : ''}`);
-          }
 
           switch (evt.type) {
             case 'message_start': {
