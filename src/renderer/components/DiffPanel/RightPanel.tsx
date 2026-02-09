@@ -8,7 +8,7 @@ type RightTab = 'changes' | 'files';
 
 export function RightPanel() {
   const { togglePanel, panelSizes, setPanelSize, gitStatus } = useAppStore();
-  const [activeTab, setActiveTab] = useState<RightTab>('changes');
+  const [activeTab, setActiveTab] = useState<RightTab>('files');
 
   const { handleMouseDown } = useResizable({
     direction: 'horizontal',
@@ -40,6 +40,22 @@ export function RightPanel() {
       {/* Tab header */}
       <div className="flex items-center justify-between border-b border-border bg-surface shrink-0">
         <div className="flex items-center">
+          {/* Files tab */}
+          <button
+            onClick={() => setActiveTab('files')}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors
+              border-b-2 ${activeTab === 'files'
+                ? 'border-accent text-text-primary'
+                : 'border-transparent text-text-muted hover:text-text-secondary'
+              }`}
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M2 4.5A1.5 1.5 0 013.5 3H6l1.5 1.5h5A1.5 1.5 0 0114 6v5.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z"
+                stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+            Files
+          </button>
+
           {/* Changes tab */}
           <button
             onClick={() => setActiveTab('changes')}
@@ -61,22 +77,6 @@ export function RightPanel() {
                 {totalChanges}
               </span>
             )}
-          </button>
-
-          {/* Files tab */}
-          <button
-            onClick={() => setActiveTab('files')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors
-              border-b-2 ${activeTab === 'files'
-                ? 'border-accent text-text-primary'
-                : 'border-transparent text-text-muted hover:text-text-secondary'
-              }`}
-          >
-            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-              <path d="M2 4.5A1.5 1.5 0 013.5 3H6l1.5 1.5h5A1.5 1.5 0 0114 6v5.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z"
-                stroke="currentColor" strokeWidth="1.2" />
-            </svg>
-            Files
           </button>
         </div>
 
