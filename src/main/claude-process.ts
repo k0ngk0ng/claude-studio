@@ -349,6 +349,8 @@ class ClaudeProcessManager extends EventEmitter {
         role: 'user',
         content,
       },
+      parent_tool_use_id: null,
+      session_id: managed.sessionId || '',
     });
 
     // Wake up the input generator

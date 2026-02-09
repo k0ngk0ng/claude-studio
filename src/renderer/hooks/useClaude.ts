@@ -63,6 +63,7 @@ interface StreamEvent {
   duration_api_ms?: number;
   num_turns?: number;
   is_error?: boolean;
+  errors?: string[];
   code?: number;
   signal?: string;
 }
@@ -551,7 +552,11 @@ export function useClaude() {
 
             // Check if this is an error result (e.g. error_during_execution)
             if (event.subtype === 'error_during_execution' || event.is_error) {
-              const errorMsg = fallbackText || `Execution error (${event.subtype || 'unknown'})`;
+              // SDKResultError has errors: string[] with detailed error messages
+              const errorsArray = Array.isArray((event as any).errors) ? (event as any).errors as string[] : [];
+              const errorMsg = errorsArray.length > 0
+                ? errorsArray.join('\n')
+                : (fallbackText || `Execution error (${event.subtype || 'unknown'})`);
               debugLog('claude', `result error: ${errorMsg}`, event, 'error');
               addMessage({
                 id: crypto.randomUUID(),
