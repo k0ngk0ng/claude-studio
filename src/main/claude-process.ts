@@ -306,8 +306,11 @@ class ClaudeProcessManager extends EventEmitter {
 
         // Check if result
         if (message.type === 'result') {
-          // Log full result for debugging
+          // Log full result for debugging (especially error_during_execution)
           debugLog('result details:', JSON.stringify(message).slice(0, 2000));
+          if ((message as any).subtype === 'error_during_execution' || (message as any).is_error) {
+            debugLog('⚠ result is an error:', (message as any).subtype, (message as any).result);
+          }
           break;
         }
       }

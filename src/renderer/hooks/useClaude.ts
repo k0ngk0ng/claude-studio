@@ -548,7 +548,18 @@ export function useClaude() {
           } else if (!lastTurnText && finalTools.length === 0 && turnCountRef.current <= 1) {
             // Single-turn with no streaming text — try event.result as fallback
             const fallbackText = typeof event.result === 'string' ? event.result : '';
-            if (fallbackText) {
+
+            // Check if this is an error result (e.g. error_during_execution)
+            if (event.subtype === 'error_during_execution' || event.is_error) {
+              const errorMsg = fallbackText || `Execution error (${event.subtype || 'unknown'})`;
+              debugLog('claude', `result error: ${errorMsg}`, event, 'error');
+              addMessage({
+                id: crypto.randomUUID(),
+                role: 'system',
+                content: `Error: ${errorMsg}`,
+                timestamp: new Date().toISOString(),
+              });
+            } else if (fallbackText) {
               addMessage({
                 id: crypto.randomUUID(),
                 role: 'assistant',
