@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
-import { useResizable } from '../../hooks/useResizable';
 import { FileSearchPopup } from './FileSearchPopup';
 
 interface Attachment {
@@ -52,15 +51,35 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
 
   // Resizable input area — drag top edge to resize, max 50% of window height
   const [inputHeight, setInputHeight] = useState(64);
-  const maxInputHeight = Math.floor(window.innerHeight * 0.5);
-  const { handleMouseDown: handleResizeMouseDown } = useResizable({
-    direction: 'vertical',
-    size: inputHeight,
-    minSize: 64,
-    maxSize: maxInputHeight,
-    reverse: false,
-    onResize: (size) => setInputHeight(size),
-  });
+  const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
+
+  const handleResizeMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragRef.current = { startY: e.clientY, startHeight: inputHeight };
+    document.body.style.cursor = 'row-resize';
+    document.body.style.userSelect = 'none';
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!dragRef.current) return;
+      ev.preventDefault();
+      const delta = dragRef.current.startY - ev.clientY; // up = positive = grow
+      const maxH = Math.floor(window.innerHeight * 0.5);
+      const newHeight = Math.max(64, Math.min(maxH, dragRef.current.startHeight + delta));
+      setInputHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      dragRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  }, [inputHeight]);
 
   // Load model name from backend
   useEffect(() => {
