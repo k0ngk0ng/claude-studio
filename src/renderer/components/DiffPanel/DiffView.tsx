@@ -32,31 +32,31 @@ export function DiffView({ diff }: DiffViewProps) {
   if (htmlContent) {
     return (
       <div
-        className="border-t border-border bg-bg overflow-x-auto max-h-[300px] overflow-y-auto"
+        className="diff-view-container border-t border-border bg-bg overflow-x-auto overflow-y-auto"
         dangerouslySetInnerHTML={{ __html: htmlContent }}
       />
     );
   }
 
-  // Fallback: render raw diff with basic coloring
+  // Fallback: render raw diff with GitHub-style coloring
   return (
-    <div className="border-t border-border bg-bg overflow-x-auto max-h-[300px] overflow-y-auto">
-      <pre className="text-xs font-mono p-3 leading-relaxed">
+    <div className="border-t border-border bg-bg overflow-x-auto overflow-y-auto">
+      <pre className="text-xs font-mono p-0 leading-relaxed">
         {diff.split('\n').map((line, i) => {
-          let className = 'text-text-secondary';
+          let className = 'text-text-secondary bg-transparent';
           if (line.startsWith('+') && !line.startsWith('+++')) {
-            className = 'text-success bg-success/10';
+            className = 'diff-line-add';
           } else if (line.startsWith('-') && !line.startsWith('---')) {
-            className = 'text-error bg-error/10';
+            className = 'diff-line-del';
           } else if (line.startsWith('@@')) {
-            className = 'text-info';
+            className = 'diff-line-hunk';
           } else if (line.startsWith('diff') || line.startsWith('index')) {
-            className = 'text-text-muted';
+            className = 'diff-line-meta';
           }
 
           return (
-            <div key={i} className={`${className} px-1`}>
-              {line}
+            <div key={i} className={`${className} px-3 py-0`}>
+              {line || ' '}
             </div>
           );
         })}

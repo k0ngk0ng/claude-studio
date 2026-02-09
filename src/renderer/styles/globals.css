@@ -218,6 +218,131 @@ html, body, #root {
   background: var(--color-bg) !important;
 }
 
+/* GitHub-style diff line colors for diff2html */
+.diff-view-container .d2h-ins,
+.diff-view-container .d2h-ins .d2h-code-line-ctn {
+  background-color: rgba(46, 160, 67, 0.15) !important;
+}
+
+.diff-view-container .d2h-del,
+.diff-view-container .d2h-del .d2h-code-line-ctn {
+  background-color: rgba(248, 81, 73, 0.15) !important;
+}
+
+.diff-view-container .d2h-ins .d2h-code-line-ctn {
+  color: #3fb950 !important;
+}
+
+.diff-view-container .d2h-del .d2h-code-line-ctn {
+  color: #f85149 !important;
+}
+
+/* Inline word-level highlights */
+.diff-view-container .d2h-ins ins,
+.diff-view-container .d2h-code-line-ctn ins {
+  background-color: rgba(46, 160, 67, 0.4) !important;
+  text-decoration: none !important;
+}
+
+.diff-view-container .d2h-del del,
+.diff-view-container .d2h-code-line-ctn del {
+  background-color: rgba(248, 81, 73, 0.4) !important;
+  text-decoration: none !important;
+}
+
+/* Hunk header */
+.diff-view-container .d2h-info {
+  background: var(--color-surface) !important;
+  color: var(--color-info) !important;
+  border-color: var(--color-border) !important;
+}
+
+/* Line numbers */
+.diff-view-container .d2h-code-linenumber {
+  background: var(--color-bg) !important;
+  border-color: var(--color-border) !important;
+  color: var(--color-text-muted) !important;
+}
+
+.diff-view-container .d2h-ins .d2h-code-linenumber {
+  background-color: rgba(46, 160, 67, 0.1) !important;
+  color: var(--color-text-muted) !important;
+}
+
+.diff-view-container .d2h-del .d2h-code-linenumber {
+  background-color: rgba(248, 81, 73, 0.1) !important;
+  color: var(--color-text-muted) !important;
+}
+
+/* Remove max-height constraint — let parent scroll */
+.diff-view-container .d2h-wrapper,
+.diff-view-container .d2h-file-wrapper {
+  margin: 0 !important;
+}
+
+.diff-view-container .d2h-file-diff {
+  overflow: visible !important;
+}
+
+/* Fallback raw diff line styles */
+.diff-line-add {
+  background-color: rgba(46, 160, 67, 0.15);
+  color: #3fb950;
+}
+
+.diff-line-del {
+  background-color: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+}
+
+.diff-line-hunk {
+  background-color: rgba(56, 139, 253, 0.1);
+  color: var(--color-info);
+}
+
+.diff-line-meta {
+  color: var(--color-text-muted);
+}
+
+/* Light theme diff overrides */
+html.light .diff-view-container .d2h-ins,
+html.light .diff-view-container .d2h-ins .d2h-code-line-ctn {
+  background-color: rgba(46, 160, 67, 0.12) !important;
+}
+
+html.light .diff-view-container .d2h-del,
+html.light .diff-view-container .d2h-del .d2h-code-line-ctn {
+  background-color: rgba(248, 81, 73, 0.12) !important;
+}
+
+html.light .diff-view-container .d2h-ins .d2h-code-line-ctn {
+  color: #1a7f37 !important;
+}
+
+html.light .diff-view-container .d2h-del .d2h-code-line-ctn {
+  color: #cf222e !important;
+}
+
+html.light .diff-view-container .d2h-ins ins,
+html.light .diff-view-container .d2h-code-line-ctn ins {
+  background-color: rgba(46, 160, 67, 0.3) !important;
+}
+
+html.light .diff-view-container .d2h-del del,
+html.light .diff-view-container .d2h-code-line-ctn del {
+  background-color: rgba(248, 81, 73, 0.3) !important;
+}
+
+html.light .diff-line-add {
+  background-color: rgba(46, 160, 67, 0.12);
+  color: #1a7f37;
+}
+
+html.light .diff-line-del {
+  background-color: rgba(248, 81, 73, 0.12);
+  color: #cf222e;
+}
+
 /* Transition utilities */
 .panel-transition {
   transition: all 200ms ease-in-out;

@@ -225,6 +225,38 @@ class GitManager {
   }
 
   /**
+   * List all files in the project (for file tree). Returns all relative paths.
+   */
+  async listFiles(cwd: string): Promise<string[]> {
+    try {
+      let stdout: string;
+      const isGit = await this.isGitRepo(cwd);
+
+      if (isGit) {
+        const result = await this.exec(['ls-files', '--cached', '--others', '--exclude-standard'], cwd);
+        stdout = result.stdout;
+      } else {
+        const result = await execFileAsync('find', [
+          cwd, '-type', 'f',
+          '-not', '-path', '*/node_modules/*',
+          '-not', '-path', '*/.git/*',
+          '-not', '-path', '*/dist/*',
+          '-not', '-path', '*/.next/*',
+          '-not', '-path', '*/__pycache__/*',
+          '-maxdepth', '8',
+        ], { cwd, maxBuffer: 10 * 1024 * 1024 });
+        stdout = result.stdout.split('\n')
+          .map((p) => p.replace(cwd + '/', '').replace(cwd + '\\', ''))
+          .join('\n');
+      }
+
+      return stdout.split('\n').filter((f) => f.trim()).sort();
+    } catch {
+      return [];
+    }
+  }
+
+  /**
    * Search files in the project. Uses git ls-files if in a git repo,
    * otherwise falls back to a basic find command.
    */

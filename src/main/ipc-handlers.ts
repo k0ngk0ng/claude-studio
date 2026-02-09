@@ -136,6 +136,10 @@ export function registerIpcHandlers(): void {
     return gitManager.searchFiles(cwd, query);
   });
 
+  ipcMain.handle('git:listFiles', (_event, cwd: string) => {
+    return gitManager.listFiles(cwd);
+  });
+
   // ─── Terminal ─────────────────────────────────────────────────────
   ipcMain.handle('terminal:create', (_event, cwd: string) => {
     const id = terminalManager.create(cwd);

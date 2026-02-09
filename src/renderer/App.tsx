@@ -4,12 +4,13 @@ import { useSettingsStore } from './stores/settingsStore';
 import { debugLog } from './stores/debugLogStore';
 import { useSessions } from './hooks/useSessions';
 import { useClaude } from './hooks/useClaude';
+import { useGit } from './hooks/useGit';
 import { Sidebar } from './components/Sidebar/Sidebar';
 import { TopBar } from './components/TopBar/TopBar';
 import { ChatView } from './components/Chat/ChatView';
 import { InputBar } from './components/InputBar/InputBar';
 import { BottomPanel } from './components/BottomPanel/BottomPanel';
-import { DiffPanel } from './components/DiffPanel/DiffPanel';
+import { RightPanel } from './components/DiffPanel/RightPanel';
 import { Settings } from './components/Settings/Settings';
 
 export default function App() {
@@ -18,6 +19,9 @@ export default function App() {
   const { isOpen: settingsOpen, openSettings, closeSettings, settings } = useSettingsStore();
   const { loadSessions } = useSessions();
   const { startSession, sendMessage, stopSession, isStreaming } = useClaude();
+
+  // Keep git status polling active at app level so commit badge always updates
+  useGit();
 
   // ─── Theme switching ──────────────────────────────────────────────
   useEffect(() => {
@@ -195,8 +199,8 @@ export default function App() {
             {(panels.terminal || panels.logs) && <BottomPanel />}
           </div>
 
-          {/* Diff panel */}
-          {panels.diff && <DiffPanel />}
+          {/* Right panel (Changes + Files tabs) */}
+          {panels.diff && <RightPanel />}
         </div>
       </div>
     </div>

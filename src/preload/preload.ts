@@ -43,6 +43,7 @@ export interface GitAPI {
   checkout: (cwd: string, branch: string) => Promise<string>;
   createBranch: (cwd: string, branch: string) => Promise<string>;
   searchFiles: (cwd: string, query: string) => Promise<{ name: string; path: string }[]>;
+  listFiles: (cwd: string) => Promise<string[]>;
   push: (cwd: string) => Promise<string>;
   pushTags: (cwd: string) => Promise<string>;
 }
@@ -172,6 +173,7 @@ contextBridge.exposeInMainWorld('api', {
     checkout: (cwd: string, branch: string) => ipcRenderer.invoke('git:checkout', cwd, branch),
     createBranch: (cwd: string, branch: string) => ipcRenderer.invoke('git:createBranch', cwd, branch),
     searchFiles: (cwd: string, query: string) => ipcRenderer.invoke('git:searchFiles', cwd, query),
+    listFiles: (cwd: string) => ipcRenderer.invoke('git:listFiles', cwd),
     push: (cwd: string) => ipcRenderer.invoke('git:push', cwd),
     pushTags: (cwd: string) => ipcRenderer.invoke('git:pushTags', cwd),
   } satisfies GitAPI,
