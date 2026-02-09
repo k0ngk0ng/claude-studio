@@ -405,9 +405,9 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             placeholder="Ask Claude anything, @ to add files, / for commands"
-            rows={2}
+            rows={4}
             className="flex-1 bg-transparent text-sm text-text-primary placeholder-text-muted
-                       px-3 py-2.5 resize-none outline-none min-h-[64px] max-h-[300px]"
+                       px-3 py-2.5 resize-none outline-none min-h-[120px] max-h-[300px]"
           />
 
           {/* Toolbar row — below textarea */}
