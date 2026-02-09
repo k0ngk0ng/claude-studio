@@ -54,10 +54,34 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 export function ThreadList() {
-  const { sessions, currentSession } = useAppStore();
+  const { sessions, currentSession, currentProject } = useAppStore();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
 
-  const projectGroups = useMemo(() => groupByProject(sessions), [sessions]);
+  // Whether we have an unsaved new thread (no session_id yet)
+  const hasUntitledThread = currentSession.id === null;
+  const untitledProjectPath = currentSession.projectPath || currentProject.path;
+
+  const projectGroups = useMemo(() => {
+    const groups = groupByProject(sessions);
+
+    // If there's an untitled thread, ensure its project group exists
+    if (hasUntitledThread && untitledProjectPath) {
+      const exists = groups.some(
+        (g) => g.projectPath === untitledProjectPath
+      );
+      if (!exists) {
+        // Create a temporary group for this project
+        const name = untitledProjectPath.split('/').filter(Boolean).pop() || untitledProjectPath;
+        groups.unshift({
+          projectName: name,
+          projectPath: untitledProjectPath,
+          sessions: [],
+        });
+      }
+    }
+
+    return groups;
+  }, [sessions, hasUntitledThread, untitledProjectPath]);
 
   const toggleProject = (key: string) => {
     setCollapsedProjects((prev) => {
@@ -125,6 +149,20 @@ export function ThreadList() {
             {/* Thread items */}
             {!isCollapsed && (
               <div className="ml-1">
+                {/* Temporary "Untitled" thread for new unsaved session */}
+                {hasUntitledThread && group.projectPath === untitledProjectPath && (
+                  <button
+                    className="flex items-center gap-2 w-full text-left px-3 py-1.5 rounded-md mb-0.5
+                               bg-surface-active text-text-primary transition-colors duration-150"
+                  >
+                    <span className="flex-1 text-[13px] font-medium truncate leading-snug italic opacity-70">
+                      Untitled
+                    </span>
+                    <span className="shrink-0 text-[11px] text-text-muted">
+                      now
+                    </span>
+                  </button>
+                )}
                 {group.sessions.map((session) => (
                   <ThreadItem
                     key={session.id}
