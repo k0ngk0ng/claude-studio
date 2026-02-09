@@ -51,7 +51,7 @@ const config: ForgeConfig = {
       // - rg/rg.exe: ripgrep binary used by SDK
       // - .wasm: WebAssembly modules
       // - spawn-helper: node-pty Unix helper
-      unpack: '{*.node,*.dll,*.dylib,*.so,*.wasm,*.exe,**/cli.js,**/vendor/ripgrep/*/rg,**/spawn-helper}',
+      unpack: '{*.node,*.dll,*.dylib,*.so,*.wasm,*.exe,**/cli.js,**/vendor/ripgrep/*/rg,**/spawn-helper,**/claude-agent-sdk/package.json}',
     },
     icon: './assets/icon', // electron-packager auto-resolves .icns (macOS) / .ico (Windows)
     extraResource: ['./assets'],
