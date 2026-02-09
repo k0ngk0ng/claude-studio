@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { usePermissionStore } from '../../stores/permissionStore';
 import { MessageBubble } from './MessageBubble';
 import { ToolCard } from './ToolCard';
@@ -8,6 +9,7 @@ import { WelcomeScreen } from './WelcomeScreen';
 
 export function ChatView() {
   const { currentSession, streamingContent, toolActivities, isLoadingSession } = useAppStore();
+  const { settings } = useSettingsStore();
   const { pendingRequests } = usePermissionStore();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -30,12 +32,15 @@ export function ChatView() {
     return <WelcomeScreen />;
   }
 
+  const isFullWidth = settings.appearance.chatLayout === 'full-width';
+  const layoutClass = isFullWidth ? 'w-full px-2' : 'max-w-3xl mx-auto';
+
   return (
     <div
       ref={scrollRef}
       className="flex-1 overflow-y-auto px-4 py-4"
     >
-      <div className="w-full px-2 space-y-4">
+      <div className={`${layoutClass} space-y-4`}>
         {messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
@@ -139,9 +144,13 @@ export function ChatView() {
 // ─── Loading Skeleton ────────────────────────────────────────────────
 
 function LoadingSkeleton() {
+  const { settings } = useSettingsStore();
+  const isFullWidth = settings.appearance.chatLayout === 'full-width';
+  const layoutClass = isFullWidth ? 'w-full px-2' : 'max-w-3xl mx-auto';
+
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4">
-      <div className="w-full px-2 space-y-6">
+      <div className={`${layoutClass} space-y-6`}>
         {/* Simulated user message skeleton */}
         <div className="flex justify-end">
           <div className="max-w-[60%] space-y-2">

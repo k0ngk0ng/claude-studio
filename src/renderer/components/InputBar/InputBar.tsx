@@ -28,6 +28,7 @@ interface InputBarProps {
 export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
   const { currentProject, setBranch } = useAppStore();
   const defaultMode = useSettingsStore(s => s.settings.general.autoApprove) as ClaudeMode;
+  const chatLayout = useSettingsStore(s => s.settings.appearance.chatLayout);
   const [value, setValue] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [mode, setMode] = useState<ClaudeMode>(defaultMode || 'default');
@@ -350,7 +351,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
 
   return (
     <div className="shrink-0 bg-bg px-4 py-3">
-      <div className="w-full px-2">
+      <div className={chatLayout === 'full-width' ? 'w-full px-2' : 'max-w-3xl mx-auto'}>
         <div className="relative flex flex-col bg-surface rounded-xl border border-border focus-within:border-border-light transition-colors">
           {/* @ File search popup */}
           <FileSearchPopup

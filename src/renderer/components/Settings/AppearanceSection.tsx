@@ -45,6 +45,18 @@ export function AppearanceSection() {
           onChange={(v) => updateAppearance({ showLineNumbers: v })}
         />
 
+        {/* Chat layout */}
+        <SettingsSelect
+          label="Chat layout"
+          description="Centered keeps messages in a fixed-width column. Full width uses all available space."
+          value={appearance.chatLayout}
+          onChange={(v) => updateAppearance({ chatLayout: v as 'centered' | 'full-width' })}
+          options={[
+            { value: 'centered', label: 'Centered (768px)' },
+            { value: 'full-width', label: 'Full width' },
+          ]}
+        />
+
         {/* Divider */}
         <div className="border-t border-border" />
 

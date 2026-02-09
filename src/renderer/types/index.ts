@@ -273,6 +273,7 @@ export interface AppearanceSettings {
   editorFontFamily: string;
   showLineNumbers: boolean;
   opaqueBackground: boolean;
+  chatLayout: 'centered' | 'full-width';
 }
 
 export interface KeyBinding {
