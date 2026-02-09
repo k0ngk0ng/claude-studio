@@ -6,6 +6,7 @@ import { GeneralSection } from './GeneralSection';
 import { ClaudeCodeSection } from './ClaudeCodeSection';
 import { PermissionsSection } from './PermissionsSection';
 import { McpServersSection } from './McpServersSection';
+import { SkillsSection } from './SkillsSection';
 import { GitSection } from './GitSection';
 import { AppearanceSection } from './AppearanceSection';
 import { KeybindingsSection } from './KeybindingsSection';
@@ -24,6 +25,8 @@ export function Settings() {
         return <ClaudeCodeSection />;
       case 'permissions':
         return <PermissionsSection />;
+      case 'skills':
+        return <SkillsSection />;
       case 'mcp-servers':
         return <McpServersSection />;
       case 'git':

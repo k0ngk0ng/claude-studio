@@ -67,6 +67,25 @@ export interface SettingsFileAPI {
   write: (data: Record<string, unknown>) => Promise<boolean>;
 }
 
+export interface SkillInfo {
+  name: string;
+  fileName: string;
+  type: 'md' | 'sh';
+  scope: 'global' | 'project';
+  description: string;
+  argumentHint: string;
+  content: string;
+  filePath: string;
+}
+
+export interface SkillsAPI {
+  list: (projectPath?: string) => Promise<SkillInfo[]>;
+  read: (filePath: string) => Promise<string>;
+  create: (scope: 'global' | 'project', fileName: string, content: string, projectPath?: string) => Promise<boolean>;
+  update: (filePath: string, content: string) => Promise<boolean>;
+  remove: (filePath: string) => Promise<boolean>;
+}
+
 export interface AppAPI {
   getProjectPath: () => Promise<string>;
   selectDirectory: () => Promise<string | null>;
@@ -288,4 +307,13 @@ contextBridge.exposeInMainWorld('api', {
     read: () => ipcRenderer.invoke('settings:read'),
     write: (data: Record<string, unknown>) => ipcRenderer.invoke('settings:write', data),
   } satisfies SettingsFileAPI,
+
+  skills: {
+    list: (projectPath?: string) => ipcRenderer.invoke('skills:list', projectPath),
+    read: (filePath: string) => ipcRenderer.invoke('skills:read', filePath),
+    create: (scope: 'global' | 'project', fileName: string, content: string, projectPath?: string) =>
+      ipcRenderer.invoke('skills:create', scope, fileName, content, projectPath),
+    update: (filePath: string, content: string) => ipcRenderer.invoke('skills:update', filePath, content),
+    remove: (filePath: string) => ipcRenderer.invoke('skills:remove', filePath),
+  } satisfies SkillsAPI,
 });

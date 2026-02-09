@@ -661,6 +661,137 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  // ─── Skills (Claude Code slash commands) ───────────────────────────
+  const globalCommandsDir = path.join(os.homedir(), '.claude', 'commands');
+
+  function parseSkillFile(filePath: string, scope: 'global' | 'project'): {
+    name: string; fileName: string; type: 'md' | 'sh'; scope: 'global' | 'project';
+    description: string; argumentHint: string; content: string; filePath: string;
+  } {
+    const fileName = path.basename(filePath);
+    const ext = path.extname(fileName).slice(1) as 'md' | 'sh';
+    const name = path.basename(fileName, path.extname(fileName));
+    let content = '';
+    try { content = fs.readFileSync(filePath, 'utf-8'); } catch {}
+
+    let description = '';
+    let argumentHint = '';
+
+    // Parse YAML frontmatter for .md files
+    if (ext === 'md' && content.startsWith('---')) {
+      const endIdx = content.indexOf('---', 3);
+      if (endIdx !== -1) {
+        const frontmatter = content.substring(3, endIdx);
+        const descMatch = frontmatter.match(/description:\s*(.+)/);
+        const hintMatch = frontmatter.match(/argument-hint:\s*(.+)/);
+        if (descMatch) description = descMatch[1].trim();
+        if (hintMatch) argumentHint = hintMatch[1].trim();
+      }
+    }
+
+    // Fallback: use first non-empty, non-frontmatter line as description
+    if (!description) {
+      const lines = content.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed && trimmed !== '---' && !trimmed.startsWith('#!')) {
+          description = trimmed.startsWith('#') ? trimmed.replace(/^#+\s*/, '') : trimmed;
+          break;
+        }
+      }
+    }
+
+    return { name, fileName, type: ext, scope, description, argumentHint, content, filePath };
+  }
+
+  ipcMain.handle('skills:list', async (_event, projectPath?: string) => {
+    const skills: ReturnType<typeof parseSkillFile>[] = [];
+
+    // Global skills from ~/.claude/commands/
+    if (fs.existsSync(globalCommandsDir)) {
+      const files = fs.readdirSync(globalCommandsDir);
+      for (const file of files) {
+        const ext = path.extname(file);
+        if (ext === '.md' || ext === '.sh') {
+          const fullPath = path.join(globalCommandsDir, file);
+          const stat = fs.statSync(fullPath);
+          if (stat.isFile()) {
+            skills.push(parseSkillFile(fullPath, 'global'));
+          }
+        }
+      }
+    }
+
+    // Project skills from <projectPath>/.claude/commands/
+    if (projectPath) {
+      const projectCommandsDir = path.join(projectPath, '.claude', 'commands');
+      if (fs.existsSync(projectCommandsDir)) {
+        const files = fs.readdirSync(projectCommandsDir);
+        for (const file of files) {
+          const ext = path.extname(file);
+          if (ext === '.md' || ext === '.sh') {
+            const fullPath = path.join(projectCommandsDir, file);
+            const stat = fs.statSync(fullPath);
+            if (stat.isFile()) {
+              skills.push(parseSkillFile(fullPath, 'project'));
+            }
+          }
+        }
+      }
+    }
+
+    return skills;
+  });
+
+  ipcMain.handle('skills:read', async (_event, filePath: string) => {
+    return fs.readFileSync(filePath, 'utf-8');
+  });
+
+  ipcMain.handle('skills:create', async (_event, scope: 'global' | 'project', fileName: string, content: string, projectPath?: string) => {
+    try {
+      let dir: string;
+      if (scope === 'global') {
+        dir = globalCommandsDir;
+      } else {
+        if (!projectPath) throw new Error('projectPath required for project scope');
+        dir = path.join(projectPath, '.claude', 'commands');
+      }
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      const filePath = path.join(dir, fileName);
+      fs.writeFileSync(filePath, content, 'utf-8');
+      // Make .sh files executable
+      if (fileName.endsWith('.sh')) {
+        fs.chmodSync(filePath, 0o755);
+      }
+      return true;
+    } catch (err: any) {
+      console.error('skills:create failed:', err?.message);
+      return false;
+    }
+  });
+
+  ipcMain.handle('skills:update', async (_event, filePath: string, content: string) => {
+    try {
+      fs.writeFileSync(filePath, content, 'utf-8');
+      return true;
+    } catch (err: any) {
+      console.error('skills:update failed:', err?.message);
+      return false;
+    }
+  });
+
+  ipcMain.handle('skills:remove', async (_event, filePath: string) => {
+    try {
+      fs.unlinkSync(filePath);
+      return true;
+    } catch (err: any) {
+      console.error('skills:remove failed:', err?.message);
+      return false;
+    }
+  });
+
   // ─── Auto-watch sessions directory for changes ────────────────────
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   sessionManager.watchForChanges(() => {

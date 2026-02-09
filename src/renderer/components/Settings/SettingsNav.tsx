@@ -50,6 +50,15 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    id: 'skills',
+    label: 'Skills',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M4 2.5l8 5.5-8 5.5V2.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
     id: 'mcp-servers',
     label: 'MCP Servers',
     icon: (

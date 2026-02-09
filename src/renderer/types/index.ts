@@ -95,6 +95,25 @@ export interface SettingsFileAPI {
   write: (data: Record<string, unknown>) => Promise<boolean>;
 }
 
+export interface SkillInfo {
+  name: string;           // filename without extension, e.g. "gen-image"
+  fileName: string;       // full filename, e.g. "gen-image.md"
+  type: 'md' | 'sh';     // file type
+  scope: 'global' | 'project'; // global (~/.claude/commands/) or project (.claude/commands/)
+  description: string;    // from frontmatter or first line
+  argumentHint: string;   // from frontmatter
+  content: string;        // full file content
+  filePath: string;       // absolute path
+}
+
+export interface SkillsAPI {
+  list: (projectPath?: string) => Promise<SkillInfo[]>;
+  read: (filePath: string) => Promise<string>;
+  create: (scope: 'global' | 'project', fileName: string, content: string, projectPath?: string) => Promise<boolean>;
+  update: (filePath: string, content: string) => Promise<boolean>;
+  remove: (filePath: string) => Promise<boolean>;
+}
+
 export interface WindowAPI {
   claude: ClaudeAPI;
   sessions: SessionsAPI;
@@ -103,6 +122,7 @@ export interface WindowAPI {
   app: AppAPI;
   claudeConfig: ClaudeConfigAPI;
   settings: SettingsFileAPI;
+  skills: SkillsAPI;
 }
 
 export interface DependencyStatus {
@@ -221,6 +241,7 @@ export type SettingsTab =
   | 'general'
   | 'claude-code'
   | 'permissions'
+  | 'skills'
   | 'mcp-servers'
   | 'git'
   | 'appearance'
