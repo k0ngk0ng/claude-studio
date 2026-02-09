@@ -69,19 +69,36 @@ export interface SettingsFileAPI {
 
 export interface SkillInfo {
   name: string;
+  description: string;
+  content: string;
+  dirPath: string;
+  filePath: string;
+  hasTemplate: boolean;
+  hasReferences: boolean;
+}
+
+export interface SkillsAPI {
+  list: () => Promise<SkillInfo[]>;
+  read: (filePath: string) => Promise<string>;
+  create: (name: string, content: string) => Promise<boolean>;
+  update: (filePath: string, content: string) => Promise<boolean>;
+  remove: (dirPath: string) => Promise<boolean>;
+}
+
+export interface CommandInfo {
+  name: string;
   fileName: string;
   type: 'md' | 'sh';
-  scope: 'global' | 'project';
   description: string;
   argumentHint: string;
   content: string;
   filePath: string;
 }
 
-export interface SkillsAPI {
-  list: (projectPath?: string) => Promise<SkillInfo[]>;
+export interface CommandsAPI {
+  list: () => Promise<CommandInfo[]>;
   read: (filePath: string) => Promise<string>;
-  create: (scope: 'global' | 'project', fileName: string, content: string, projectPath?: string) => Promise<boolean>;
+  create: (fileName: string, content: string) => Promise<boolean>;
   update: (filePath: string, content: string) => Promise<boolean>;
   remove: (filePath: string) => Promise<boolean>;
 }
@@ -309,11 +326,18 @@ contextBridge.exposeInMainWorld('api', {
   } satisfies SettingsFileAPI,
 
   skills: {
-    list: (projectPath?: string) => ipcRenderer.invoke('skills:list', projectPath),
+    list: () => ipcRenderer.invoke('skills:list'),
     read: (filePath: string) => ipcRenderer.invoke('skills:read', filePath),
-    create: (scope: 'global' | 'project', fileName: string, content: string, projectPath?: string) =>
-      ipcRenderer.invoke('skills:create', scope, fileName, content, projectPath),
+    create: (name: string, content: string) => ipcRenderer.invoke('skills:create', name, content),
     update: (filePath: string, content: string) => ipcRenderer.invoke('skills:update', filePath, content),
-    remove: (filePath: string) => ipcRenderer.invoke('skills:remove', filePath),
+    remove: (dirPath: string) => ipcRenderer.invoke('skills:remove', dirPath),
   } satisfies SkillsAPI,
+
+  commands: {
+    list: () => ipcRenderer.invoke('commands:list'),
+    read: (filePath: string) => ipcRenderer.invoke('commands:read', filePath),
+    create: (fileName: string, content: string) => ipcRenderer.invoke('commands:create', fileName, content),
+    update: (filePath: string, content: string) => ipcRenderer.invoke('commands:update', filePath, content),
+    remove: (filePath: string) => ipcRenderer.invoke('commands:remove', filePath),
+  } satisfies CommandsAPI,
 });

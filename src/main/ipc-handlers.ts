@@ -661,69 +661,64 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  // ─── Skills (Claude Code slash commands) ───────────────────────────
-  const globalCommandsDir = path.join(os.homedir(), '.claude', 'commands');
-
-  function parseSkillFile(filePath: string, scope: 'global' | 'project'): {
-    name: string; fileName: string; type: 'md' | 'sh'; scope: 'global' | 'project';
-    description: string; argumentHint: string; content: string; filePath: string;
-  } {
-    const fileName = path.basename(filePath);
-    const ext = path.extname(fileName).slice(1) as 'md' | 'sh';
-    const name = path.basename(fileName, path.extname(fileName));
-    let content = '';
-    try { content = fs.readFileSync(filePath, 'utf-8'); } catch {}
-
-    let description = '';
-    let argumentHint = '';
-
-    // Parse YAML frontmatter for .md files
-    if (ext === 'md' && content.startsWith('---')) {
-      const endIdx = content.indexOf('---', 3);
-      if (endIdx !== -1) {
-        const frontmatter = content.substring(3, endIdx);
-        const descMatch = frontmatter.match(/description:\s*(.+)/);
-        const hintMatch = frontmatter.match(/argument-hint:\s*(.+)/);
-        if (descMatch) description = descMatch[1].trim();
-        if (hintMatch) argumentHint = hintMatch[1].trim();
-      }
-    }
-
-    // Fallback: use first non-empty, non-frontmatter line as description
-    if (!description) {
-      const lines = content.split('\n');
-      for (const line of lines) {
-        const trimmed = line.trim();
-        if (trimmed && trimmed !== '---' && !trimmed.startsWith('#!')) {
-          description = trimmed.startsWith('#') ? trimmed.replace(/^#+\s*/, '') : trimmed;
-          break;
-        }
-      }
-    }
-
-    return { name, fileName, type: ext, scope, description, argumentHint, content, filePath };
-  }
+  // ─── Skills (~/.claude/skills/) ─────────────────────────────────────
+  const globalSkillsDir = path.join(os.homedir(), '.claude', 'skills');
 
   ipcMain.handle('skills:list', async () => {
-    const skills: ReturnType<typeof parseSkillFile>[] = [];
+    const skills: {
+      name: string; description: string; content: string;
+      dirPath: string; filePath: string; hasTemplate: boolean; hasReferences: boolean;
+    }[] = [];
 
-    // Global skills from ~/.claude/commands/
-    if (fs.existsSync(globalCommandsDir)) {
-      const files = fs.readdirSync(globalCommandsDir);
-      for (const file of files) {
-        const ext = path.extname(file);
-        if (ext === '.md' || ext === '.sh') {
-          const fullPath = path.join(globalCommandsDir, file);
-          try {
-            const stat = fs.statSync(fullPath);
-            if (stat.isFile() || stat.isSymbolicLink()) {
-              skills.push(parseSkillFile(fullPath, 'global'));
-            }
-          } catch {
-            // Skip broken symlinks etc.
+    if (!fs.existsSync(globalSkillsDir)) return skills;
+
+    const entries = fs.readdirSync(globalSkillsDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const dirPath = path.join(globalSkillsDir, entry.name);
+      // Follow symlinks
+      let isDir = false;
+      try {
+        const stat = fs.statSync(dirPath);
+        isDir = stat.isDirectory();
+      } catch { continue; }
+      if (!isDir) continue;
+
+      const skillFile = path.join(dirPath, 'SKILL.md');
+      if (!fs.existsSync(skillFile)) continue;
+
+      let content = '';
+      try { content = fs.readFileSync(skillFile, 'utf-8'); } catch { continue; }
+
+      let description = '';
+      // Parse YAML frontmatter
+      if (content.startsWith('---')) {
+        const endIdx = content.indexOf('---', 3);
+        if (endIdx !== -1) {
+          const frontmatter = content.substring(3, endIdx);
+          const descMatch = frontmatter.match(/description:\s*(.+)/);
+          if (descMatch) description = descMatch[1].trim();
+        }
+      }
+      // Fallback: first heading or non-empty line
+      if (!description) {
+        for (const line of content.split('\n')) {
+          const trimmed = line.trim();
+          if (trimmed && trimmed !== '---') {
+            description = trimmed.startsWith('#') ? trimmed.replace(/^#+\s*/, '') : trimmed;
+            break;
           }
         }
       }
+
+      skills.push({
+        name: entry.name,
+        description,
+        content,
+        dirPath,
+        filePath: skillFile,
+        hasTemplate: fs.existsSync(path.join(dirPath, 'CLAUDE.md.template')),
+        hasReferences: fs.existsSync(path.join(dirPath, 'references')),
+      });
     }
 
     return skills;
@@ -733,24 +728,13 @@ export function registerIpcHandlers(): void {
     return fs.readFileSync(filePath, 'utf-8');
   });
 
-  ipcMain.handle('skills:create', async (_event, scope: 'global' | 'project', fileName: string, content: string, projectPath?: string) => {
+  ipcMain.handle('skills:create', async (_event, name: string, content: string) => {
     try {
-      let dir: string;
-      if (scope === 'global') {
-        dir = globalCommandsDir;
-      } else {
-        if (!projectPath) throw new Error('projectPath required for project scope');
-        dir = path.join(projectPath, '.claude', 'commands');
+      const dirPath = path.join(globalSkillsDir, name);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
       }
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-      const filePath = path.join(dir, fileName);
-      fs.writeFileSync(filePath, content, 'utf-8');
-      // Make .sh files executable
-      if (fileName.endsWith('.sh')) {
-        fs.chmodSync(filePath, 0o755);
-      }
+      fs.writeFileSync(path.join(dirPath, 'SKILL.md'), content, 'utf-8');
       return true;
     } catch (err: any) {
       console.error('skills:create failed:', err?.message);
@@ -768,12 +752,123 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle('skills:remove', async (_event, filePath: string) => {
+  ipcMain.handle('skills:remove', async (_event, dirPath: string) => {
+    try {
+      // Check if it's a symlink — just remove the link
+      const lstat = fs.lstatSync(dirPath);
+      if (lstat.isSymbolicLink()) {
+        fs.unlinkSync(dirPath);
+      } else {
+        fs.rmSync(dirPath, { recursive: true, force: true });
+      }
+      return true;
+    } catch (err: any) {
+      console.error('skills:remove failed:', err?.message);
+      return false;
+    }
+  });
+
+  // ─── Commands (~/.claude/commands/) ────────────────────────────────
+  const globalCommandsDir = path.join(os.homedir(), '.claude', 'commands');
+
+  function parseCommandFile(filePath: string): {
+    name: string; fileName: string; type: 'md' | 'sh';
+    description: string; argumentHint: string; content: string; filePath: string;
+  } {
+    const fileName = path.basename(filePath);
+    const ext = path.extname(fileName).slice(1) as 'md' | 'sh';
+    const name = path.basename(fileName, path.extname(fileName));
+    let content = '';
+    try { content = fs.readFileSync(filePath, 'utf-8'); } catch {}
+
+    let description = '';
+    let argumentHint = '';
+
+    if (ext === 'md' && content.startsWith('---')) {
+      const endIdx = content.indexOf('---', 3);
+      if (endIdx !== -1) {
+        const frontmatter = content.substring(3, endIdx);
+        const descMatch = frontmatter.match(/description:\s*(.+)/);
+        const hintMatch = frontmatter.match(/argument-hint:\s*(.+)/);
+        if (descMatch) description = descMatch[1].trim();
+        if (hintMatch) argumentHint = hintMatch[1].trim();
+      }
+    }
+
+    if (!description) {
+      for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (trimmed && trimmed !== '---' && !trimmed.startsWith('#!')) {
+          description = trimmed.startsWith('#') ? trimmed.replace(/^#+\s*/, '') : trimmed;
+          break;
+        }
+      }
+    }
+
+    return { name, fileName, type: ext, description, argumentHint, content, filePath };
+  }
+
+  ipcMain.handle('commands:list', async () => {
+    const commands: ReturnType<typeof parseCommandFile>[] = [];
+
+    if (!fs.existsSync(globalCommandsDir)) return commands;
+
+    const files = fs.readdirSync(globalCommandsDir);
+    for (const file of files) {
+      const ext = path.extname(file);
+      if (ext === '.md' || ext === '.sh') {
+        const fullPath = path.join(globalCommandsDir, file);
+        try {
+          const stat = fs.statSync(fullPath);
+          if (stat.isFile()) {
+            commands.push(parseCommandFile(fullPath));
+          }
+        } catch {
+          // Skip broken symlinks
+        }
+      }
+    }
+
+    return commands;
+  });
+
+  ipcMain.handle('commands:read', async (_event, filePath: string) => {
+    return fs.readFileSync(filePath, 'utf-8');
+  });
+
+  ipcMain.handle('commands:create', async (_event, fileName: string, content: string) => {
+    try {
+      if (!fs.existsSync(globalCommandsDir)) {
+        fs.mkdirSync(globalCommandsDir, { recursive: true });
+      }
+      const filePath = path.join(globalCommandsDir, fileName);
+      fs.writeFileSync(filePath, content, 'utf-8');
+      if (fileName.endsWith('.sh')) {
+        fs.chmodSync(filePath, 0o755);
+      }
+      return true;
+    } catch (err: any) {
+      console.error('commands:create failed:', err?.message);
+      return false;
+    }
+  });
+
+  ipcMain.handle('commands:update', async (_event, filePath: string, content: string) => {
+    try {
+      fs.writeFileSync(filePath, content, 'utf-8');
+      return true;
+    } catch (err: any) {
+      console.error('commands:update failed:', err?.message);
+      return false;
+    }
+  });
+
+  ipcMain.handle('commands:remove', async (_event, filePath: string) => {
     try {
       fs.unlinkSync(filePath);
       return true;
     } catch (err: any) {
-      console.error('skills:remove failed:', err?.message);
+      console.error('commands:remove failed:', err?.message);
       return false;
     }
   });

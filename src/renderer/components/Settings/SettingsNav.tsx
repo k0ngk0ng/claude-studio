@@ -59,6 +59,17 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    id: 'commands',
+    label: 'Commands',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M4.5 6l2 1.5-2 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M8 10h3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+        <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.3" />
+      </svg>
+    ),
+  },
+  {
     id: 'mcp-servers',
     label: 'MCP Servers',
     icon: (

@@ -96,10 +96,19 @@ export interface SettingsFileAPI {
 }
 
 export interface SkillInfo {
+  name: string;           // directory name, e.g. "agent-browser"
+  description: string;    // from SKILL.md frontmatter
+  content: string;        // SKILL.md content
+  dirPath: string;        // absolute path to skill directory
+  filePath: string;       // absolute path to SKILL.md
+  hasTemplate: boolean;   // has CLAUDE.md.template
+  hasReferences: boolean; // has references/ directory
+}
+
+export interface CommandInfo {
   name: string;           // filename without extension, e.g. "gen-image"
   fileName: string;       // full filename, e.g. "gen-image.md"
   type: 'md' | 'sh';     // file type
-  scope: 'global' | 'project'; // global (~/.claude/commands/) or project (.claude/commands/)
   description: string;    // from frontmatter or first line
   argumentHint: string;   // from frontmatter
   content: string;        // full file content
@@ -107,9 +116,17 @@ export interface SkillInfo {
 }
 
 export interface SkillsAPI {
-  list: (projectPath?: string) => Promise<SkillInfo[]>;
+  list: () => Promise<SkillInfo[]>;
   read: (filePath: string) => Promise<string>;
-  create: (scope: 'global' | 'project', fileName: string, content: string, projectPath?: string) => Promise<boolean>;
+  create: (name: string, content: string) => Promise<boolean>;
+  update: (filePath: string, content: string) => Promise<boolean>;
+  remove: (dirPath: string) => Promise<boolean>;
+}
+
+export interface CommandsAPI {
+  list: () => Promise<CommandInfo[]>;
+  read: (filePath: string) => Promise<string>;
+  create: (fileName: string, content: string) => Promise<boolean>;
   update: (filePath: string, content: string) => Promise<boolean>;
   remove: (filePath: string) => Promise<boolean>;
 }
@@ -123,6 +140,7 @@ export interface WindowAPI {
   claudeConfig: ClaudeConfigAPI;
   settings: SettingsFileAPI;
   skills: SkillsAPI;
+  commands: CommandsAPI;
 }
 
 export interface DependencyStatus {
@@ -242,6 +260,7 @@ export type SettingsTab =
   | 'claude-code'
   | 'permissions'
   | 'skills'
+  | 'commands'
   | 'mcp-servers'
   | 'git'
   | 'appearance'
