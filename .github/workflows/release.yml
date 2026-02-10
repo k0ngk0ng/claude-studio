@@ -156,6 +156,7 @@ jobs:
       - name: Install ossutil
         run: |
           curl -fsSL https://gosspublic.alicdn.com/ossutil/install.sh | sudo bash
+          ossutil --version
 
       - name: Configure ossutil
         run: |
@@ -163,6 +164,10 @@ jobs:
             -e ${{ secrets.ALIYUN_OSS_ENDPOINT }} \
             -i ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }} \
             -k ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}
+          echo "Endpoint: ${{ secrets.ALIYUN_OSS_ENDPOINT }}"
+          echo "Bucket: ${{ secrets.ALIYUN_OSS_BUCKET }}"
+          # Verify access
+          ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/ --limited-num 1 || echo "Warning: cannot list bucket"
 
       - name: Flatten artifacts for upload
         run: |
