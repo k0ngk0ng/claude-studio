@@ -390,15 +390,34 @@ html.light .diff-line-del {
 
 .diff-viewer-modal table.d2h-diff-table {
   font-size: 12px;
+  border-collapse: collapse;
 }
 
 /* No word wrap — horizontal scroll instead */
-.diff-viewer-modal .d2h-code-line,
-.diff-viewer-modal .d2h-code-side-line,
-.diff-viewer-modal .d2h-code-line-ctn {
+.diff-viewer-modal .d2h-code-side-line {
   white-space: pre !important;
   word-wrap: normal !important;
   overflow-wrap: normal !important;
+}
+
+/* Remove extra padding/spacing in line number cells */
+.diff-viewer-modal .d2h-code-side-linenumber {
+  padding: 0 8px !important;
+  line-height: 1.4 !important;
+  vertical-align: top !important;
+  font-size: 12px;
+}
+
+/* Compact table rows — remove extra whitespace */
+.diff-viewer-modal .d2h-diff-tbody tr td {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.diff-viewer-modal .d2h-code-side-line {
+  padding: 0 4px !important;
+  line-height: 1.4 !important;
 }
 
 /* Container: no scroll on outer, let side panels scroll */
