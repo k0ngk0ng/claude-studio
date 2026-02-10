@@ -466,19 +466,10 @@ export function useClaude() {
         case 'assistant': {
           // Complete assistant message snapshot — contains both text and tool_use blocks.
           // With --include-partial-messages, this fires multiple times with cumulative content
-          // across ALL turns. Since we now commit previous turns as separate messages,
-          // we must NOT use the snapshot text (it includes already-committed turns).
-          // Only use it if streamingTextRef is empty (no deltas received yet for this turn).
+          // across ALL turns. We NEVER use the snapshot text for streaming display —
+          // content_block_delta is the reliable source. The snapshot would cause double text
+          // especially during resume (fork/continue) where history is replayed.
           const content = event.message?.content;
-          const text = extractTextFromContent(content);
-
-          // Only use assistant snapshot text if we haven't received any deltas yet
-          // for this turn (streamingTextRef is empty). And even then, if we've committed
-          // previous turns (turnCount > 1), the snapshot text is cumulative — skip it.
-          if (text && !streamingTextRef.current && turnCountRef.current <= 1) {
-            streamingTextRef.current = text;
-            setStreamingContent(text);
-          }
 
           // Mark any tool_use blocks in this snapshot as done
           if (Array.isArray(content)) {
