@@ -58,6 +58,7 @@ export function ThreadList() {
   const { sessions, currentSession, currentProject, sessionRuntimes } = useAppStore();
   const { createNewSession } = useSessions();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Which sessions have active running processes
   const runningIds = useMemo(() => {
@@ -79,8 +80,18 @@ export function ThreadList() {
   const hasUntitledThread = currentSession.id === null;
   const untitledProjectPath = currentSession.projectPath || currentProject.path;
 
+  // Filter sessions by search query
+  const filteredSessions = useMemo(() => {
+    if (!searchQuery.trim()) return sessions;
+    const q = searchQuery.toLowerCase();
+    return sessions.filter((s) =>
+      (s.title || '').toLowerCase().includes(q) ||
+      (s.projectName || '').toLowerCase().includes(q)
+    );
+  }, [sessions, searchQuery]);
+
   const projectGroups = useMemo(() => {
-    const groups = groupByProject(sessions);
+    const groups = groupByProject(filteredSessions);
 
     // If there's an untitled thread, ensure its project group exists
     if (hasUntitledThread && untitledProjectPath) {
@@ -99,7 +110,7 @@ export function ThreadList() {
     }
 
     return groups;
-  }, [sessions, hasUntitledThread, untitledProjectPath]);
+  }, [filteredSessions, hasUntitledThread, untitledProjectPath]);
 
   const toggleProject = (key: string) => {
     setCollapsedProjects((prev) => {
@@ -120,6 +131,40 @@ export function ThreadList() {
 
   return (
     <div className="flex-1 overflow-y-auto px-2">
+      {/* Search filter */}
+      {sessions.length > 5 && (
+        <div className="px-1 pb-2 pt-1 sticky top-0 bg-sidebar z-10">
+          <div className="relative">
+            <svg
+              width="12" height="12" viewBox="0 0 16 16" fill="none"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted"
+            >
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter threads…"
+              className="w-full bg-surface border border-border rounded-md pl-7 pr-2 py-1
+                         text-xs text-text-primary placeholder-text-muted
+                         outline-none focus:border-accent/50"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded
+                           text-text-muted hover:text-text-primary transition-colors"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                  <path d="M2 2l6 6M8 2l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
       {projectGroups.map((group) => {
         const key = group.projectPath || group.projectName;
         const isCollapsed = collapsedProjects.has(key);
@@ -232,12 +277,18 @@ export function ThreadList() {
         );
       })}
 
-      {sessions.length === 0 && (
+      {sessions.length === 0 && !searchQuery && (
         <div className="px-4 py-8 text-center">
           <p className="text-sm text-text-muted">No threads yet</p>
           <p className="text-xs text-text-muted mt-1">
             Start a new conversation
           </p>
+        </div>
+      )}
+
+      {searchQuery && filteredSessions.length === 0 && (
+        <div className="px-4 py-6 text-center">
+          <p className="text-xs text-text-muted">No matching threads</p>
         </div>
       )}
     </div>
