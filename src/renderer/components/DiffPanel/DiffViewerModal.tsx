@@ -34,14 +34,13 @@ export function DiffViewerModal({ filePath, diff, onClose }: DiffViewerModalProp
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 top-12 z-50 flex flex-col bg-bg" onClick={onClose}>
       <div
-        className="bg-bg border border-border rounded-lg shadow-2xl flex flex-col"
-        style={{ width: '90vw', height: '85vh', maxWidth: 1400 }}
+        className="flex flex-col w-full h-full"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface rounded-t-lg">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface shrink-0">
           <div className="flex items-center gap-2 min-w-0">
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0 text-text-muted">
               <circle cx="4.5" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.2" />

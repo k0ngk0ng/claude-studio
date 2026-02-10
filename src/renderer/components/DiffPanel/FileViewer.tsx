@@ -137,7 +137,7 @@ export function FileViewer({ filePath, projectPath, onClose }: FileViewerProps) 
   const lines = content?.split('\n') || [];
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-bg" onClick={onClose}>
+    <div className="fixed inset-0 top-12 z-50 flex flex-col bg-bg" onClick={onClose}>
       <div
         className="flex flex-col w-full h-full"
         onClick={(e) => e.stopPropagation()}
