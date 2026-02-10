@@ -402,25 +402,36 @@ export function registerIpcHandlers(): void {
         case 'terminal': {
           if (platform === 'mac') {
             execFile('open', ['-a', 'Terminal', cwd]);
-          } else if (platform === 'windows') {
-            execFile('cmd', ['/c', 'start', 'cmd', '/K', `cd /d "${cwd}"`], { shell: true });
           } else {
             // Linux: try common terminal emulators
             execFile('xdg-open', [cwd]);
           }
           return true;
         }
+        case 'cmd':
+          execFile('cmd', ['/c', 'start', 'cmd', '/K', `cd /d "${cwd}"`], { shell: true });
+          return true;
+        case 'wt':
+          execFile('wt', ['-d', cwd], { shell: true });
+          return true;
+        case 'powershell':
+          execFile('pwsh', ['-NoExit', '-Command', `Set-Location '${cwd}'`], { shell: true });
+          return true;
+        case 'notepad':
+          execFile('notepad', [cwd], { shell: true });
+          return true;
         case 'vscode':
           execFile('code', [cwd], winShell);
           return true;
         case 'cursor':
           execFile('cursor', [cwd], winShell);
           return true;
-        case 'windsurf':
-          execFile('windsurf', [cwd], winShell);
-          return true;
         case 'zed':
-          execFile('zed', [cwd], winShell);
+          if (platform === 'mac') {
+            execFile('open', ['-a', 'Zed', cwd]);
+          } else {
+            execFile('zed', [cwd], winShell);
+          }
           return true;
         case 'idea':
           execFile('idea', [cwd], winShell);
@@ -433,6 +444,9 @@ export function registerIpcHandlers(): void {
           return true;
         case 'iterm':
           execFile('open', ['-a', 'iTerm', cwd]);
+          return true;
+        case 'notepad':
+          execFile('notepad', [cwd], { shell: true });
           return true;
         default:
           execFile(editor, [cwd], winShell);
@@ -456,7 +470,14 @@ export function registerIpcHandlers(): void {
     } else {
       editors.push({ id: 'finder', name: 'File Manager' });
     }
-    editors.push({ id: 'terminal', name: 'Terminal' });
+
+    if (platform === 'mac') {
+      editors.push({ id: 'terminal', name: 'Terminal' });
+    } else if (platform === 'windows') {
+      editors.push({ id: 'cmd', name: 'CMD' });
+    } else {
+      editors.push({ id: 'terminal', name: 'Terminal' });
+    }
 
     // Mac-only: check for terminal apps (right after Terminal)
     if (platform === 'mac') {
@@ -473,15 +494,58 @@ export function registerIpcHandlers(): void {
       }
     }
 
-    // Check for common editors
+    // Windows-only: Terminal (Windows Terminal), PowerShell, Notepad
+    if (platform === 'windows') {
+      // Windows Terminal (wt.exe)
+      try {
+        await new Promise<void>((resolve, reject) => {
+          execFile('where', ['wt'], (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+        editors.push({ id: 'wt', name: 'Terminal' });
+      } catch {
+        // Windows Terminal not found
+      }
+      // PowerShell
+      try {
+        await new Promise<void>((resolve, reject) => {
+          execFile('where', ['pwsh'], (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+        editors.push({ id: 'powershell', name: 'PowerShell' });
+      } catch {
+        // Try legacy powershell
+        try {
+          await new Promise<void>((resolve, reject) => {
+            execFile('where', ['powershell'], (err) => {
+              if (err) reject(err);
+              else resolve();
+            });
+          });
+          editors.push({ id: 'powershell', name: 'PowerShell' });
+        } catch {
+          // PowerShell not found
+        }
+      }
+      editors.push({ id: 'notepad', name: 'Notepad' });
+    }
+
+    // Check for common editors (CLI-based detection)
     const editorChecks = [
       { id: 'vscode', name: 'VS Code', cmd: 'code' },
       { id: 'cursor', name: 'Cursor', cmd: 'cursor' },
-      { id: 'windsurf', name: 'Windsurf', cmd: 'windsurf' },
-      { id: 'zed', name: 'Zed', cmd: 'zed' },
       { id: 'idea', name: 'IntelliJ IDEA', cmd: 'idea' },
       { id: 'webstorm', name: 'WebStorm', cmd: 'webstorm' },
     ];
+
+    // Zed has CLI on Linux/Windows but not on Mac
+    if (platform !== 'mac') {
+      editorChecks.push({ id: 'zed', name: 'Zed', cmd: 'zed' });
+    }
 
     if (platform === 'mac') {
       editorChecks.push({ id: 'xcode', name: 'Xcode', cmd: 'xcode' });
@@ -500,6 +564,23 @@ export function registerIpcHandlers(): void {
         editors.push({ id: editor.id, name: editor.name });
       } catch {
         // Editor not found, skip
+      }
+    }
+
+    // Mac-only: check for apps without CLI commands
+    if (platform === 'mac') {
+      const macApps = [
+        { id: 'zed', name: 'Zed', path: '/Applications/Zed.app' },
+      ];
+      for (const macApp of macApps) {
+        // Skip if already found via CLI
+        if (editors.some(e => e.id === macApp.id)) continue;
+        try {
+          await fs.promises.access(macApp.path);
+          editors.push({ id: macApp.id, name: macApp.name });
+        } catch {
+          // App not found, skip
+        }
       }
     }
 
