@@ -102,7 +102,9 @@ export default function App() {
   // Keyboard shortcuts
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      const mod = e.metaKey || e.ctrlKey;
+      // On macOS use metaKey (⌘), on other platforms use ctrlKey
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const mod = isMac ? e.metaKey : e.ctrlKey;
 
       if (mod && e.key === 'n') {
         e.preventDefault();

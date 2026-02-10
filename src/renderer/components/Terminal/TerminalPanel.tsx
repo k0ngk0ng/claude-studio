@@ -45,7 +45,7 @@ export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boo
   }, [panelSizes.terminal, visible]);
 
   // Initialize terminal only when BOTH visible and cwd are ready
-  // This ensures xterm can measure the container correctly
+  // Once initialized, never destroy — preserve state across hide/show
   useEffect(() => {
     if (!visible || !cwd || !containerRef.current || initializedRef.current) return;
     initializedRef.current = true;
@@ -144,15 +144,8 @@ export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boo
     resizeObserver.observe(containerRef.current);
     resizeObserverRef.current = resizeObserver;
 
-    return () => {
-      resizeObserver.disconnect();
-      resizeObserverRef.current = null;
-      term.dispose();
-      terminalRef.current = null;
-      fitAddonRef.current = null;
-      initializedRef.current = false;
-    };
-  }, [visible, cwd, createTerminal, onData, onExit]);
+    // No cleanup — terminal persists for the lifetime of the app
+  }, [visible, cwd]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fit when panel becomes visible again (after first init)
   useEffect(() => {
