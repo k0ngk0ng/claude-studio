@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { ThreadItem } from './ThreadItem';
 import { useAppStore } from '../../stores/appStore';
+import { useSessions } from '../../hooks/useSessions';
 import { Tooltip } from '../common/Tooltip';
 import type { SessionInfo } from '../../types';
 
@@ -55,6 +56,7 @@ function formatRelativeTime(dateStr: string): string {
 
 export function ThreadList() {
   const { sessions, currentSession, currentProject, sessionRuntimes } = useAppStore();
+  const { createNewSession } = useSessions();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
 
   // Which sessions have active running processes
@@ -111,6 +113,11 @@ export function ThreadList() {
     });
   };
 
+  const handleNewThreadInProject = useCallback((projectPath: string, projectName: string) => {
+    createNewSession(projectPath);
+    useAppStore.getState().setCurrentProject({ path: projectPath, name: projectName });
+  }, [createNewSession]);
+
   return (
     <div className="flex-1 overflow-y-auto px-2">
       {projectGroups.map((group) => {
@@ -121,45 +128,62 @@ export function ThreadList() {
           <div key={key} className="mb-1">
             {/* Project folder header */}
             <Tooltip text={group.projectPath}>
-            <button
-              onClick={() => toggleProject(key)}
-              className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md
-                         text-text-secondary hover:text-text-primary hover:bg-surface-hover
-                         transition-colors group"
-            >
-              {/* Folder icon */}
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0 opacity-60">
-                <path
-                  d="M2 4.5A1.5 1.5 0 013.5 3H6l1.5 1.5h5A1.5 1.5 0 0114 6v5.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                />
-              </svg>
-              <span className="text-[13px] font-semibold truncate flex-1 text-left">
-                {group.projectName}
-              </span>
-              {/* Collapse indicator + count */}
-              <span className="text-[10px] text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">
-                {group.sessions.length}
-              </span>
-              <svg
-                width="10"
-                height="10"
-                viewBox="0 0 10 10"
-                fill="none"
-                className={`shrink-0 opacity-40 transition-transform duration-150 ${
-                  isCollapsed ? '-rotate-90' : ''
-                }`}
+            <div className="flex items-center gap-0 group">
+              <button
+                onClick={() => toggleProject(key)}
+                className="flex items-center gap-2 flex-1 min-w-0 px-2 py-1.5 rounded-md
+                           text-text-secondary hover:text-text-primary hover:bg-surface-hover
+                           transition-colors"
               >
-                <path
-                  d="M3 4l2 2 2-2"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+                {/* Folder icon */}
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="shrink-0 opacity-60">
+                  <path
+                    d="M2 4.5A1.5 1.5 0 013.5 3H6l1.5 1.5h5A1.5 1.5 0 0114 6v5.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
+                </svg>
+                <span className="text-[13px] font-semibold truncate flex-1 text-left">
+                  {group.projectName}
+                </span>
+                {/* Collapse indicator + count */}
+                <span className="text-[10px] text-text-muted opacity-0 group-hover:opacity-100 transition-opacity">
+                  {group.sessions.length}
+                </span>
+                <svg
+                  width="10"
+                  height="10"
+                  viewBox="0 0 10 10"
+                  fill="none"
+                  className={`shrink-0 opacity-40 transition-transform duration-150 ${
+                    isCollapsed ? '-rotate-90' : ''
+                  }`}
+                >
+                  <path
+                    d="M3 4l2 2 2-2"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              {/* New thread button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleNewThreadInProject(group.projectPath, group.projectName);
+                }}
+                className="shrink-0 p-1 rounded text-text-muted hover:text-text-primary
+                           hover:bg-surface-hover transition-colors
+                           opacity-0 group-hover:opacity-100"
+                title="New thread in this project"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
             </Tooltip>
 
             {/* Thread items */}
