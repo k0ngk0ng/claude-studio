@@ -35,34 +35,19 @@ export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boo
 
   // Re-fit terminal when panel size changes
   useEffect(() => {
-    if (fitAddonRef.current) {
+    if (visible && fitAddonRef.current) {
       try {
         fitAddonRef.current.fit();
       } catch {
         // Ignore fit errors during transitions
       }
     }
-  }, [panelSizes.terminal]);
+  }, [panelSizes.terminal, visible]);
 
-  // Re-fit terminal when panel becomes visible again (CSS display toggle)
+  // Initialize terminal only when BOTH visible and cwd are ready
+  // This ensures xterm can measure the container correctly
   useEffect(() => {
-    if (visible && fitAddonRef.current) {
-      // Small delay to let the DOM layout settle after display:none → display:block
-      const timer = setTimeout(() => {
-        try {
-          fitAddonRef.current?.fit();
-        } catch {
-          // Ignore fit errors during transitions
-        }
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [visible]);
-
-  const initTerminal = useCallback(async () => {
-    if (!containerRef.current || initializedRef.current) return;
-    // Wait for a valid cwd before creating the PTY
-    if (!cwd) return;
+    if (!visible || !cwd || !containerRef.current || initializedRef.current) return;
     initializedRef.current = true;
 
     const term = new Terminal({
@@ -102,44 +87,51 @@ export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boo
     term.loadAddon(fitAddon);
 
     term.open(containerRef.current);
-    fitAddon.fit();
 
     terminalRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // Create PTY backend
-    const termId = await createTerminal();
-    if (!termId) {
-      term.writeln('\x1b[31mTerminal not available — node-pty may not be installed.\x1b[0m');
-      return;
-    }
-
-    // Connect xterm input → PTY (use ref so it survives re-creates)
-    term.onData((data) => {
-      writeRef.current(data);
-    });
-
-    // Connect PTY output → xterm
-    onData((data) => {
-      term.write(data);
-    });
-
-    // Handle shell exit (e.g. Ctrl+D) — respawn a new PTY
-    onExit(async () => {
-      term.writeln('\r\n\x1b[90m[shell exited — restarting…]\x1b[0m\r\n');
-      const newId = await createTerminal();
-      if (newId) {
-        // Re-connect PTY output → xterm
-        onData((data) => {
-          term.write(data);
-        });
+    // Small delay to let the DOM fully layout, then fit + create PTY
+    setTimeout(async () => {
+      try {
+        fitAddon.fit();
+      } catch {
+        // ignore
       }
-    });
 
-    // Handle resize
-    term.onResize(({ cols, rows }) => {
-      resizeRef.current(cols, rows);
-    });
+      // Create PTY backend
+      const termId = await createTerminal();
+      if (!termId) {
+        term.writeln('\x1b[31mTerminal not available — node-pty may not be installed.\x1b[0m');
+        return;
+      }
+
+      // Connect xterm input → PTY
+      term.onData((data) => {
+        writeRef.current(data);
+      });
+
+      // Connect PTY output → xterm
+      onData((data) => {
+        term.write(data);
+      });
+
+      // Handle shell exit (e.g. Ctrl+D) — respawn a new PTY
+      onExit(async () => {
+        term.writeln('\r\n\x1b[90m[shell exited — restarting…]\x1b[0m\r\n');
+        const newId = await createTerminal();
+        if (newId) {
+          onData((data) => {
+            term.write(data);
+          });
+        }
+      });
+
+      // Handle resize
+      term.onResize(({ cols, rows }) => {
+        resizeRef.current(cols, rows);
+      });
+    }, 100);
 
     // Observe container size changes
     const resizeObserver = new ResizeObserver(() => {
@@ -151,25 +143,30 @@ export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boo
     });
     resizeObserver.observe(containerRef.current);
     resizeObserverRef.current = resizeObserver;
-  }, [cwd]); // Re-create if cwd changes (e.g. from empty to actual path)
-
-  // Initialize once cwd is available
-  useEffect(() => {
-    if (!cwd) return; // Wait for valid cwd
-    initTerminal();
 
     return () => {
-      if (resizeObserverRef.current) {
-        resizeObserverRef.current.disconnect();
-        resizeObserverRef.current = null;
-      }
-      if (terminalRef.current) {
-        terminalRef.current.dispose();
-        terminalRef.current = null;
-      }
+      resizeObserver.disconnect();
+      resizeObserverRef.current = null;
+      term.dispose();
+      terminalRef.current = null;
+      fitAddonRef.current = null;
       initializedRef.current = false;
     };
-  }, [initTerminal]);
+  }, [visible, cwd, createTerminal, onData, onExit]);
+
+  // Re-fit when panel becomes visible again (after first init)
+  useEffect(() => {
+    if (visible && initializedRef.current && fitAddonRef.current) {
+      const timer = setTimeout(() => {
+        try {
+          fitAddonRef.current?.fit();
+        } catch {
+          // Ignore
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
 
   // Bare mode: just the terminal container, no chrome
   if (bare) {
