@@ -6,11 +6,11 @@
   "author": "k0ngk0ng",
   "main": ".vite/build/index.js",
   "scripts": {
-    "start": "npx electron-forge start",
-    "package": "npx electron-forge package",
-    "make": "npx electron-forge make",
-    "rebuild": "npx electron-rebuild -m . -o node-pty",
-    "postinstall": "npx electron-rebuild -m . -o node-pty",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "rebuild": "electron-rebuild -m . -o node-pty",
+    "postinstall": "electron-rebuild -m . -o node-pty",
     "version:sync": "node scripts/sync-version.mjs"
   },
   "dependencies": {
