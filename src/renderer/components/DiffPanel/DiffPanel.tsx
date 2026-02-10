@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useGit } from '../../hooks/useGit';
 import { useAppStore } from '../../stores/appStore';
-import { DiffView } from './DiffView';
 import { DiffViewerModal } from './DiffViewerModal';
 import type { FileChange } from '../../types';
 
@@ -11,7 +10,6 @@ export function DiffPanel() {
   const { gitStatus, stageFile, unstageFile, commit, getDiff, refreshStatus } = useGit();
   const [activeTab, setActiveTab] = useState<TabType>('unstaged');
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
-  const [diffContent, setDiffContent] = useState<string>('');
   const [commitMessage, setCommitMessage] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
   const [diffModal, setDiffModal] = useState<{ filePath: string; diff: string } | null>(null);
@@ -19,17 +17,6 @@ export function DiffPanel() {
   const files = activeTab === 'unstaged'
     ? gitStatus?.unstaged || []
     : gitStatus?.staged || [];
-
-  // Load diff when file is selected
-  useEffect(() => {
-    if (!selectedFile) {
-      setDiffContent('');
-      return;
-    }
-
-    const staged = activeTab === 'staged';
-    getDiff(selectedFile, staged).then(setDiffContent).catch(() => setDiffContent(''));
-  }, [selectedFile, activeTab, getDiff]);
 
   // Refresh on mount
   useEffect(() => {
@@ -139,11 +126,6 @@ export function DiffPanel() {
                     {activeTab === 'unstaged' ? 'Stage' : 'Unstage'}
                   </button>
                 </button>
-
-                {/* Inline diff */}
-                {selectedFile === file.path && diffContent && (
-                  <DiffView diff={diffContent} />
-                )}
               </div>
             ))}
           </div>
