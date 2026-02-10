@@ -44,17 +44,18 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
 
   if (isUser) {
     return (
-      <div className="flex justify-end group">
-        <div className="flex items-start gap-1">
-          {forkButton}
+      <div className="group">
+        <div className="flex justify-end">
           <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-br-md bg-user-bubble text-text-primary">
             <div className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </div>
-            <div className="text-[10px] text-text-muted mt-1.5 text-right">
-              {formatTime(message.timestamp)}
-            </div>
           </div>
+        </div>
+        {/* Metadata row — outside the bubble, right-aligned */}
+        <div className="flex items-center justify-end gap-3 mt-1.5 text-[10px] text-text-muted">
+          {forkButton}
+          <span>{formatTime(message.timestamp)}</span>
         </div>
       </div>
     );
