@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, globalShortcut } from 'electron';
+import { app, BrowserWindow, ipcMain, globalShortcut, Menu } from 'electron';
 import path from 'path';
 import os from 'os';
 import { execSync, spawn } from 'child_process';
@@ -147,6 +147,11 @@ function createWindow(): void {
   const iconPath = MAIN_WINDOW_VITE_DEV_SERVER_URL
     ? path.join(process.cwd(), 'assets', 'icon.png')
     : path.join(process.resourcesPath, 'assets', 'icon.png');
+
+  // Hide menu bar on Windows/Linux (macOS uses hiddenInset titlebar)
+  if (!isMac) {
+    Menu.setApplicationMenu(null);
+  }
 
   mainWindow = new BrowserWindow({
     width: 1400,
