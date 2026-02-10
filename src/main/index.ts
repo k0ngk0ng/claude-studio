@@ -1,48 +1,8 @@
 import { app, BrowserWindow, ipcMain, globalShortcut, Menu } from 'electron';
 import path from 'path';
 import os from 'os';
-import { execSync, spawn } from 'child_process';
+import { execSync } from 'child_process';
 import { registerIpcHandlers } from './ipc-handlers';
-
-// ─── Handle Squirrel.Windows events (install/update/uninstall) ──────
-// Must be at the very top before anything else runs.
-// This prevents the app from launching during install/update and removes
-// the default Squirrel loading animation.
-if (process.platform === 'win32') {
-  const squirrelCommand = process.argv[1];
-  if (squirrelCommand) {
-    const appFolder = path.resolve(process.execPath, '..');
-    const rootFolder = path.resolve(appFolder, '..');
-    const updateExe = path.resolve(rootFolder, 'Update.exe');
-    const exeName = path.basename(process.execPath);
-
-    const spawnUpdate = (args: string[]) => {
-      try {
-        spawn(updateExe, args, { detached: true });
-      } catch {}
-    };
-
-    switch (squirrelCommand) {
-      case '--squirrel-install':
-      case '--squirrel-updated':
-        // Create desktop & start menu shortcuts
-        spawnUpdate(['--createShortcut', exeName]);
-        app.quit();
-        process.exit(0);
-        break;
-      case '--squirrel-uninstall':
-        // Remove shortcuts
-        spawnUpdate(['--removeShortcut', exeName]);
-        app.quit();
-        process.exit(0);
-        break;
-      case '--squirrel-obsolete':
-        app.quit();
-        process.exit(0);
-        break;
-    }
-  }
-}
 
 // Debug log — console only (no file writes)
 function mainDebugLog(...args: unknown[]) {

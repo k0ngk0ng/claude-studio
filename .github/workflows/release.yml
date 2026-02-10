@@ -65,19 +65,32 @@ jobs:
       - name: Sync version from git tag
         run: npm run version:sync
 
-      - name: Make distributables
-        run: npm run make
+      - name: Extract version
+        id: version
+        shell: bash
+        run: |
+          VER=$(node -p "require('./package.json').version")
+          echo "VERSION=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Package app
+        run: npm run package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install NSIS
+        run: choco install nsis -y
+
+      - name: Build NSIS installer
+        shell: cmd
+        run: |
+          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }} "/DAPP_DIR=%CD%\out\Claude App-win32-x64" installer\installer.nsi
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-windows
           path: |
-            out/make/**/*.exe
-            out/make/**/*.nupkg
-            out/make/**/RELEASES
+            installer/Claude.App-*-Setup.exe
           retention-days: 5
 
   release-linux:
@@ -173,8 +186,6 @@ jobs:
         run: |
           mkdir -p upload/
           find artifacts/ -type f \
-            ! -name 'RELEASES' \
-            ! -name '*.nupkg' \
             -exec cp {} upload/ \;
           # Replace spaces with dots in filenames (match GitHub Release behavior)
           cd upload/

@@ -1,7 +1,6 @@
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { MakerDMG } from '@electron-forge/maker-dmg';
-import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import path from 'path';
@@ -102,11 +101,6 @@ const config: ForgeConfig = {
       format: 'ULFO',
       icon: './assets/icon.icns',
     }),
-    new MakerSquirrel({
-      name: 'claude-app',
-      setupIcon: './assets/icon.ico',
-      authors: 'k0ngk0ng',
-    }),
     new MakerDeb({
       options: {
         maintainer: 'Claude App',
@@ -115,7 +109,7 @@ const config: ForgeConfig = {
         categories: ['Development'],
       },
     }),
-    new MakerZIP({}, ['darwin', 'linux']),
+    new MakerZIP({}, ['darwin', 'linux', 'win32']),
   ],
   plugins: [
     new VitePlugin({
