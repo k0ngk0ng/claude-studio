@@ -458,6 +458,21 @@ export function registerIpcHandlers(): void {
     }
     editors.push({ id: 'terminal', name: 'Terminal' });
 
+    // Mac-only: check for terminal apps (right after Terminal)
+    if (platform === 'mac') {
+      const terminalApps = [
+        { id: 'iterm', name: 'iTerm', path: '/Applications/iTerm.app' },
+      ];
+      for (const tApp of terminalApps) {
+        try {
+          await fs.promises.access(tApp.path);
+          editors.push({ id: tApp.id, name: tApp.name });
+        } catch {
+          // App not found, skip
+        }
+      }
+    }
+
     // Check for common editors
     const editorChecks = [
       { id: 'vscode', name: 'VS Code', cmd: 'code' },
@@ -485,21 +500,6 @@ export function registerIpcHandlers(): void {
         editors.push({ id: editor.id, name: editor.name });
       } catch {
         // Editor not found, skip
-      }
-    }
-
-    // Mac-only: check for apps that don't have CLI commands
-    if (platform === 'mac') {
-      const macApps = [
-        { id: 'iterm', name: 'iTerm', path: '/Applications/iTerm.app' },
-      ];
-      for (const app of macApps) {
-        try {
-          await fs.promises.access(app.path);
-          editors.push({ id: app.id, name: app.name });
-        } catch {
-          // App not found, skip
-        }
       }
     }
 
