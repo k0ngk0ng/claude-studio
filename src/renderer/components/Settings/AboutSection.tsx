@@ -7,7 +7,7 @@ interface ReleaseInfo {
   name: string;
   body: string;
   htmlUrl: string;
-  assets: { name: string; size: number; downloadUrl: string }[];
+  assets: { name: string; size: number; downloadUrl: string; cdnUrl?: string | null }[];
 }
 
 type UpdateStatus =
@@ -246,11 +246,30 @@ export function AboutSection() {
       setUpdateStatus({ state: 'error', message: `No download available for ${platform}. Visit the release page to download manually.` });
       return;
     }
-    debugLog('app', `Downloading: ${asset.name} (${formatBytes(asset.size)})`, asset);
+
     setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size });
+
+    // Try CDN first, fallback to GitHub
+    if (asset.cdnUrl) {
+      debugLog('app', `Downloading from CDN: ${asset.cdnUrl}`);
+      try {
+        const filePath = await window.api.app.downloadUpdate(asset.cdnUrl, asset.name);
+        debugLog('app', `CDN download complete: ${filePath}`);
+        setDownloadFilePath(filePath);
+        setUpdateStatus({ state: 'downloaded', filePath });
+        return;
+      } catch (err: any) {
+        debugLog('app', `CDN download failed, falling back to GitHub: ${err?.message}`, err, 'warn');
+        // Reset progress for GitHub retry
+        setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size });
+      }
+    }
+
+    // Fallback: download from GitHub
+    debugLog('app', `Downloading from GitHub: ${asset.name} (${formatBytes(asset.size)})`);
     try {
       const filePath = await window.api.app.downloadUpdate(asset.downloadUrl, asset.name);
-      debugLog('app', `Download complete: ${filePath}`);
+      debugLog('app', `GitHub download complete: ${filePath}`);
       setDownloadFilePath(filePath);
       setUpdateStatus({ state: 'downloaded', filePath });
     } catch (err: any) {

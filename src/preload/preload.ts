@@ -135,7 +135,7 @@ export interface AppAPI {
     name: string;
     body: string;
     htmlUrl: string;
-    assets: { name: string; size: number; downloadUrl: string }[];
+    assets: { name: string; size: number; downloadUrl: string; cdnUrl?: string | null }[];
   }>;
   downloadUpdate: (downloadUrl: string, fileName: string) => Promise<string>;
   installUpdate: (filePath: string) => Promise<boolean>;

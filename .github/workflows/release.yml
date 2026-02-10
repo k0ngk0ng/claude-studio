@@ -95,9 +95,6 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
-
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
@@ -122,9 +119,10 @@ jobs:
           retention-days: 5
 
   publish-release:
-    name: Publish GitHub Release
+    name: Publish GitHub Release & Upload to OSS
     runs-on: ubuntu-latest
     needs: [release-macos, release-windows, release-linux]
+    environment: production
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -146,3 +144,77 @@ jobs:
             artifacts/release-linux/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ─── Upload to Aliyun OSS ────────────────────────────────────────
+      - name: Extract tag version
+        id: version
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+
+      - name: Install ossutil
+        run: |
+          curl -fsSL https://gosspublic.alicdn.com/ossutil/install.sh | sudo bash
+
+      - name: Configure ossutil
+        run: |
+          ossutil config \
+            -e ${{ secrets.ALIYUN_OSS_ENDPOINT }} \
+            -i ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }} \
+            -k ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}
+
+      - name: Flatten artifacts for upload
+        run: |
+          mkdir -p upload/
+          find artifacts/ -type f \
+            ! -name 'RELEASES' \
+            ! -name '*.nupkg' \
+            -exec cp {} upload/ \;
+          echo "Files to upload:"
+          ls -lh upload/
+
+      - name: Upload to OSS — releases/${{ steps.version.outputs.TAG }}/
+        run: |
+          ossutil cp -r upload/ \
+            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/releases/${{ steps.version.outputs.TAG }}/ \
+            --force
+
+      - name: Upload to OSS — releases/latest/
+        run: |
+          ossutil cp -r upload/ \
+            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/releases/latest/ \
+            --force
+
+      - name: Generate cdn-urls.json
+        run: |
+          CDN_BASE="${{ vars.ALIYUN_OSS_CDN_URL }}/releases/${{ steps.version.outputs.TAG }}"
+          TAG="${{ steps.version.outputs.TAG }}"
+          echo '{}' > cdn-urls.json
+          # Build JSON with all file URLs
+          node -e "
+            const fs = require('fs');
+            const files = fs.readdirSync('upload/');
+            const base = '${CDN_BASE}';
+            const tag = '${TAG}';
+            const urls = { version: tag.replace('v',''), cdnBase: base, files: {} };
+            for (const f of files) {
+              urls.files[f] = base + '/' + f;
+            }
+            fs.writeFileSync('cdn-urls.json', JSON.stringify(urls, null, 2));
+            console.log(JSON.stringify(urls, null, 2));
+          "
+
+      - name: Upload cdn-urls.json to OSS
+        run: |
+          ossutil cp cdn-urls.json \
+            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/releases/${{ steps.version.outputs.TAG }}/cdn-urls.json \
+            --force
+          ossutil cp cdn-urls.json \
+            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/releases/latest/cdn-urls.json \
+            --force
+
+      - name: Verify OSS upload
+        run: |
+          echo "=== releases/${{ steps.version.outputs.TAG }}/ ==="
+          ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/releases/${{ steps.version.outputs.TAG }}/ --short
+          echo ""
+          echo "=== releases/latest/ ==="
+          ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/releases/latest/ --short

@@ -10,6 +10,10 @@ import path from 'path';
 import fs from 'fs';
 import { execFile, execSync } from 'child_process';
 
+// CDN base URL for update downloads (set via environment or fallback)
+// Configure this to your Aliyun OSS CDN domain
+const CDN_BASE_URL = process.env.CLAUDE_APP_CDN_URL || '';
+
 function getWebContents(): Electron.WebContents | null {
   const windows = BrowserWindow.getAllWindows();
   return windows.length > 0 ? windows[0].webContents : null;
@@ -386,9 +390,33 @@ export function registerIpcHandlers(): void {
         }).on('error', reject);
       });
       const release = JSON.parse(data);
+      const tagName = release.tag_name || '';
+
+      // Try to fetch CDN URLs from OSS
+      let cdnUrls: Record<string, string> = {};
+      if (CDN_BASE_URL) {
+        try {
+          const cdnData: string = await new Promise((resolve, reject) => {
+            const cdnJsonUrl = `${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`;
+            const mod = cdnJsonUrl.startsWith('https') ? https : require('http');
+            mod.get(cdnJsonUrl, { timeout: 5000 }, (res: any) => {
+              if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
+              let body = '';
+              res.on('data', (chunk: string) => { body += chunk; });
+              res.on('end', () => resolve(body));
+              res.on('error', reject);
+            }).on('error', reject);
+          });
+          const parsed = JSON.parse(cdnData);
+          cdnUrls = parsed.files || {};
+        } catch {
+          // CDN not available, will use GitHub URLs only
+        }
+      }
+
       return {
-        version: (release.tag_name || '').replace(/^v/, ''),
-        tagName: release.tag_name,
+        version: tagName.replace(/^v/, ''),
+        tagName,
         name: release.name,
         body: release.body,
         htmlUrl: release.html_url,
@@ -396,6 +424,7 @@ export function registerIpcHandlers(): void {
           name: a.name,
           size: a.size,
           downloadUrl: a.browser_download_url,
+          cdnUrl: cdnUrls[a.name] || null,
         })),
       };
     } catch (err: any) {
