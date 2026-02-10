@@ -2,6 +2,7 @@ import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron';
 import { claudeProcessManager } from './claude-process';
 import { sessionManager } from './session-manager';
 import { gitManager } from './git-manager';
+import { fileManager } from './file-manager';
 import { terminalManager } from './terminal-manager';
 import { getPlatform, getClaudeBinary, getClaudeModel, checkDependencies, readClaudeConfig, writeClaudeConfig } from './platform';
 import os from 'os';
@@ -140,11 +141,11 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle('git:searchFiles', (_event, cwd: string, query: string) => {
-    return gitManager.searchFiles(cwd, query);
+    return fileManager.searchFiles(cwd, query);
   });
 
   ipcMain.handle('git:listFiles', (_event, cwd: string) => {
-    return gitManager.listFiles(cwd);
+    return fileManager.listFiles(cwd);
   });
 
   // ─── Terminal ─────────────────────────────────────────────────────
@@ -276,6 +277,99 @@ export function registerIpcHandlers(): void {
       // fall through
     }
     return 'not found';
+  });
+
+  ipcMain.handle('app:getGitVersion', () => {
+    try {
+      const raw = execSync('git --version', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+      // Output is like "git version 2.43.0" — extract version number
+      const match = raw.match(/(\d+\.\d+[\.\d]*)/);
+      return match ? match[1] : raw;
+    } catch {
+      return 'not found';
+    }
+  });
+
+  ipcMain.handle('app:installClaudeCode', async () => {
+    const platform = getPlatform();
+    const wc = getWebContents();
+    try {
+      const cmd = platform === 'windows'
+        ? 'npm install -g @anthropic-ai/claude-code'
+        : 'npm install -g @anthropic-ai/claude-code';
+      await new Promise<void>((resolve, reject) => {
+        const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+        const child = execFile(npmCmd, ['install', '-g', '@anthropic-ai/claude-code'], {
+          timeout: 120000,
+          env: { ...process.env },
+        }, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+        child.stdout?.on('data', (data: string) => {
+          if (wc) wc.send('app:install-output', data.toString());
+        });
+        child.stderr?.on('data', (data: string) => {
+          if (wc) wc.send('app:install-output', data.toString());
+        });
+      });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
+
+  ipcMain.handle('app:installGit', async () => {
+    const platform = getPlatform();
+    try {
+      if (platform === 'mac') {
+        // macOS: use xcode-select --install (triggers Xcode Command Line Tools)
+        execFile('xcode-select', ['--install']);
+        return { success: true, message: 'Xcode Command Line Tools installer launched. Please follow the on-screen instructions.' };
+      } else if (platform === 'windows') {
+        // Windows: open the Git for Windows download page
+        await shell.openExternal('https://git-scm.com/download/win');
+        return { success: true, message: 'Git download page opened. Please download and install Git for Windows.' };
+      } else {
+        // Linux: try common package managers
+        const wc = getWebContents();
+        // Try apt first, then dnf, then pacman
+        const commands = [
+          { check: 'apt', cmd: 'sudo', args: ['apt', 'install', '-y', 'git'] },
+          { check: 'dnf', cmd: 'sudo', args: ['dnf', 'install', '-y', 'git'] },
+          { check: 'pacman', cmd: 'sudo', args: ['pacman', '-S', '--noconfirm', 'git'] },
+        ];
+        for (const c of commands) {
+          try {
+            execSync(`which ${c.check}`, { stdio: 'pipe' });
+            await new Promise<void>((resolve, reject) => {
+              const child = execFile(c.cmd, c.args, { timeout: 120000 }, (err) => {
+                if (err) reject(err);
+                else resolve();
+              });
+              child.stdout?.on('data', (data: string) => {
+                if (wc) wc.send('app:install-output', data.toString());
+              });
+              child.stderr?.on('data', (data: string) => {
+                if (wc) wc.send('app:install-output', data.toString());
+              });
+            });
+            return { success: true };
+          } catch {
+            continue;
+          }
+        }
+        // Fallback: open download page
+        await shell.openExternal('https://git-scm.com/downloads');
+        return { success: true, message: 'Git download page opened. Please install Git manually.' };
+      }
+    } catch (err: any) {
+      return { success: false, error: err?.message || String(err) };
+    }
   });
 
   ipcMain.handle('app:checkForUpdates', async () => {

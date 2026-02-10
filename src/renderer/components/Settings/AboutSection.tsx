@@ -19,6 +19,8 @@ type UpdateStatus =
   | { state: 'downloaded'; filePath: string }
   | { state: 'error'; message: string };
 
+type InstallStatus = 'idle' | 'installing' | 'success' | 'error';
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -31,28 +33,160 @@ function getPlatformAsset(assets: ReleaseInfo['assets'], platform: string): Rele
       || assets.find(a => a.name.includes('darwin') || a.name.includes('mac'))
       || null;
   } else if (platform === 'windows') {
-    return assets.find(a => a.name.endsWith('.exe') || a.name.endsWith('.msi'))
+    // Squirrel.Windows produces "Setup.exe"; prefer that over .nupkg / RELEASES
+    return assets.find(a => a.name.toLowerCase().includes('setup') && a.name.endsWith('.exe'))
+      || assets.find(a => a.name.endsWith('.exe'))
+      || assets.find(a => a.name.endsWith('.msi'))
       || assets.find(a => a.name.includes('win'))
       || null;
   } else {
-    return assets.find(a => a.name.endsWith('.AppImage') || a.name.endsWith('.deb'))
+    return assets.find(a => a.name.endsWith('.deb'))
+      || assets.find(a => a.name.endsWith('.AppImage'))
+      || assets.find(a => a.name.endsWith('.rpm'))
       || assets.find(a => a.name.includes('linux'))
       || null;
   }
+}
+
+// Spinning loader icon
+function Spinner({ className = '' }: { className?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className={`animate-spin ${className}`}>
+      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" className="text-border" />
+      <path d="M14 8a6 6 0 00-6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-accent" />
+    </svg>
+  );
+}
+
+// Check icon
+function CheckIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-success">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
+      <path d="M5.5 8l2 2 3.5-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Warning icon
+function WarningIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="text-warning">
+      <path d="M8 1.5L1 14h14L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M8 6v4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <circle cx="8" cy="12" r="0.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+interface VersionRowProps {
+  label: string;
+  sublabel: string;
+  version: string;
+  notFoundLabel?: string;
+  installStatus?: InstallStatus;
+  installError?: string;
+  installMessage?: string;
+  onInstall?: () => void;
+}
+
+function VersionRow({
+  label,
+  sublabel,
+  version,
+  notFoundLabel,
+  installStatus,
+  installError,
+  installMessage,
+  onInstall,
+}: VersionRowProps) {
+  const isNotFound = version === 'not found' || version === 'not installed';
+  const isLoading = !version;
+
+  return (
+    <div className="flex items-center justify-between py-1">
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-text-primary">{label}</div>
+        <div className="text-xs text-text-muted mt-0.5">{sublabel}</div>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {isLoading ? (
+          <span className="text-sm font-mono text-text-muted">…</span>
+        ) : isNotFound ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-warning">{notFoundLabel || 'Not installed'}</span>
+            {onInstall && installStatus === 'idle' && (
+              <button
+                onClick={onInstall}
+                className="px-2.5 py-1 rounded-md bg-accent text-white text-xs font-medium
+                           hover:bg-accent/90 transition-colors"
+              >
+                Install
+              </button>
+            )}
+            {installStatus === 'installing' && (
+              <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                <Spinner />
+                <span>Installing…</span>
+              </div>
+            )}
+            {installStatus === 'success' && (
+              <div className="flex items-center gap-1.5 text-xs text-success">
+                <CheckIcon />
+                <span>{installMessage || 'Installed'}</span>
+              </div>
+            )}
+            {installStatus === 'error' && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-error truncate max-w-[200px]" title={installError}>
+                  {installError || 'Failed'}
+                </span>
+                {onInstall && (
+                  <button
+                    onClick={onInstall}
+                    className="px-2 py-0.5 rounded text-xs text-text-muted hover:text-text-primary
+                               border border-border hover:border-border-light transition-colors"
+                  >
+                    Retry
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ) : (
+          <span className="text-sm font-mono text-text-muted">{version}</span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function AboutSection() {
   const [version, setVersion] = useState('');
   const [sdkVersion, setSdkVersion] = useState('');
   const [claudeCodeVersion, setClaudeCodeVersion] = useState('');
+  const [gitVersion, setGitVersion] = useState('');
   const [platform, setPlatform] = useState('');
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
   const [downloadFilePath, setDownloadFilePath] = useState('');
+
+  // Install states
+  const [claudeCodeInstall, setClaudeCodeInstall] = useState<{
+    status: InstallStatus;
+    error?: string;
+    message?: string;
+  }>({ status: 'idle' });
+  const [gitInstall, setGitInstall] = useState<{
+    status: InstallStatus;
+    error?: string;
+    message?: string;
+  }>({ status: 'idle' });
 
   useEffect(() => {
     window.api.app.getVersion().then(setVersion).catch(() => {});
     window.api.app.getAgentSdkVersion().then(setSdkVersion).catch(() => {});
     window.api.app.getClaudeCodeVersion().then(setClaudeCodeVersion).catch(() => {});
+    window.api.app.getGitVersion().then(setGitVersion).catch(() => {});
     window.api.app.getPlatform().then(setPlatform).catch(() => {});
   }, []);
 
@@ -75,17 +209,13 @@ export function AboutSection() {
   const handleCheckForUpdates = useCallback(async () => {
     setUpdateStatus({ state: 'checking' });
     debugLog('app', 'Checking for updates...');
-    console.log('[update] Checking for updates...');
     try {
       const release = await window.api.app.checkForUpdates();
-      console.log('[update] Latest release:', release.version, release.tagName);
       debugLog('app', `Latest release: ${release.version} (${release.tagName})`, release);
       if (!release.version || release.version === version) {
-        console.log('[update] Already up to date:', version);
         debugLog('app', `Already up to date: ${version}`);
         setUpdateStatus({ state: 'up-to-date' });
       } else {
-        // Compare versions
         const current = version.split('.').map(Number);
         const latest = release.version.split('.').map(Number);
         let isNewer = false;
@@ -94,17 +224,14 @@ export function AboutSection() {
           if ((latest[i] || 0) < (current[i] || 0)) break;
         }
         if (isNewer) {
-          console.log('[update] New version available:', version, '->', release.version);
           debugLog('app', `New version available: ${version} → ${release.version}`);
           setUpdateStatus({ state: 'available', release });
         } else {
-          console.log('[update] Already up to date:', version, '>=', release.version);
           debugLog('app', `Already up to date: ${version} >= ${release.version}`);
           setUpdateStatus({ state: 'up-to-date' });
         }
       }
     } catch (err: any) {
-      console.error('[update] Check failed:', err);
       debugLog('app', `Update check failed: ${err?.message}`, err, 'error');
       setUpdateStatus({ state: 'error', message: err?.message || 'Failed to check for updates' });
     }
@@ -115,22 +242,18 @@ export function AboutSection() {
     const { release } = updateStatus;
     const asset = getPlatformAsset(release.assets, platform);
     if (!asset) {
-      console.error('[update] No asset found for platform:', platform, 'assets:', release.assets);
       debugLog('app', `No download asset for ${platform}`, release.assets, 'error');
       setUpdateStatus({ state: 'error', message: `No download available for ${platform}. Visit the release page to download manually.` });
       return;
     }
-    console.log('[update] Downloading:', asset.name, formatBytes(asset.size), asset.downloadUrl);
     debugLog('app', `Downloading: ${asset.name} (${formatBytes(asset.size)})`, asset);
     setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size });
     try {
       const filePath = await window.api.app.downloadUpdate(asset.downloadUrl, asset.name);
-      console.log('[update] Download complete:', filePath);
       debugLog('app', `Download complete: ${filePath}`);
       setDownloadFilePath(filePath);
       setUpdateStatus({ state: 'downloaded', filePath });
     } catch (err: any) {
-      console.error('[update] Download failed:', err);
       debugLog('app', `Download failed: ${err?.message}`, err, 'error');
       setUpdateStatus({ state: 'error', message: err?.message || 'Download failed' });
     }
@@ -140,6 +263,53 @@ export function AboutSection() {
     if (updateStatus.state !== 'downloaded') return;
     await window.api.app.installUpdate(updateStatus.filePath);
   }, [updateStatus]);
+
+  const handleInstallClaudeCode = useCallback(async () => {
+    setClaudeCodeInstall({ status: 'installing' });
+    debugLog('app', 'Installing Claude Code...');
+    try {
+      const result = await window.api.app.installClaudeCode();
+      if (result.success) {
+        debugLog('app', 'Claude Code installed successfully');
+        setClaudeCodeInstall({ status: 'success', message: result.message });
+        // Re-check version
+        const ver = await window.api.app.getClaudeCodeVersion();
+        setClaudeCodeVersion(ver);
+      } else {
+        debugLog('app', `Claude Code install failed: ${result.error}`, result, 'error');
+        setClaudeCodeInstall({ status: 'error', error: result.error });
+      }
+    } catch (err: any) {
+      debugLog('app', `Claude Code install error: ${err?.message}`, err, 'error');
+      setClaudeCodeInstall({ status: 'error', error: err?.message || 'Install failed' });
+    }
+  }, []);
+
+  const handleInstallGit = useCallback(async () => {
+    setGitInstall({ status: 'installing' });
+    debugLog('app', `Installing Git (${platform})...`);
+    try {
+      const result = await window.api.app.installGit();
+      if (result.success) {
+        debugLog('app', 'Git install triggered', result);
+        if (result.message) {
+          // For Mac (xcode-select) and Windows (browser), show the message
+          setGitInstall({ status: 'success', message: result.message });
+        } else {
+          setGitInstall({ status: 'success', message: 'Installed' });
+          // Re-check version
+          const ver = await window.api.app.getGitVersion();
+          setGitVersion(ver);
+        }
+      } else {
+        debugLog('app', `Git install failed: ${result.error}`, result, 'error');
+        setGitInstall({ status: 'error', error: result.error });
+      }
+    } catch (err: any) {
+      debugLog('app', `Git install error: ${err?.message}`, err, 'error');
+      setGitInstall({ status: 'error', error: err?.message || 'Install failed' });
+    }
+  }, [platform]);
 
   return (
     <div>
@@ -171,31 +341,41 @@ export function AboutSection() {
 
         <div className="border-t border-border" />
 
-        {/* Version rows */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-text-primary">App Version</div>
-              <div className="text-xs text-text-muted mt-0.5">Claude App</div>
-            </div>
-            <span className="text-sm font-mono text-text-muted">{version || '...'}</span>
-          </div>
+        {/* Version rows — ordered: App → SDK → Claude Code → Git */}
+        <div className="space-y-3">
+          <VersionRow
+            label="App Version"
+            sublabel="Claude App"
+            version={version}
+          />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-text-primary">Claude Code</div>
-              <div className="text-xs text-text-muted mt-0.5">@anthropic-ai/claude-code</div>
-            </div>
-            <span className="text-sm font-mono text-text-muted">{claudeCodeVersion || '...'}</span>
-          </div>
+          <VersionRow
+            label="Claude Agent SDK"
+            sublabel="@anthropic-ai/claude-agent-sdk"
+            version={sdkVersion}
+          />
 
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium text-text-primary">Claude Agent SDK</div>
-              <div className="text-xs text-text-muted mt-0.5">@anthropic-ai/claude-agent-sdk</div>
-            </div>
-            <span className="text-sm font-mono text-text-muted">{sdkVersion || '...'}</span>
-          </div>
+          <VersionRow
+            label="Claude Code"
+            sublabel="@anthropic-ai/claude-code"
+            version={claudeCodeVersion}
+            notFoundLabel="Not installed"
+            installStatus={claudeCodeInstall.status}
+            installError={claudeCodeInstall.error}
+            installMessage={claudeCodeInstall.message}
+            onInstall={handleInstallClaudeCode}
+          />
+
+          <VersionRow
+            label="Git"
+            sublabel={platform === 'mac' ? 'Xcode Command Line Tools / Homebrew' : platform === 'windows' ? 'Git for Windows' : 'git'}
+            version={gitVersion}
+            notFoundLabel="Not installed"
+            installStatus={gitInstall.status}
+            installError={gitInstall.error}
+            installMessage={gitInstall.message}
+            onInstall={handleInstallGit}
+          />
         </div>
 
         <div className="border-t border-border" />
@@ -216,10 +396,7 @@ export function AboutSection() {
 
           {updateStatus.state === 'checking' && (
             <div className="flex items-center gap-2 text-sm text-text-muted">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="animate-spin">
-                <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" className="text-border" />
-                <path d="M14 8a6 6 0 00-6-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-accent" />
-              </svg>
+              <Spinner />
               Checking for updates…
             </div>
           )}
@@ -227,10 +404,7 @@ export function AboutSection() {
           {updateStatus.state === 'up-to-date' && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-success">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
-                  <path d="M5.5 8l2 2 3.5-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <CheckIcon />
                 You're on the latest version
               </div>
               <button
@@ -302,10 +476,7 @@ export function AboutSection() {
           {updateStatus.state === 'downloaded' && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-success">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" />
-                  <path d="M5.5 8l2 2 3.5-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                <CheckIcon />
                 Download complete
               </div>
               <button

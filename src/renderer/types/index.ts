@@ -63,6 +63,9 @@ export interface AppAPI {
   getModel: () => Promise<string>;
   getAgentSdkVersion: () => Promise<string>;
   getClaudeCodeVersion: () => Promise<string>;
+  getGitVersion: () => Promise<string>;
+  installClaudeCode: () => Promise<{ success: boolean; error?: string; message?: string }>;
+  installGit: () => Promise<{ success: boolean; error?: string; message?: string }>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<DependencyStatus[]>;

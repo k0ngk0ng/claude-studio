@@ -115,6 +115,9 @@ export interface AppAPI {
   getModel: () => Promise<string>;
   getAgentSdkVersion: () => Promise<string>;
   getClaudeCodeVersion: () => Promise<string>;
+  getGitVersion: () => Promise<string>;
+  installClaudeCode: () => Promise<{ success: boolean; error?: string; message?: string }>;
+  installGit: () => Promise<{ success: boolean; error?: string; message?: string }>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
   getAvailableEditors: () => Promise<{ id: string; name: string }[]>;
   checkDependencies: () => Promise<{ name: string; found: boolean; path?: string; version?: string; installHint: string }[]>;
@@ -296,6 +299,9 @@ contextBridge.exposeInMainWorld('api', {
     getModel: () => ipcRenderer.invoke('app:getModel'),
     getAgentSdkVersion: () => ipcRenderer.invoke('app:getAgentSdkVersion'),
     getClaudeCodeVersion: () => ipcRenderer.invoke('app:getClaudeCodeVersion'),
+    getGitVersion: () => ipcRenderer.invoke('app:getGitVersion'),
+    installClaudeCode: () => ipcRenderer.invoke('app:installClaudeCode'),
+    installGit: () => ipcRenderer.invoke('app:installGit'),
     openInEditor: (cwd: string, editor: string) => ipcRenderer.invoke('app:openInEditor', cwd, editor),
     getAvailableEditors: () => ipcRenderer.invoke('app:getAvailableEditors'),
     checkDependencies: () => ipcRenderer.invoke('app:checkDependencies'),
