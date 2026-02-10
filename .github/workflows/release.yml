@@ -176,6 +176,15 @@ jobs:
             ! -name 'RELEASES' \
             ! -name '*.nupkg' \
             -exec cp {} upload/ \;
+          # Replace spaces with dots in filenames (match GitHub Release behavior)
+          cd upload/
+          for f in *; do
+            newname="$(echo "$f" | tr ' ' '.')"
+            if [ "$f" != "$newname" ]; then
+              mv "$f" "$newname"
+            fi
+          done
+          cd ..
           echo "Files to upload:"
           ls -lh upload/
 
