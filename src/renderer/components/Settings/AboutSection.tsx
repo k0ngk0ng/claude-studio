@@ -15,7 +15,7 @@ type UpdateStatus =
   | { state: 'checking' }
   | { state: 'up-to-date' }
   | { state: 'available'; release: ReleaseInfo }
-  | { state: 'downloading'; progress: number; downloaded: number; totalSize: number }
+  | { state: 'downloading'; progress: number; downloaded: number; totalSize: number; source?: string }
   | { state: 'downloaded'; filePath: string }
   | { state: 'error'; message: string };
 
@@ -201,6 +201,7 @@ export function AboutSection() {
           progress: data.progress,
           downloaded: data.downloaded,
           totalSize: data.totalSize,
+          source: prev.source,
         };
       });
     };
@@ -251,7 +252,7 @@ export function AboutSection() {
       return;
     }
 
-    setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size });
+    setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size, source: asset.cdnUrl ? 'CDN' : 'GitHub' });
 
     // Try CDN first, fallback to GitHub
     if (asset.cdnUrl) {
@@ -265,7 +266,7 @@ export function AboutSection() {
       } catch (err: any) {
         debugLog('app', `CDN download failed, falling back to GitHub: ${err?.message}`, err, 'warn');
         // Reset progress for GitHub retry
-        setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size });
+        setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size, source: 'GitHub' });
       }
     }
 
@@ -481,7 +482,9 @@ export function AboutSection() {
           {updateStatus.state === 'downloading' && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-text-muted">Downloading…</span>
+                <span className="text-text-muted">
+                  Downloading{updateStatus.source ? ` from ${updateStatus.source}` : ''}…
+                </span>
                 <span className="text-text-muted font-mono text-xs">
                   {formatBytes(updateStatus.downloaded)} / {formatBytes(updateStatus.totalSize)}
                 </span>
