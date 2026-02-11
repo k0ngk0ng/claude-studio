@@ -12,6 +12,7 @@ jobs:
   release-macos:
     name: Release (macOS)
     runs-on: macos-latest
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -34,6 +35,7 @@ jobs:
         run: npm run make
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLAUDE_APP_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -47,6 +49,7 @@ jobs:
   release-windows:
     name: Release (Windows)
     runs-on: windows-latest
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -76,6 +79,7 @@ jobs:
         run: npm run package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLAUDE_APP_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
 
       - name: Install NSIS
         run: choco install nsis -y
@@ -96,6 +100,7 @@ jobs:
   release-linux:
     name: Release (Linux)
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -123,6 +128,7 @@ jobs:
         run: ./node_modules/.bin/electron-forge make
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CLAUDE_APP_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4

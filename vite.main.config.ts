@@ -9,6 +9,10 @@ import { defineConfig } from 'vite';
 //   - external: electron, node builtins
 // So we only need to add our own overrides here.
 export default defineConfig({
+  define: {
+    // Inject CDN base URL at build time (set via CI environment variable)
+    'process.env.CLAUDE_APP_CDN_URL': JSON.stringify(process.env.CLAUDE_APP_CDN_URL || ''),
+  },
   build: {
     rollupOptions: {
       external: ['node-pty', '@anthropic-ai/claude-agent-sdk'],
