@@ -40,16 +40,27 @@ function copyDirSync(src: string, dest: string, skip?: Set<string>) {
 }
 
 // macOS code signing + notarization (requires certificate + Apple credentials)
+const signingEnvVars = {
+  CSC_LINK: !!process.env.CSC_LINK,
+  CSC_KEY_PASSWORD: !!process.env.CSC_KEY_PASSWORD,
+  APPLE_ID: !!process.env.APPLE_ID,
+  APPLE_ID_PASSWORD: !!process.env.APPLE_ID_PASSWORD,
+  APPLE_TEAM_ID: !!process.env.APPLE_TEAM_ID,
+};
+for (const [name, isSet] of Object.entries(signingEnvVars)) {
+  console.log(`  ${isSet ? '✓' : '✗'} ${name}: ${isSet ? 'set' : 'not set'}`);
+}
+
 const appleId = process.env.APPLE_ID || '';
 const appleIdPassword = process.env.APPLE_ID_PASSWORD || '';
 const appleTeamId = process.env.APPLE_TEAM_ID || '';
-const hasCertificate = !!process.env.CSC_LINK; // Developer ID certificate available in keychain
+const hasCertificate = !!process.env.CSC_LINK;
 const canSignMac = !!(appleId && appleIdPassword && appleTeamId && hasCertificate);
 
 if (canSignMac) {
   console.log('  🔏 macOS code signing & notarization ENABLED');
 } else {
-  console.log('  ⚠ macOS code signing SKIPPED (missing CSC_LINK / APPLE_ID / APPLE_ID_PASSWORD / APPLE_TEAM_ID)');
+  console.log('  ⚠ macOS code signing SKIPPED');
 }
 
 const config: ForgeConfig = {
