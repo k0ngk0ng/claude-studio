@@ -81,8 +81,9 @@ const config: ForgeConfig = {
     ...(canSignMac && {
       osxSign: {
         identity: 'Developer ID Application',
+        // Make signing failures fatal instead of silently falling back to adhoc
+        continueOnError: false,
         optionsForFile: () => ({
-          // Hardened runtime is required for notarization
           entitlements: './entitlements.plist',
           'entitlements-inherit': './entitlements.plist',
         }),
