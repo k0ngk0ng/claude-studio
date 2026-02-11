@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { usePermissionStore } from '../../stores/permissionStore';
@@ -7,6 +7,7 @@ import { MessageBubble } from './MessageBubble';
 import { ToolCard } from './ToolCard';
 import { PermissionPrompt } from './PermissionPrompt';
 import { WelcomeScreen } from './WelcomeScreen';
+import { ChatSearch } from './ChatSearch';
 
 export function ChatView() {
   const { currentSession, streamingContent, toolActivities, isLoadingSession } = useAppStore();
@@ -15,6 +16,7 @@ export function ChatView() {
   const { forkSession } = useSessions();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [showSearch, setShowSearch] = useState(false);
 
   const { messages, isStreaming } = currentSession;
   const hasMessages = messages.length > 0;
@@ -34,6 +36,18 @@ export function ChatView() {
     }
   }, [messages.length, streamingContent, toolActivities.length, pendingRequests.length]);
 
+  // Cmd/Ctrl+F to open search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        setShowSearch(true);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   if (isLoadingSession) {
     return <LoadingSkeleton />;
   }
@@ -46,10 +60,17 @@ export function ChatView() {
   const layoutClass = isFullWidth ? 'w-full px-2' : 'max-w-3xl mx-auto';
 
   return (
-    <div
-      ref={scrollRef}
-      className="flex-1 overflow-y-auto px-4 py-4"
-    >
+    <div className="relative flex-1 min-h-0">
+      {showSearch && (
+        <ChatSearch
+          containerRef={scrollRef}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
+      <div
+        ref={scrollRef}
+        className="h-full overflow-y-auto px-4 py-4"
+      >
       <div className={`${layoutClass} space-y-4`}>
         {messages.map((message) => (
           <MessageBubble
@@ -172,6 +193,7 @@ export function ChatView() {
 
         <div ref={bottomRef} />
       </div>
+    </div>
     </div>
   );
 }

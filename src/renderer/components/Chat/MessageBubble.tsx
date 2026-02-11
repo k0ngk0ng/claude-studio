@@ -276,10 +276,12 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
     pre: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
       const code = extractTextFromChildren(children).replace(/\n$/, '');
       return (
-        <pre {...props} className={`${props.className || ''} relative group/code`}>
-          {children}
+        <div className="relative group/code">
+          <pre {...props}>
+            {children}
+          </pre>
           <CodeBlockCopyButton code={code} />
-        </pre>
+        </div>
       );
     },
   }), []);

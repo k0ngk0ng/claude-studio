@@ -500,23 +500,39 @@ export function FileTree() {
     <>
       {/* Search */}
       <div className="px-2 py-2 border-b border-border shrink-0">
-        <div className="relative">
-          <svg
-            width="12" height="12" viewBox="0 0 16 16" fill="none"
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted"
+        <div className="relative flex items-center gap-1">
+          <div className="relative flex-1">
+            <svg
+              width="12" height="12" viewBox="0 0 16 16" fill="none"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted"
+            >
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter files…"
+              className="w-full bg-surface border border-border rounded-md pl-7 pr-2 py-1
+                         text-xs text-text-primary placeholder-text-muted
+                         outline-none focus:border-accent/50"
+            />
+          </div>
+          <button
+            onClick={loadFiles}
+            disabled={loading}
+            className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-primary
+                       disabled:opacity-30 transition-colors shrink-0"
+            title="Refresh files"
           >
-            <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.2" />
-            <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-          </svg>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter files…"
-            className="w-full bg-surface border border-border rounded-md pl-7 pr-2 py-1
-                       text-xs text-text-primary placeholder-text-muted
-                       outline-none focus:border-accent/50"
-          />
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className={loading ? 'animate-spin' : ''}>
+              <path d="M13.5 8a5.5 5.5 0 01-9.27 4.01" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path d="M2.5 8a5.5 5.5 0 019.27-4.01" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path d="M4.5 12.5L4.23 10.01 6.5 11.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M11.5 3.5l.27 2.49L9.5 4.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
         </div>
       </div>
 
