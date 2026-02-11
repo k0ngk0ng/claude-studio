@@ -57,7 +57,7 @@ const defaultSettings: AppSettings = {
     showLineNumbers: true,
     opaqueBackground: false,
     chatLayout: 'centered',
-    streamingCursor: 'pulse-dot',
+    streamingCursor: 'classic',
   },
   keybindings: [
     { id: 'new-thread', label: 'New Thread', keys: 'Cmd+N', action: 'newThread' },

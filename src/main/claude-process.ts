@@ -4,6 +4,7 @@ import path from 'path';
 import { createRequire } from 'module';
 import { app } from 'electron';
 import fs from 'fs';
+import { getSessionsDir, encodePath } from './platform';
 
 // Debug log helper — console only (no file writes)
 function debugLog(...args: unknown[]) {
@@ -130,6 +131,7 @@ interface ManagedSession {
   abortController: AbortController;
   permissionResolvers: Map<string, (result: PermissionResponse) => void>;
   queryInstance?: any; // SDK Query object — has setPermissionMode(), interrupt(), etc.
+  messageCount: number; // Track messages sent to detect follow-ups
 }
 
 export interface PermissionResponse {
@@ -170,6 +172,7 @@ class ClaudeProcessManager extends EventEmitter {
       language,
       abortController,
       permissionResolvers: new Map(),
+      messageCount: 0,
     };
     this.sessions.set(processId, managed);
 
@@ -366,6 +369,9 @@ class ClaudeProcessManager extends EventEmitter {
     const queue = (managed as any)._inputQueue as Array<any>;
     if (!queue) return false;
 
+    const isFollowUp = managed.messageCount > 0;
+    managed.messageCount++;
+
     queue.push({
       type: 'user',
       message: {
@@ -375,6 +381,29 @@ class ClaudeProcessManager extends EventEmitter {
       parent_tool_use_id: null,
       session_id: managed.sessionId || '',
     });
+
+    // Persist follow-up user messages to JSONL so they appear in session history.
+    // The first message is written by the SDK itself, so we only append follow-ups.
+    if (isFollowUp && managed.sessionId && managed.cwd) {
+      try {
+        const sessionsDir = getSessionsDir();
+        const encoded = encodePath(managed.cwd);
+        const jsonlPath = path.join(sessionsDir, encoded, `${managed.sessionId}.jsonl`);
+        if (fs.existsSync(jsonlPath)) {
+          const entry = {
+            type: 'user',
+            message: { role: 'user', content },
+            uuid: randomUUID(),
+            sessionId: managed.sessionId,
+            timestamp: new Date().toISOString(),
+          };
+          fs.appendFileSync(jsonlPath, '\n' + JSON.stringify(entry));
+          debugLog('Appended follow-up user message to JSONL');
+        }
+      } catch (err: any) {
+        debugLog('Failed to append user message to JSONL:', err?.message);
+      }
+    }
 
     // Wake up the input generator
     const resolve = (managed as any)._inputResolve;

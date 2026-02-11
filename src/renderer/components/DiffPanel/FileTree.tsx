@@ -310,20 +310,25 @@ function TreeItem({
   projectPath,
   expandedPaths,
   highlightPath,
+  selectedPath,
   onContextMenu,
   onFileOpen,
+  onSelect,
 }: {
   node: TreeNode;
   depth: number;
   projectPath: string;
   expandedPaths: Set<string>;
   highlightPath: string | null;
+  selectedPath: string | null;
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
   onFileOpen: (node: TreeNode) => void;
+  onSelect: (path: string | null) => void;
 }) {
   const shouldForceOpen = node.isDir && expandedPaths.has(node.path);
   const [isOpen, setIsOpen] = useState(depth < 1 || shouldForceOpen);
   const isHighlighted = highlightPath === node.path;
+  const isSelected = !node.isDir && selectedPath === node.path;
   const itemRef = useRef<HTMLButtonElement>(null);
 
   // Force open when revealFile triggers
@@ -343,6 +348,8 @@ function TreeItem({
   const handleClick = () => {
     if (node.isDir) {
       setIsOpen(!isOpen);
+    } else {
+      onSelect(selectedPath === node.path ? null : node.path);
     }
   };
 
@@ -366,7 +373,7 @@ function TreeItem({
         onDoubleClick={handleDoubleClick}
         onContextMenu={handleContextMenu}
         className={`flex items-center gap-1 w-full text-left hover:bg-surface-hover transition-colors py-[3px] pr-2 ${
-          isHighlighted ? 'bg-accent/15 ring-1 ring-accent/30' : ''
+          isHighlighted ? 'bg-accent/15 ring-1 ring-accent/30' : isSelected ? 'bg-accent/10' : ''
         }`}
         style={{ paddingLeft: `${depth * 16 + 8}px` }}
       >
@@ -384,7 +391,7 @@ function TreeItem({
 
         <FileIcon name={node.name} isDir={node.isDir} isOpen={isOpen} />
 
-        <span className={`text-xs truncate font-mono ${isHighlighted ? 'text-text-primary font-medium' : 'text-text-secondary'}`}>
+        <span className={`text-xs truncate font-mono ${isHighlighted || isSelected ? 'text-text-primary font-medium' : 'text-text-secondary'}`}>
           {node.name}
         </span>
       </button>
@@ -397,8 +404,10 @@ function TreeItem({
           projectPath={projectPath}
           expandedPaths={expandedPaths}
           highlightPath={highlightPath}
+          selectedPath={selectedPath}
           onContextMenu={onContextMenu}
           onFileOpen={onFileOpen}
+          onSelect={onSelect}
         />
       ))}
     </>
@@ -416,6 +425,7 @@ export function FileTree() {
   const [viewerFile, setViewerFile] = useState<string | null>(null);
   const [highlightPath, setHighlightPath] = useState<string | null>(null);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
 
   const loadFiles = useCallback(async () => {
     if (!currentProject.path) return;
@@ -527,8 +537,10 @@ export function FileTree() {
                 projectPath={currentProject.path}
                 expandedPaths={expandedPaths}
                 highlightPath={highlightPath}
+                selectedPath={selectedFile}
                 onContextMenu={handleContextMenu}
                 onFileOpen={handleFileOpen}
+                onSelect={setSelectedFile}
               />
             ))}
           </div>

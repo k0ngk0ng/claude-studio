@@ -811,12 +811,18 @@ export function useClaude() {
 
   const sendMessage = useCallback(async (content: string) => {
     debugLog('claude', `sending message: ${content.slice(0, 100)}${content.length > 100 ? '…' : ''}`, { length: content.length });
-    const { addMessage, setIsStreaming, clearStreamingContent, clearToolActivities } =
+    const { addMessage, setIsStreaming, clearStreamingContent, clearToolActivities, toolActivities } =
       useAppStore.getState();
 
     // If no process, need to spawn one first
     const pid = processIdRef.current;
     if (!pid) return;
+
+    // Commit any in-flight assistant response before clearing
+    if (streamingTextRef.current || toolActivities.length > 0) {
+      const partial = commitCurrentTurn(streamingTextRef.current, toolActivities, currentModelRef.current);
+      if (partial) addMessage(partial);
+    }
 
     addMessage({
       id: crypto.randomUUID(),

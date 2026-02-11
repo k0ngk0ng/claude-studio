@@ -235,11 +235,13 @@ export function DiffPanel() {
                   onContextMenu={(e) => handleContextMenu(e, file)}
                   className={`flex items-center gap-2 w-full px-3 py-1.5 text-left
                              hover:bg-surface-hover transition-colors ${
-                               selectedFile === file.path ? 'bg-surface' : ''
+                               selectedFile === file.path ? 'bg-accent/10' : ''
                              }`}
                 >
                   <StatusBadge status={file.status} />
-                  <span className="flex-1 text-xs text-text-secondary truncate font-mono">
+                  <span className={`flex-1 text-xs truncate font-mono ${
+                    selectedFile === file.path ? 'text-text-primary font-medium' : 'text-text-secondary'
+                  }`}>
                     {file.path}
                   </span>
                   <button

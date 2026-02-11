@@ -7,9 +7,9 @@ import { StreamingCursor } from '../Chat/MessageBubble';
 import type { StreamingCursorStyle } from '../../types';
 
 const CURSOR_OPTIONS: { value: StreamingCursorStyle; label: string }[] = [
+  { value: 'classic', label: 'Classic' },
   { value: 'pulse-dot', label: 'Pulse Dot' },
   { value: 'terminal', label: 'Terminal' },
-  { value: 'classic', label: 'Classic' },
   { value: 'scan-line', label: 'Scan Line' },
   { value: 'typewriter', label: 'Typewriter' },
   { value: 'dna-helix', label: 'DNA Helix' },
