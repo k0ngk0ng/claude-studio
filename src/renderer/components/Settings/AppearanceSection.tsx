@@ -3,6 +3,19 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { SettingsSelect } from './controls/SettingsSelect';
 import { SettingsInput } from './controls/SettingsInput';
 import { SettingsToggle } from './controls/SettingsToggle';
+import { StreamingCursor } from '../Chat/MessageBubble';
+import type { StreamingCursorStyle } from '../../types';
+
+const CURSOR_OPTIONS: { value: StreamingCursorStyle; label: string }[] = [
+  { value: 'pulse-dot', label: 'Pulse Dot' },
+  { value: 'terminal', label: 'Terminal' },
+  { value: 'classic', label: 'Classic' },
+  { value: 'scan-line', label: 'Scan Line' },
+  { value: 'typewriter', label: 'Typewriter' },
+  { value: 'dna-helix', label: 'DNA Helix' },
+  { value: 'heartbeat', label: 'Heartbeat' },
+  { value: 'neon-flicker', label: 'Neon Flicker' },
+];
 
 export function AppearanceSection() {
   const { settings, updateAppearance } = useSettingsStore();
@@ -56,6 +69,34 @@ export function AppearanceSection() {
             { value: 'full-width', label: 'Full width' },
           ]}
         />
+
+        {/* Streaming cursor style */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <div className="text-sm font-medium text-text-primary">Streaming cursor</div>
+              <div className="text-xs text-text-muted mt-0.5">Choose the animation style shown while AI is responding.</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-4 gap-2 mt-3">
+            {CURSOR_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => updateAppearance({ streamingCursor: opt.value })}
+                className={`flex flex-col items-center gap-2 px-3 py-3 rounded-lg border transition-all ${
+                  appearance.streamingCursor === opt.value
+                    ? 'border-accent bg-accent/10'
+                    : 'border-border bg-surface hover:border-text-muted'
+                }`}
+              >
+                <div className="h-6 flex items-center justify-center text-[14px]">
+                  <StreamingCursor style={opt.value} />
+                </div>
+                <span className="text-xs text-text-primary font-medium">{opt.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {/* Divider */}
         <div className="border-t border-border" />

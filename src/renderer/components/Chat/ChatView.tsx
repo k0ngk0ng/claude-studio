@@ -101,6 +101,27 @@ export function ChatView() {
                   status={activity.status}
                 />
               ))}
+
+              {/* Thinking indicator when tools are active but no text content yet */}
+              {!streamingContent && toolActivities.length > 0 && (
+                <div className="flex items-center gap-2 py-1">
+                  <div className="flex gap-1">
+                    <div
+                      className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce"
+                      style={{ animationDelay: '0ms' }}
+                    />
+                    <div
+                      className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce"
+                      style={{ animationDelay: '150ms' }}
+                    />
+                    <div
+                      className="w-1.5 h-1.5 rounded-full bg-text-muted animate-bounce"
+                      style={{ animationDelay: '300ms' }}
+                    />
+                  </div>
+                  <span className="text-sm text-text-muted">Claude is thinking…</span>
+                </div>
+              )}
             </div>
           </div>
         )}

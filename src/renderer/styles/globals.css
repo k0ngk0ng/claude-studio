@@ -180,23 +180,60 @@ html, body, #root {
 .markdown-content a {
   color: var(--color-accent);
   text-decoration: none;
+  cursor: pointer;
 }
 
 .markdown-content a:hover {
   text-decoration: underline;
 }
 
-/* Streaming cursor animation */
-@keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+/* Streaming cursor styles */
+
+/* Terminal: blinking underscore */
+@keyframes terminal-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.terminal-cursor {
+  color: var(--color-accent);
+  font-family: monospace;
+  font-weight: bold;
+  animation: terminal-blink 0.8s step-end infinite;
+  text-shadow: 0 0 4px var(--color-accent);
 }
 
-.streaming-cursor::after {
-  content: "▊";
-  animation: blink 1s step-end infinite;
+/* Scan line: sweeping bar */
+@keyframes scan-sweep {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+.scan-line-bar {
+  animation: scan-sweep 1s ease-in-out infinite;
+}
+
+/* Classic: smooth pulsing vertical bar */
+@keyframes classic-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.classic-cursor {
   color: var(--color-accent);
-  margin-left: 2px;
+  font-weight: 300;
+  animation: classic-pulse 1.2s ease-in-out infinite;
+}
+
+/* Typewriter: subtle bounce */
+.typewriter-cursor {
+  text-shadow: 0 0 4px var(--color-accent);
+}
+
+/* Heartbeat: ECG pulse sweep */
+@keyframes heartbeat-sweep {
+  0% { clip-path: inset(0 100% 0 0); }
+  100% { clip-path: inset(0 0 0 0); }
+}
+.heartbeat-line {
+  animation: heartbeat-sweep 1.2s linear infinite;
 }
 
 /* Diff styles */

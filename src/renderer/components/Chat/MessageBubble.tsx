@@ -1,9 +1,206 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import type { Message } from '../../types';
+import type { Message, StreamingCursorStyle } from '../../types';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { ToolCard } from './ToolCard';
+
+/* ── Streaming cursor styles ─────────────────────────────────────── */
+
+function PulseDotCursor() {
+  return (
+    <span className="inline-flex items-center ml-1.5 align-middle" aria-hidden="true">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inset-0 rounded-full bg-accent opacity-40 animate-ping" />
+        <span className="relative rounded-full h-2 w-2 bg-accent shadow-[0_0_6px_var(--color-accent)]" />
+      </span>
+    </span>
+  );
+}
+
+function TerminalCursor() {
+  return (
+    <span className="inline-block ml-0.5 align-baseline terminal-cursor" aria-hidden="true">
+      _
+    </span>
+  );
+}
+
+function ScanLineCursor() {
+  return (
+    <span className="inline-block ml-1 align-middle scan-line-cursor" aria-hidden="true">
+      <span className="inline-block w-4 h-[14px] relative overflow-hidden rounded-sm">
+        <span className="absolute inset-0 bg-accent/10" />
+        <span className="absolute left-0 w-full h-[2px] bg-accent shadow-[0_0_6px_var(--color-accent)] scan-line-bar" />
+      </span>
+    </span>
+  );
+}
+
+function ClassicCursor() {
+  return (
+    <span className="inline-block ml-0.5 align-baseline classic-cursor" aria-hidden="true">
+      │
+    </span>
+  );
+}
+
+const TYPEWRITER_CHARS = '|/-\\';
+
+function TypewriterCursor() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setIdx(i => (i + 1) % TYPEWRITER_CHARS.length), 120);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="inline-block ml-0.5 font-mono text-accent align-baseline typewriter-cursor" aria-hidden="true">
+      {TYPEWRITER_CHARS[idx]}
+    </span>
+  );
+}
+
+function DnaHelixCursor() {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 80);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="inline-flex items-center ml-1 gap-[2px] align-middle" aria-hidden="true">
+      {[0, 1, 2].map(i => (
+        <span
+          key={i}
+          className="inline-block w-1.5 h-1.5 rounded-full bg-accent"
+          style={{
+            transform: `translateY(${Math.sin((tick + i * 4) * 0.3) * 4}px)`,
+            opacity: 0.5 + Math.sin((tick + i * 4) * 0.3) * 0.5,
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function HeartbeatCursor() {
+  return (
+    <span className="inline-flex items-center ml-1 align-middle" aria-hidden="true">
+      <svg width="24" height="14" viewBox="0 0 24 14" fill="none" className="heartbeat-line">
+        <polyline
+          points="0,7 4,7 6,2 8,12 10,4 12,9 14,7 24,7"
+          stroke="var(--color-accent)"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </svg>
+    </span>
+  );
+}
+
+function NeonFlickerCursor() {
+  const [brightness, setBrightness] = useState(1);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setBrightness(Math.random() > 0.3 ? 0.8 + Math.random() * 0.2 : 0.2 + Math.random() * 0.3);
+    }, 100);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span
+      className="inline-block ml-0.5 font-mono align-baseline"
+      style={{
+        color: 'var(--color-accent)',
+        opacity: brightness,
+        textShadow: `0 0 ${4 + brightness * 8}px var(--color-accent), 0 0 ${brightness * 16}px var(--color-accent)`,
+      }}
+      aria-hidden="true"
+    >
+      ▍
+    </span>
+  );
+}
+
+const CURSOR_MAP: Record<StreamingCursorStyle, React.FC> = {
+  'pulse-dot': PulseDotCursor,
+  'terminal': TerminalCursor,
+  'scan-line': ScanLineCursor,
+  'classic': ClassicCursor,
+  'typewriter': TypewriterCursor,
+  'dna-helix': DnaHelixCursor,
+  'heartbeat': HeartbeatCursor,
+  'neon-flicker': NeonFlickerCursor,
+};
+
+export function StreamingCursor({ style }: { style?: StreamingCursorStyle }) {
+  const settingStyle = useSettingsStore((s) => s.settings.appearance.streamingCursor);
+  const Comp = CURSOR_MAP[style || settingStyle] || PulseDotCursor;
+  return <Comp />;
+}
+
+/* ── Link context menu (Open Link / Copy Link) ─────────────────────── */
+
+interface LinkMenuState {
+  x: number;
+  y: number;
+  href: string;
+}
+
+function LinkContextMenu({ menu, onClose }: { menu: LinkMenuState; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [onClose]);
+
+  // Clamp position to viewport
+  const style: React.CSSProperties = {
+    position: 'fixed',
+    left: Math.min(menu.x, window.innerWidth - 180),
+    top: Math.min(menu.y, window.innerHeight - 80),
+    zIndex: 9999,
+  };
+
+  return (
+    <div
+      ref={ref}
+      style={style}
+      className="min-w-[160px] py-1 rounded-lg bg-surface border border-border shadow-lg"
+    >
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-surface-hover"
+        onClick={() => {
+          window.api.app.openExternal(menu.href);
+          onClose();
+        }}
+      >
+        Open Link
+      </button>
+      <button
+        className="w-full px-3 py-1.5 text-left text-sm text-text-primary hover:bg-surface-hover"
+        onClick={() => {
+          navigator.clipboard.writeText(menu.href);
+          onClose();
+        }}
+      >
+        Copy Link
+      </button>
+    </div>
+  );
+}
 
 interface MessageBubbleProps {
   message: Message;
@@ -15,6 +212,29 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
   const isAssistant = message.role === 'assistant';
+
+  const [linkMenu, setLinkMenu] = useState<LinkMenuState | null>(null);
+  const closeLinkMenu = useCallback(() => setLinkMenu(null), []);
+
+  /* Custom <a> renderer: left-click opens in browser, right-click shows menu */
+  const markdownComponents = React.useMemo(() => ({
+    a: ({ href, children, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+      <a
+        {...props}
+        href={href}
+        onClick={(e) => {
+          e.preventDefault();
+          if (href) window.api.app.openExternal(href);
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          if (href) setLinkMenu({ x: e.clientX, y: e.clientY, href });
+        }}
+      >
+        {children}
+      </a>
+    ),
+  }), []);
 
   if (isSystem) {
     return (
@@ -84,16 +304,17 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
       <div className="flex-1 min-w-0">
         {message.content && (
           <div
-            className={`text-[14px] leading-relaxed text-text-primary markdown-content ${
-              message.isStreaming ? 'streaming-cursor' : ''
-            }`}
+            className="text-[14px] leading-relaxed text-text-primary markdown-content"
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               rehypePlugins={[rehypeHighlight]}
+              components={markdownComponents}
             >
               {message.content}
             </ReactMarkdown>
+            {message.isStreaming && <StreamingCursor />}
+            {linkMenu && <LinkContextMenu menu={linkMenu} onClose={closeLinkMenu} />}
           </div>
         )}
 

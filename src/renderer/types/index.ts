@@ -346,6 +346,8 @@ export interface GitSettings {
   autoPush: boolean;
 }
 
+export type StreamingCursorStyle = 'pulse-dot' | 'terminal' | 'scan-line' | 'classic' | 'typewriter' | 'dna-helix' | 'heartbeat' | 'neon-flicker';
+
 export interface AppearanceSettings {
   theme: ThemeMode;
   fontSize: number;
@@ -355,6 +357,7 @@ export interface AppearanceSettings {
   showLineNumbers: boolean;
   opaqueBackground: boolean;
   chatLayout: 'centered' | 'full-width';
+  streamingCursor: StreamingCursorStyle;
 }
 
 export interface KeyBinding {
