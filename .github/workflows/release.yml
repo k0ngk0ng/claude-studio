@@ -65,6 +65,15 @@ jobs:
       - name: Sync version from git tag
         run: npm run version:sync
 
+      - name: Verify signing identity before build
+        run: |
+          echo "=== Keychain search list ==="
+          security list-keychains -d user
+          echo "=== All codesigning identities ==="
+          security find-identity -v -p codesigning
+          echo "=== Developer ID identities ==="
+          security find-identity -v -p codesigning | grep "Developer ID" || echo "WARNING: No Developer ID identity found!"
+
       - name: Make distributables
         run: npm run make
         env:
