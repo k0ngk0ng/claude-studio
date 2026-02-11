@@ -140,6 +140,45 @@ export function StreamingCursor({ style }: { style?: StreamingCursorStyle }) {
   return <Comp />;
 }
 
+/* ── Code block copy button ──────────────────────────────────────── */
+
+function CodeBlockCopyButton({ code }: { code: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(code);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      className="absolute top-2 right-2 p-1 rounded bg-surface-hover/80 hover:bg-surface-hover
+                 text-text-muted hover:text-text-primary opacity-0 group-hover/code:opacity-100
+                 transition-opacity"
+      title="Copy code"
+    >
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M3 11V3.5A1.5 1.5 0 014.5 2H10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+function extractTextFromChildren(children: React.ReactNode): string {
+  if (typeof children === 'string') return children;
+  if (Array.isArray(children)) return children.map(extractTextFromChildren).join('');
+  if (children && typeof children === 'object' && 'props' in children) {
+    return extractTextFromChildren((children as React.ReactElement).props.children);
+  }
+  return '';
+}
+
 /* ── Link context menu (Open Link / Copy Link) ─────────────────────── */
 
 interface LinkMenuState {
@@ -234,6 +273,15 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
         {children}
       </a>
     ),
+    pre: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
+      const code = extractTextFromChildren(children).replace(/\n$/, '');
+      return (
+        <pre {...props} className={`${props.className || ''} relative group/code`}>
+          {children}
+          <CodeBlockCopyButton code={code} />
+        </pre>
+      );
+    },
   }), []);
 
   if (isSystem) {
@@ -245,6 +293,32 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
       </div>
     );
   }
+
+  const [copied, setCopied] = useState(false);
+
+  const copyButton = message.content && (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(message.content);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded
+                 hover:bg-surface-hover text-text-muted hover:text-text-primary"
+      title="Copy text"
+    >
+      {copied ? (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <path d="M3 8.5l3 3 7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+          <rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
+          <path d="M3 11V3.5A1.5 1.5 0 014.5 2H10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+        </svg>
+      )}
+    </button>
+  );
 
   const forkButton = onFork && (
     <button
@@ -274,6 +348,7 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
         </div>
         {/* Metadata row — outside the bubble, right-aligned */}
         <div className="flex items-center justify-end gap-3 mt-1.5 text-[10px] text-text-muted">
+          {copyButton}
           {forkButton}
           <span>{formatTime(message.timestamp)}</span>
         </div>
@@ -367,6 +442,7 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
               {(message.durationMs / 1000).toFixed(1)}s
             </span>
           )}
+          {copyButton}
           {forkButton}
         </div>
       </div>
