@@ -12,7 +12,7 @@ import { execFile, execSync } from 'child_process';
 
 // CDN base URL for update downloads (set via environment or fallback)
 // Configure this to your Aliyun OSS CDN domain
-const CDN_BASE_URL = process.env.CLAUDE_APP_CDN_URL || '';
+const CDN_BASE_URL = process.env.CLAUDE_STUDIO_CDN_URL || '';
 
 function getWebContents(): Electron.WebContents | null {
   const windows = BrowserWindow.getAllWindows();
@@ -382,8 +382,8 @@ export function registerIpcHandlers(): void {
     try {
       const https = require('https');
       const data: string = await new Promise((resolve, reject) => {
-        https.get('https://api.github.com/repos/k0ngk0ng/claude-app/releases/latest', {
-          headers: { 'User-Agent': 'claude-app', 'Accept': 'application/vnd.github.v3+json' },
+        https.get('https://api.github.com/repos/k0ngk0ng/claude-studio/releases/latest', {
+          headers: { 'User-Agent': 'claude-studio', 'Accept': 'application/vnd.github.v3+json' },
         }, (res: any) => {
           let body = '';
           res.on('data', (chunk: string) => { body += chunk; });
@@ -462,7 +462,7 @@ export function registerIpcHandlers(): void {
 
       const follow = (url: string) => {
         currentReq = https.get(url, {
-          headers: { 'User-Agent': 'claude-app' },
+          headers: { 'User-Agent': 'claude-studio' },
         }, (res: any) => {
           // Follow redirects
           if (res.statusCode === 301 || res.statusCode === 302) {
@@ -828,7 +828,7 @@ export function registerIpcHandlers(): void {
       if (isPackaged) {
         const pkgJsonPath = path.join(installDir, 'package.json');
         if (!fs.existsSync(pkgJsonPath)) {
-          fs.writeFileSync(pkgJsonPath, JSON.stringify({ name: 'claude-app-runtime', private: true }, null, 2));
+          fs.writeFileSync(pkgJsonPath, JSON.stringify({ name: 'claude-studio-runtime', private: true }, null, 2));
         }
 
         // Install missing deps
@@ -885,9 +885,24 @@ export function registerIpcHandlers(): void {
     return true;
   });
 
-  // ─── App Settings (~/.claude-app/settings.json) ──────────────────
-  const settingsDir = path.join(os.homedir(), '.claude-app');
+  // ─── App Settings (~/.claude-studio/settings.json) ──────────────────
+  const settingsDir = path.join(os.homedir(), '.claude-studio');
   const settingsFile = path.join(settingsDir, 'settings.json');
+
+  // Migrate from old ~/.claude-app/ directory if it exists and new one doesn't
+  const oldSettingsDir = path.join(os.homedir(), '.claude-app');
+  const oldSettingsFile = path.join(oldSettingsDir, 'settings.json');
+  if (!fs.existsSync(settingsFile) && fs.existsSync(oldSettingsFile)) {
+    try {
+      if (!fs.existsSync(settingsDir)) {
+        fs.mkdirSync(settingsDir, { recursive: true });
+      }
+      fs.copyFileSync(oldSettingsFile, settingsFile);
+      console.log('Migrated settings from ~/.claude-app/ to ~/.claude-studio/');
+    } catch (err) {
+      console.warn('Failed to migrate settings from ~/.claude-app/:', err);
+    }
+  }
 
   ipcMain.handle('settings:read', async () => {
     try {

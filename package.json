@@ -1,6 +1,6 @@
 {
-  "name": "claude-app",
-  "productName": "Claude App",
+  "name": "claude-studio",
+  "productName": "ClaudeStudio",
   "version": "0.0.1",
   "description": "Desktop GUI for Claude Code CLI",
   "author": "k0ngk0ng",

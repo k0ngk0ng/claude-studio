@@ -53,8 +53,8 @@ if (canSignMac) {
 
 const config: ForgeConfig = {
   packagerConfig: {
-    name: 'Claude App',
-    executableName: 'claude-app',
+    name: 'ClaudeStudio',
+    executableName: 'claude-studio',
     asar: {
       // Unpack native binaries and executable files so they can be loaded/executed at runtime
       // - .node/.dll/.dylib/.so: native Node addons
@@ -123,8 +123,8 @@ const config: ForgeConfig = {
     }),
     new MakerDeb({
       options: {
-        maintainer: 'Claude App',
-        homepage: 'https://github.com/k0ngk0ng/claude-app',
+        maintainer: 'ClaudeStudio',
+        homepage: 'https://github.com/k0ngk0ng/claude-studio',
         icon: './assets/icon.png',
         categories: ['Development'],
       },

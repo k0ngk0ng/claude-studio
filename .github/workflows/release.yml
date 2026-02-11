@@ -35,7 +35,7 @@ jobs:
         run: npm run make
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CLAUDE_APP_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
+          CLAUDE_STUDIO_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -82,7 +82,7 @@ jobs:
         run: npm run package
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CLAUDE_APP_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
+          CLAUDE_STUDIO_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
 
       - name: Install NSIS
         run: choco install nsis -y
@@ -90,14 +90,14 @@ jobs:
       - name: Build NSIS installer
         shell: cmd
         run: |
-          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }} "/DAPP_DIR=%CD%\out\Claude App-win32-x64" installer\installer.nsi
+          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }} "/DAPP_DIR=%CD%\out\ClaudeStudio-win32-x64" installer\installer.nsi
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-windows
           path: |
-            installer/Claude.App-*-Setup.exe
+            installer/ClaudeStudio-*-Setup.exe
           retention-days: 5
 
   release-linux:
@@ -131,7 +131,7 @@ jobs:
         run: ./node_modules/.bin/electron-forge make
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CLAUDE_APP_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
+          CLAUDE_STUDIO_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4

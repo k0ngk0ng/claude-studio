@@ -11,7 +11,7 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   define: {
     // Inject CDN base URL at build time (set via CI environment variable)
-    'process.env.CLAUDE_APP_CDN_URL': JSON.stringify(process.env.CLAUDE_APP_CDN_URL || ''),
+    'process.env.CLAUDE_STUDIO_CDN_URL': JSON.stringify(process.env.CLAUDE_STUDIO_CDN_URL || ''),
   },
   build: {
     rollupOptions: {

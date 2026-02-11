@@ -1,4 +1,4 @@
-; ─── Claude App NSIS Installer ─────────────────────────────────────────
+; ─── ClaudeStudio NSIS Installer ─────────────────────────────────────────
 ; Packages the Electron app into a standard Windows installer with
 ; welcome page, directory selection, shortcuts, and uninstaller.
 
@@ -16,16 +16,16 @@
 !endif
 
 ; ─── Product info ────────────────────────────────────────────────────
-!define PRODUCT_NAME "Claude App"
+!define PRODUCT_NAME "ClaudeStudio"
 !define PRODUCT_PUBLISHER "k0ngk0ng"
-!define PRODUCT_WEB_SITE "https://github.com/k0ngk0ng/claude-app"
-!define PRODUCT_EXE "claude-app.exe"
+!define PRODUCT_WEB_SITE "https://github.com/k0ngk0ng/claude-studio"
+!define PRODUCT_EXE "claude-studio.exe"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !define PRODUCT_DIR_KEY "Software\${PRODUCT_NAME}"
 
 ; ─── Installer attributes ────────────────────────────────────────────
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile "Claude.App-${PRODUCT_VERSION}-Setup.exe"
+OutFile "ClaudeStudio-${PRODUCT_VERSION}-Setup.exe"
 InstallDir "$PROGRAMFILES64\${PRODUCT_NAME}"
 InstallDirRegKey HKLM "${PRODUCT_DIR_KEY}" "InstallDir"
 RequestExecutionLevel admin

@@ -1,13 +1,13 @@
-# Claude App
+# ClaudeStudio
 
 <p align="center">
   <img src="https://img.shields.io/badge/Electron-35-47848F?logo=electron&logoColor=white" />
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" />
   <img src="https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white" />
   <img src="https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white" />
-  <img src="https://img.shields.io/github/actions/workflow/status/k0ngk0ng/claude-app/ci.yml?label=CI" />
-  <img src="https://img.shields.io/github/v/release/k0ngk0ng/claude-app?label=Release" />
-  <img src="https://img.shields.io/github/license/k0ngk0ng/claude-app" />
+  <img src="https://img.shields.io/github/actions/workflow/status/k0ngk0ng/claude-studio/ci.yml?label=CI" />
+  <img src="https://img.shields.io/github/v/release/k0ngk0ng/claude-studio?label=Release" />
+  <img src="https://img.shields.io/github/license/k0ngk0ng/claude-studio" />
 </p>
 
 A desktop GUI for [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code), inspired by OpenAI's Codex app. Spawn local `claude` CLI processes and interact with them through a polished graphical interface — chat with streaming responses, real-time tool activity display, integrated terminal, git diff panel, and full session history.
@@ -84,7 +84,7 @@ A desktop GUI for [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-co
 
 ### Download Pre-built Releases
 
-Check the [Releases](https://github.com/k0ngk0ng/claude-app/releases) page for pre-built installers:
+Check the [Releases](https://github.com/k0ngk0ng/claude-studio/releases) page for pre-built installers:
 
 | Platform | Format |
 |---|---|
@@ -98,8 +98,8 @@ Check the [Releases](https://github.com/k0ngk0ng/claude-app/releases) page for p
 
 ```bash
 # Clone the repo
-git clone https://github.com/k0ngk0ng/claude-app.git
-cd claude-app
+git clone https://github.com/k0ngk0ng/claude-studio.git
+cd claude-studio
 
 # Install dependencies (auto-rebuilds node-pty for Electron)
 npm install
@@ -148,7 +148,7 @@ Changes made in the app are written back to `~/.claude/settings.json`, and vice 
 ## 📁 Project Structure
 
 ```
-claude-app/
+claude-studio/
 ├── .github/workflows/
 │   ├── ci.yml                  # CI: typecheck + build verify (push/PR)
 │   └── release.yml             # Release: build installers (tag v*)

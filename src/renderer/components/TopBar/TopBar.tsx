@@ -9,7 +9,7 @@ export function TopBar() {
   const threadTitle = currentSession.title || 'Thread';
   const title = currentSession.id
     ? `${currentProject.name} — ${threadTitle}`
-    : currentProject.name || 'Claude App';
+    : currentProject.name || 'ClaudeStudio';
 
   const isBottomOpen = panels.terminal || panels.logs;
 

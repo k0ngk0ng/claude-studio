@@ -340,7 +340,7 @@ export function AboutSection() {
             </svg>
           </div>
           <div>
-            <div className="text-lg font-semibold text-text-primary">Claude App</div>
+            <div className="text-lg font-semibold text-text-primary">ClaudeStudio</div>
             <div className="text-sm text-text-muted">A desktop client for Claude Code</div>
           </div>
         </div>
@@ -351,7 +351,7 @@ export function AboutSection() {
         <div className="space-y-3">
           <VersionRow
             label="App Version"
-            sublabel="Claude App"
+            sublabel="ClaudeStudio"
             version={version}
           />
 
@@ -527,7 +527,7 @@ export function AboutSection() {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              window.api.app.openExternal('https://github.com/k0ngk0ng/claude-app');
+              window.api.app.openExternal('https://github.com/k0ngk0ng/claude-studio');
             }}
             className="flex items-center gap-2 text-sm text-text-secondary hover:text-accent transition-colors"
           >
@@ -541,7 +541,7 @@ export function AboutSection() {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              window.api.app.openExternal('https://github.com/k0ngk0ng/claude-app/releases');
+              window.api.app.openExternal('https://github.com/k0ngk0ng/claude-studio/releases');
             }}
             className="flex items-center gap-2 text-sm text-text-secondary hover:text-accent transition-colors"
           >
@@ -555,7 +555,7 @@ export function AboutSection() {
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              window.api.app.openExternal('https://github.com/k0ngk0ng/claude-app/issues');
+              window.api.app.openExternal('https://github.com/k0ngk0ng/claude-studio/issues');
             }}
             className="flex items-center gap-2 text-sm text-text-secondary hover:text-accent transition-colors"
           >

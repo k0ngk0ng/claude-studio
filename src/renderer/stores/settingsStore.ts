@@ -15,7 +15,7 @@ import type {
   KeyBinding,
 } from '../types';
 
-const STORAGE_KEY = 'claude-app-settings';
+const STORAGE_KEY = 'claude-studio-settings';
 
 const defaultSettings: AppSettings = {
   general: {
@@ -71,7 +71,7 @@ const defaultSettings: AppSettings = {
 };
 
 function saveSettings(settings: AppSettings) {
-  // Fire-and-forget write to ~/.claude-app/settings.json
+  // Fire-and-forget write to ~/.claude-studio/settings.json
   window.api.settings.write(settings as unknown as Record<string, unknown>).catch(() => {
     // Ignore write errors
   });
@@ -122,16 +122,17 @@ async function loadSettingsFromFile(): Promise<AppSettings> {
       return settings;
     }
 
-    // No file yet — check localStorage for data to migrate
+    // No file yet — check localStorage for data to migrate (try new key, then old key)
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem('claude-app-settings');
       if (stored) {
         const parsed = JSON.parse(stored);
         const settings = mergeWithDefaults(parsed);
         // Write migrated data to file
         saveSettings(settings);
-        // Clean up localStorage
+        // Clean up both localStorage keys
         localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem('claude-app-settings');
         return settings;
       }
     } catch {

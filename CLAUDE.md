@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working on this project.
 
 ## Project Overview
 
-Claude App — Desktop GUI for Claude Code CLI. Built with Electron 35 + React 18 + TypeScript + Tailwind CSS v4 + Zustand.
+ClaudeStudio — Desktop GUI for Claude Code CLI. Built with Electron 35 + React 18 + TypeScript + Tailwind CSS v4 + Zustand.
 
 ## Architecture
 
@@ -24,7 +24,7 @@ src/
     ├── types/index.ts  # All TypeScript interfaces and types
     ├── stores/         # Zustand stores
     │   ├── appStore.ts       # Main app state (session, messages, streaming, panels)
-    │   ├── settingsStore.ts  # Settings with auto-persist to ~/.claude-app/settings.json
+    │   ├── settingsStore.ts  # Settings with auto-persist to ~/.claude-studio/settings.json
     │   └── ...
     ├── hooks/
     │   └── useClaude.ts      # Claude SDK interaction, streaming, message handling
