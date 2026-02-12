@@ -117,14 +117,10 @@ export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boo
       });
 
       // Handle shell exit (e.g. Ctrl+D) — respawn a new PTY
+      // No need to re-register onData — it uses terminalIdRef which auto-updates
       onExit(async () => {
         term.writeln('\r\n\x1b[90m[shell exited — restarting…]\x1b[0m\r\n');
-        const newId = await createTerminal();
-        if (newId) {
-          onData((data) => {
-            term.write(data);
-          });
-        }
+        await createTerminal();
       });
 
       // Handle resize
