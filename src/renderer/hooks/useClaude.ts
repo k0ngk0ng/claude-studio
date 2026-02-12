@@ -563,6 +563,12 @@ export function useClaude() {
           }
           lastResultIdRef.current = resultId;
 
+          // Guard: if user already switched away, route to background
+          if (processId !== processIdRef.current) {
+            handleBackgroundEvent(processId, event);
+            break;
+          }
+
           // Use the current turn's streaming text (not event.result which is cumulative
           // across ALL turns). Previous turns have already been committed as messages.
           const lastTurnText = streamingTextRef.current;
@@ -648,6 +654,10 @@ export function useClaude() {
           turnCountRef.current = 0;
           pendingToolResultsRef.current.clear();
 
+          // Mark process as done so follow-up messages spawn a new SDK process
+          setProcessId(null);
+          processIdRef.current = null;
+
           if (event.session_id) {
             setCurrentSession({ id: event.session_id });
           }
@@ -664,6 +674,12 @@ export function useClaude() {
         }
 
         case 'error': {
+          // Guard: if user already switched away, route to background
+          if (processId !== processIdRef.current) {
+            handleBackgroundEvent(processId, event);
+            break;
+          }
+
           setIsStreaming(false);
           clearStreamingContent();
           clearToolActivities();
@@ -682,6 +698,9 @@ export function useClaude() {
             timestamp: new Date().toISOString(),
           });
 
+          setProcessId(null);
+          processIdRef.current = null;
+
           // Clean up runtime cache
           const errSessionKey = useAppStore.getState().currentSession.id;
           if (errSessionKey) {
@@ -691,6 +710,12 @@ export function useClaude() {
         }
 
         case 'exit': {
+          // Guard: if user already switched away, route to background
+          if (processId !== processIdRef.current) {
+            handleBackgroundEvent(processId, event);
+            break;
+          }
+
           setIsStreaming(false);
           clearStreamingContent();
           clearToolActivities();
