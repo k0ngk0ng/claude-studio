@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { DiffViewerModal } from './DiffViewerModal';
 import type { GitCommit } from '../../types';
@@ -134,6 +134,7 @@ export function HistoryPanel() {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [diffModal, setDiffModal] = useState<{ filePath: string; diff: string } | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; hash: string; file: CommitFile } | null>(null);
+  const [filterQuery, setFilterQuery] = useState('');
 
   const loadCommits = useCallback(() => {
     if (!cwd) return;
@@ -209,6 +210,16 @@ export function HistoryPanel() {
     setContextMenu({ x: e.clientX, y: e.clientY, hash, file });
   }, []);
 
+  const filteredCommits = useMemo(() => {
+    if (!filterQuery.trim()) return commits;
+    const q = filterQuery.toLowerCase();
+    return commits.filter(c =>
+      c.subject.toLowerCase().includes(q) ||
+      c.shortHash.toLowerCase().includes(q) ||
+      c.author.toLowerCase().includes(q)
+    );
+  }, [commits, filterQuery]);
+
   const formatDate = (dateStr: string) => {
     try {
       const d = new Date(dateStr);
@@ -249,25 +260,49 @@ export function HistoryPanel() {
 
   return (
     <>
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border shrink-0">
-        <span className="text-[10px] text-text-muted">{commits.length} commits</span>
-        <button
-          onClick={loadCommits}
-          disabled={loading}
-          className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-primary transition-colors disabled:opacity-40"
-          title="Refresh"
-        >
-          <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className={loading ? 'animate-spin' : ''}>
-            <path d="M13.5 8a5.5 5.5 0 01-9.8 3.4M2.5 8a5.5 5.5 0 019.8-3.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-            <path d="M3.5 14.5v-3h3M12.5 1.5v3h-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </button>
+      {/* Filter */}
+      <div className="px-2 py-2 border-b border-border shrink-0">
+        <div className="relative flex items-center gap-1">
+          <div className="relative flex-1">
+            <svg
+              width="12" height="12" viewBox="0 0 16 16" fill="none"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-text-muted"
+            >
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.2" />
+              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+            </svg>
+            <input
+              type="text"
+              value={filterQuery}
+              onChange={(e) => setFilterQuery(e.target.value)}
+              placeholder="Filter commits…"
+              className="w-full bg-surface border border-border rounded-md pl-7 pr-2 py-1
+                         text-xs text-text-primary placeholder-text-muted
+                         outline-none focus:border-accent/50"
+            />
+          </div>
+          <button
+            onClick={loadCommits}
+            disabled={loading}
+            className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-primary
+                       transition-colors shrink-0 disabled:opacity-40"
+            title="Refresh"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className={loading ? 'animate-spin' : ''}>
+              <path d="M13.5 8a5.5 5.5 0 01-9.8 3.4M2.5 8a5.5 5.5 0 019.8-3.4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+              <path d="M3.5 14.5v-3h3M12.5 1.5v3h-3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
         <div className="py-1">
-          {commits.map((commit) => {
+          {filteredCommits.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-text-muted">
+              {filterQuery ? 'No matching commits' : 'No commits'}
+            </div>
+          ) : filteredCommits.map((commit) => {
             const isExpanded = expandedHash === commit.hash;
             const files = commitFiles[commit.hash];
             const isLoadingThis = loadingFiles === commit.hash;
