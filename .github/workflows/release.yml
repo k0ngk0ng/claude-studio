@@ -242,6 +242,7 @@ jobs:
           mkdir -p server-release
           cp -r server/dist server-release/
           cp server/package.json server-release/
+          cp server/admin.mjs server-release/
           cp server/.env.example server-release/
           cp server/claude-studio-server.service server-release/
           cp server/deploy.sh server-release/

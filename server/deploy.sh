@@ -41,6 +41,7 @@ echo "  Installing to $APP_DIR..."
 mkdir -p "$APP_DIR"
 cp -r dist/ "$APP_DIR/"
 cp package.json "$APP_DIR/"
+cp admin.mjs "$APP_DIR/"
 
 # 5. Install production dependencies
 echo "  Installing dependencies..."
