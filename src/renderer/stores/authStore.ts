@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { User, AuthResult } from '../types';
+import { pullFromServer } from './settingsStore';
 
 const TOKEN_KEY = 'claude-studio-auth-token';
 
@@ -29,6 +30,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (result.success && result.user && result.token) {
       localStorage.setItem(TOKEN_KEY, result.token);
       set({ user: result.user as User, token: result.token, showLoginModal: false });
+      pullFromServer();
     }
     return result;
   },
@@ -38,6 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (result.success && result.user && result.token) {
       localStorage.setItem(TOKEN_KEY, result.token);
       set({ user: result.user as User, token: result.token, showLoginModal: false });
+      pullFromServer();
     }
     return result;
   },

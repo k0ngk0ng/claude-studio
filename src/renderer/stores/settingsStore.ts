@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { useDebugLogStore } from './debugLogStore';
+import { useAuthStore } from './authStore';
 import type {
   AppSettings,
   SettingsTab,
@@ -78,6 +79,47 @@ function saveSettings(settings: AppSettings) {
   window.api.settings.write(settings as unknown as Record<string, unknown>).catch(() => {
     // Ignore write errors
   });
+  // Sync to server (debounced)
+  syncToServer(settings);
+}
+
+// Debounced sync to server — excludes `server` section (local-only)
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+
+function syncToServer(settings: AppSettings) {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    const token = useAuthStore.getState().token;
+    if (!token) return;
+    // Exclude server config from sync
+    const { server: _server, ...syncable } = settings;
+    window.api.auth.setSettings(token, 'appSettings', syncable).catch(() => {});
+  }, 1000);
+}
+
+/** Pull settings from server and merge with local */
+export async function pullFromServer(): Promise<void> {
+  const token = useAuthStore.getState().token;
+  if (!token) return;
+  try {
+    const remote = await window.api.auth.getSettings(token);
+    if (remote?.appSettings) {
+      const remoteSettings = remote.appSettings as Record<string, unknown>;
+      // Preserve local-only `server` section
+      const localServer = useSettingsStore.getState().settings.server;
+      const merged = mergeWithDefaults({ ...remoteSettings, server: localServer });
+      // Save locally without triggering another server sync
+      window.api.settings.write(merged as unknown as Record<string, unknown>).catch(() => {});
+      useSettingsStore.setState({ settings: merged });
+    } else {
+      // Server has no settings yet — push current local settings to seed it
+      const current = useSettingsStore.getState().settings;
+      const { server: _server, ...syncable } = current;
+      window.api.auth.setSettings(token, 'appSettings', syncable).catch(() => {});
+    }
+  } catch {
+    // Ignore sync errors
+  }
 }
 
 function mergeWithDefaults(parsed: Record<string, unknown>): AppSettings {
@@ -407,4 +449,14 @@ loadSettingsFromFile().then((settings) => {
     });
     console.log('[debug:app] Debug mode enabled — settings loaded from file');
   }
+
+  // Pull settings from server once auth is ready
+  const unsub = useAuthStore.subscribe((state) => {
+    if (!state.isLoading && state.token) {
+      pullFromServer();
+      unsub();
+    } else if (!state.isLoading && !state.token) {
+      unsub();
+    }
+  });
 });
