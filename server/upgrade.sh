@@ -33,7 +33,7 @@ cp "$SCRIPT_DIR/admin.mjs" "$APP_DIR/"
 # 2. Install dependencies
 echo "  Installing dependencies..."
 cd "$APP_DIR"
-npm install --omit=dev --ignore-scripts 2>/dev/null || npm install --production --ignore-scripts 2>/dev/null
+npm install --omit=dev --ignore-scripts || npm install --production --ignore-scripts
 chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR"
 
 # 3. Restart service
