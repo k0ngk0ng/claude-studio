@@ -15,6 +15,7 @@ import { InputBar } from './components/InputBar/InputBar';
 import { BottomPanel } from './components/BottomPanel/BottomPanel';
 import { RightPanel } from './components/DiffPanel/RightPanel';
 import { Settings } from './components/Settings/Settings';
+import { LOCAL_COMMANDS, BUILTIN_COMMANDS } from './components/InputBar/SlashCommandPopup';
 
 export default function App() {
   const { panels, togglePanel, setCurrentProject, setPlatform, currentProject } =
@@ -228,9 +229,68 @@ export default function App() {
     [switchToTab, currentProject.path]
   );
 
+  // ─── Local slash command handlers ───────────────────────────────────
+  const handleLocalCommand = useCallback(
+    (content: string): boolean => {
+      const trimmed = content.trim();
+      if (!trimmed.startsWith('/')) return false;
+
+      const parts = trimmed.slice(1).split(/\s+/);
+      const cmd = parts[0].toLowerCase();
+
+      if (!LOCAL_COMMANDS.has(cmd)) return false;
+
+      const { addMessage, clearMessages } = useAppStore.getState();
+
+      switch (cmd) {
+        case 'clear': {
+          clearMessages();
+          // Also send to SDK if process is running so it clears context
+          const pid = useAppStore.getState().currentSession.processId;
+          if (pid) {
+            window.api.claude.send(pid, '/clear').catch(() => {});
+          }
+          return true;
+        }
+
+        case 'config': {
+          openSettings();
+          return true;
+        }
+
+        case 'help': {
+          // Build help text from all commands
+          const lines = ['Available slash commands:\n'];
+          for (const c of BUILTIN_COMMANDS) {
+            const hint = c.argumentHint ? ` ${c.argumentHint}` : '';
+            const tag = c.local ? ' (local)' : '';
+            lines.push(`  /${c.name}${hint} — ${c.description}${tag}`);
+          }
+          lines.push('\nCustom commands from ~/.claude/commands/ are also available.');
+          lines.push('Commands marked (local) are handled in the GUI without using tokens.');
+
+          addMessage({
+            id: `local-help-${Date.now()}`,
+            role: 'assistant',
+            content: lines.join('\n'),
+            timestamp: new Date().toISOString(),
+          });
+          return true;
+        }
+
+        default:
+          return false;
+      }
+    },
+    [openSettings]
+  );
+
   // ─── Send message ─────────────────────────────────────────────────
   const handleSendMessage = useCallback(
     async (content: string, permissionMode?: string) => {
+      // Intercept local commands first
+      if (handleLocalCommand(content)) return;
+
       const state = useAppStore.getState();
       const projectPath = state.currentSession.projectPath || currentProject.path;
 
@@ -243,7 +303,7 @@ export default function App() {
 
       await sendMessage(content);
     },
-    [startSession, sendMessage, currentProject.path]
+    [startSession, sendMessage, currentProject.path, handleLocalCommand]
   );
 
   // ─── Keyboard shortcuts (after all callbacks are defined) ─────────

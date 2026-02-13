@@ -109,16 +109,16 @@ export function TabBar({ onTabSelect, onTabClose, onNewThread }: TabBarProps) {
           );
         })}
 
-        {/* New tab button — right after the last tab */}
+        {/* New tab button — right after the last tab, same height as tabs */}
         <button
           onClick={onNewThread}
           onDoubleClick={(e) => e.stopPropagation()}
-          className="flex items-center justify-center w-9 h-full shrink-0
+          className="flex items-center justify-center w-10 shrink-0 self-stretch
                      text-text-muted hover:text-text-primary hover:bg-surface-hover
                      transition-colors"
           title="New thread (⌘N)"
         >
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
             <path
               d="M6 2v8M2 6h8"
               stroke="currentColor"

@@ -50,6 +50,7 @@ interface AppStore {
   // Session actions
   setCurrentSession: (session: Partial<CurrentSession>) => void;
   resetCurrentSession: () => void;
+  clearMessages: () => void;
   addMessage: (message: Message) => void;
   updateLastAssistantMessage: (content: string) => void;
   setIsStreaming: (streaming: boolean) => void;
@@ -146,6 +147,16 @@ export const useAppStore = create<AppStore>((set, get) => ({
       streamingContent: '',
       toolActivities: [],
     }),
+
+  clearMessages: () =>
+    set((state) => ({
+      currentSession: {
+        ...state.currentSession,
+        messages: [],
+      },
+      streamingContent: '',
+      toolActivities: [],
+    })),
 
   addMessage: (message) =>
     set((state) => ({

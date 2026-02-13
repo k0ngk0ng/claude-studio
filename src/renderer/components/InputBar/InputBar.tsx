@@ -3,7 +3,7 @@ import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { FileSearchPopup } from './FileSearchPopup';
 import { SlashCommandPopup } from './SlashCommandPopup';
-import type { AppearanceSettings, CommandInfo } from '../../types';
+import type { AppearanceSettings } from '../../types';
 
 const LAYOUT_CLASS: Record<AppearanceSettings['chatLayout'], string> = {
   'centered-sm': 'max-w-xl mx-auto',
@@ -296,9 +296,9 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
   }, []);
 
   // Handle slash command selection
-  const handleSlashSelect = useCallback((cmd: CommandInfo) => {
+  const handleSlashSelect = useCallback((name: string) => {
     // Replace the /query with the full command invocation
-    setValue(`/${cmd.name} `);
+    setValue(`/${name} `);
     setSlashVisible(false);
     setSlashQuery('');
     textareaRef.current?.focus();
