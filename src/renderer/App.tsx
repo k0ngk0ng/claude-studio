@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useRef } from 'react';
 import { useAppStore } from './stores/appStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useAuthStore } from './stores/authStore';
@@ -29,6 +29,9 @@ export default function App() {
 
   // Keep git status polling active at app level so commit badge always updates
   useGit();
+
+  // Guard against race conditions during rapid tab switching
+  const switchCounterRef = useRef(0);
 
   // ─── Theme switching ──────────────────────────────────────────────
   useEffect(() => {
@@ -148,6 +151,9 @@ export default function App() {
   // ─── Tab handlers ────────────────────────────────────────────────
   const switchToTab = useCallback(
     async (tab: TabInfo) => {
+      // Bump counter to detect stale async operations
+      const mySwitch = ++switchCounterRef.current;
+
       // Save current tab's scroll position BEFORE any state changes tear down the DOM
       const currentId = useAppStore.getState().currentSession.id;
       if (currentId && chatScrollElement) {
@@ -171,6 +177,12 @@ export default function App() {
         const session = sessions.find((s) => s.id === tab.id);
         if (session) {
           await selectSession(session);
+          // If another switch happened while we were awaiting, bail out —
+          // the newer switch will set the correct state
+          if (switchCounterRef.current !== mySwitch) {
+            debugLog('app', `stale tab switch to ${tab.id} — superseded by newer switch`);
+            return;
+          }
         }
       }
     },

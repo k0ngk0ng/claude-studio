@@ -310,10 +310,66 @@ class ClaudeProcessManager extends EventEmitter {
     }
 
     try {
-      const queryIterator = query({
-        prompt: streamInput() as any,
-        options: options as any,
-      });
+      let queryIterator: any;
+
+      try {
+        queryIterator = query({
+          prompt: streamInput() as any,
+          options: options as any,
+        });
+
+        // The SDK query() returns an async iterator. For some SDK versions,
+        // the "No conversation" error surfaces on the first iteration rather
+        // than at construction time. Peek at the first message to detect this.
+        // We use a wrapper to re-yield the peeked message.
+        const firstResult = await queryIterator.next();
+        if (!firstResult.done) {
+          const firstMsg = firstResult.value;
+          // Check if the first message is a "No conversation" error result
+          if (firstMsg.type === 'result' && (firstMsg as any).is_error) {
+            const resultText = typeof (firstMsg as any).result === 'string' ? (firstMsg as any).result : '';
+            if (options.resume && /no conversation/i.test(resultText)) {
+              debugLog('Resume returned "No conversation" error, retrying without resume');
+              delete options.resume;
+              managed.sessionId = undefined;
+              // Start a fresh query without resume
+              queryIterator = query({
+                prompt: streamInput() as any,
+                options: options as any,
+              });
+            } else {
+              // Not a resume error — process normally by wrapping the iterator
+              // to re-yield this first message
+              const origIterator = queryIterator;
+              queryIterator = (async function* () {
+                yield firstMsg;
+                yield* origIterator;
+              })();
+            }
+          } else {
+            // Normal first message — wrap to re-yield it
+            const origIterator = queryIterator;
+            queryIterator = (async function* () {
+              yield firstMsg;
+              yield* origIterator;
+            })();
+          }
+        }
+      } catch (initErr: any) {
+        // If resume fails at construction (e.g. "No conversation <id>"), retry without resume
+        const msg = initErr?.message || String(initErr);
+        if (options.resume && /no conversation/i.test(msg)) {
+          debugLog('Resume failed at init, retrying without resume:', msg);
+          delete options.resume;
+          managed.sessionId = undefined;
+          queryIterator = query({
+            prompt: streamInput() as any,
+            options: options as any,
+          });
+        } else {
+          throw initErr;
+        }
+      }
 
       // Store the query instance for runtime control (setPermissionMode, etc.)
       managed.queryInstance = queryIterator;
