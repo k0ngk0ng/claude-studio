@@ -49,7 +49,18 @@ cd "$APP_DIR"
 npm install --omit=dev --ignore-scripts 2>/dev/null || npm install --production --ignore-scripts 2>/dev/null
 chown -R "$SERVICE_USER:$SERVICE_USER" "$APP_DIR"
 
-# 6. Install systemd service
+# 6. Create admin CLI symlink
+echo "  Setting up admin CLI..."
+ln -sf "$APP_DIR/admin.mjs" /usr/local/bin/claude-studio-admin
+# Wrapper so DATA_DIR is always set
+cat > /usr/local/bin/cs-admin <<'WRAPPER'
+#!/usr/bin/env bash
+export DATA_DIR="${DATA_DIR:-/var/lib/claude-studio}"
+exec node /opt/claude-studio-server/admin.mjs "$@"
+WRAPPER
+chmod +x /usr/local/bin/cs-admin
+
+# 7. Install systemd service
 echo "  Installing systemd service..."
 cp "$OLDPWD/claude-studio-server.service" /etc/systemd/system/"$SERVICE_NAME".service
 systemctl daemon-reload

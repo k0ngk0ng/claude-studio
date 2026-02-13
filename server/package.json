@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "admin": "node admin.mjs"
+  },
+  "bin": {
+    "claude-studio-admin": "./admin.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.0",
