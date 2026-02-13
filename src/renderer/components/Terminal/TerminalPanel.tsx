@@ -4,10 +4,14 @@ import '@xterm/xterm/css/xterm.css';
 import { FitAddon } from '@xterm/addon-fit';
 import { useTerminal } from '../../hooks/useTerminal';
 import { useAppStore } from '../../stores/appStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { useResizable } from '../../hooks/useResizable';
 
 export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boolean } = {}) {
   const { currentProject, togglePanel, panelSizes, setPanelSize } = useAppStore();
+  const { editorFontSize, editorFontFamily } = useSettingsStore(
+    (s) => s.settings.appearance
+  );
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -74,8 +78,8 @@ export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boo
         brightCyan: '#67e8f9',
         brightWhite: '#ffffff',
       },
-      fontFamily: '"SF Mono", "Fira Code", "Fira Mono", Menlo, monospace',
-      fontSize: 13,
+      fontFamily: editorFontFamily || '"SF Mono", "Fira Code", "Fira Mono", Menlo, monospace',
+      fontSize: editorFontSize || 13,
       lineHeight: 1.4,
       cursorBlink: true,
       cursorStyle: 'bar',
@@ -156,6 +160,19 @@ export function TerminalPanel({ bare, visible }: { bare?: boolean; visible?: boo
       return () => clearTimeout(timer);
     }
   }, [visible]);
+
+  // Sync terminal font settings in real-time
+  useEffect(() => {
+    const term = terminalRef.current;
+    if (!term) return;
+    term.options.fontSize = editorFontSize || 13;
+    term.options.fontFamily = editorFontFamily || '"SF Mono", "Fira Code", "Fira Mono", Menlo, monospace';
+    try {
+      fitAddonRef.current?.fit();
+    } catch {
+      // Ignore
+    }
+  }, [editorFontSize, editorFontFamily]);
 
   // Bare mode: just the terminal container, no chrome
   if (bare) {

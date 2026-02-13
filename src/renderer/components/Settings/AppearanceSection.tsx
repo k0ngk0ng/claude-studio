@@ -4,7 +4,7 @@ import { SettingsSelect } from './controls/SettingsSelect';
 import { SettingsInput } from './controls/SettingsInput';
 import { SettingsToggle } from './controls/SettingsToggle';
 import { StreamingCursor } from '../Chat/MessageBubble';
-import type { StreamingCursorStyle } from '../../types';
+import type { StreamingCursorStyle, AppearanceSettings } from '../../types';
 
 const CURSOR_OPTIONS: { value: StreamingCursorStyle; label: string }[] = [
   { value: 'classic', label: 'Classic' },
@@ -42,14 +42,6 @@ export function AppearanceSection() {
           ]}
         />
 
-        {/* Opaque background */}
-        <SettingsToggle
-          label="Opaque background"
-          description="Use a fully opaque background instead of translucent effects."
-          checked={appearance.opaqueBackground}
-          onChange={(v) => updateAppearance({ opaqueBackground: v })}
-        />
-
         {/* Show line numbers */}
         <SettingsToggle
           label="Show line numbers"
@@ -61,11 +53,14 @@ export function AppearanceSection() {
         {/* Chat layout */}
         <SettingsSelect
           label="Chat layout"
-          description="Centered keeps messages in a fixed-width column. Full width uses all available space."
+          description="Controls the max width of the chat message area."
           value={appearance.chatLayout}
-          onChange={(v) => updateAppearance({ chatLayout: v as 'centered' | 'full-width' })}
+          onChange={(v) => updateAppearance({ chatLayout: v as AppearanceSettings['chatLayout'] })}
           options={[
+            { value: 'centered-sm', label: 'Narrow (576px)' },
             { value: 'centered', label: 'Centered (768px)' },
+            { value: 'centered-lg', label: 'Wide (1024px)' },
+            { value: 'centered-xl', label: 'Extra wide (1280px)' },
             { value: 'full-width', label: 'Full width' },
           ]}
         />

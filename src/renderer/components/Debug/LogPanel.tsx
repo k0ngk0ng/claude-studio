@@ -42,12 +42,26 @@ export function LogPanel() {
       ? logs.filter(l => l.level === 'error')
       : logs.filter(l => l.category === filter);
 
-  // Auto-scroll to bottom
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isUserToggle = useRef(false);
+
+  // Auto-scroll to bottom when new logs arrive or user toggles on
   useEffect(() => {
     if (autoScroll && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [filteredLogs.length, autoScroll]);
+
+  const handleToggleAutoScroll = () => {
+    const next = !autoScroll;
+    isUserToggle.current = true;
+    setAutoScroll(next);
+    if (next && bottomRef.current) {
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+    // Prevent onScroll from immediately overriding the toggle
+    setTimeout(() => { isUserToggle.current = false; }, 300);
+  };
 
   const toggleExpand = (id: number) => {
     setExpandedIds(prev => {
@@ -104,13 +118,15 @@ export function LogPanel() {
 
         {/* Auto-scroll toggle */}
         <button
-          onClick={() => setAutoScroll(!autoScroll)}
+          onClick={handleToggleAutoScroll}
           className={`px-1.5 py-0.5 rounded text-[11px] transition-colors
             ${autoScroll ? 'text-accent' : 'text-text-muted hover:text-text-secondary'}`}
           title={autoScroll ? 'Auto-scroll ON' : 'Auto-scroll OFF'}
         >
+          {/* Stacked double chevron down — visually distinct from download arrow */}
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-            <path d="M6 2v8M3 7l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3 2l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M3 7l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
 
@@ -144,7 +160,9 @@ export function LogPanel() {
 
       {/* Log entries */}
       <div className="flex-1 overflow-y-auto font-mono text-[11px] leading-[18px]"
+        ref={scrollContainerRef}
         onScroll={(e) => {
+          if (isUserToggle.current) return;
           const el = e.currentTarget;
           const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
           if (atBottom !== autoScroll) setAutoScroll(atBottom);

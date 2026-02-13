@@ -59,8 +59,8 @@ html, body, #root {
   padding: 0;
   background-color: var(--color-bg);
   color: var(--color-text-primary);
-  font-family: var(--font-sans);
-  font-size: 14px;
+  font-family: var(--ui-font-family, var(--font-sans));
+  font-size: var(--ui-font-size, 14px);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -118,13 +118,13 @@ html, body, #root {
   padding: 12px;
   overflow-x: auto;
   margin: 0.75em 0;
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-family: var(--editor-font-family, var(--font-mono));
+  font-size: var(--editor-font-size, 13px);
 }
 
 .markdown-content code {
-  font-family: var(--font-mono);
-  font-size: 13px;
+  font-family: var(--editor-font-family, var(--font-mono));
+  font-size: var(--editor-font-size, 13px);
 }
 
 .markdown-content :not(pre) > code {
@@ -238,8 +238,8 @@ html, body, #root {
 
 /* Diff styles */
 .d2h-wrapper {
-  font-family: var(--font-mono);
-  font-size: 12px;
+  font-family: var(--editor-font-family, var(--font-mono));
+  font-size: var(--editor-font-size, 12px);
 }
 
 .d2h-file-header {

@@ -47,6 +47,21 @@ export default function App() {
     }
   }, [settings.appearance.theme]);
 
+  // ─── Appearance CSS variables (real-time) ──────────────────────────
+  useEffect(() => {
+    const { fontSize, fontFamily, editorFontSize, editorFontFamily } = settings.appearance;
+    const s = document.documentElement.style;
+    s.setProperty('--ui-font-size', `${fontSize}px`);
+    s.setProperty('--ui-font-family', fontFamily);
+    s.setProperty('--editor-font-size', `${editorFontSize}px`);
+    s.setProperty('--editor-font-family', editorFontFamily);
+  }, [
+    settings.appearance.fontSize,
+    settings.appearance.fontFamily,
+    settings.appearance.editorFontSize,
+    settings.appearance.editorFontFamily,
+  ]);
+
   // Initialize app
   useEffect(() => {
     async function init() {

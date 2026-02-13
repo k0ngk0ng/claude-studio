@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import hljs from 'highlight.js';
 import { SearchBar } from './SearchBar';
+import { useSettingsStore } from '../../stores/settingsStore';
 
 interface FileViewerProps {
   filePath: string;
@@ -97,6 +98,9 @@ export function FileViewer({ filePath, projectPath, onClose }: FileViewerProps) 
   const [loading, setLoading] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const { showLineNumbers, editorFontSize, editorFontFamily } = useSettingsStore(
+    (s) => s.settings.appearance
+  );
 
   const fullPath = filePath.startsWith('/') ? filePath : `${projectPath}/${filePath}`;
   const fileName = filePath.split('/').pop() || filePath;
@@ -191,13 +195,18 @@ export function FileViewer({ filePath, projectPath, onClose }: FileViewerProps) 
             </div>
           )}
           {!loading && !error && content !== null && (
-            <div className="flex text-[13px] font-mono leading-relaxed">
+            <div
+              className="flex font-mono leading-relaxed"
+              style={{ fontSize: editorFontSize, fontFamily: editorFontFamily }}
+            >
               {/* Line numbers */}
-              <div className="shrink-0 select-none text-right pr-3 pl-3 py-2 text-text-muted/40 bg-surface/50 border-r border-border">
-                {lines.map((_, i) => (
-                  <div key={i}>{i + 1}</div>
-                ))}
-              </div>
+              {showLineNumbers && (
+                <div className="shrink-0 select-none text-right pr-3 pl-3 py-2 text-text-muted/40 bg-surface/50 border-r border-border">
+                  {lines.map((_, i) => (
+                    <div key={i}>{i + 1}</div>
+                  ))}
+                </div>
+              )}
               {/* Code */}
               <div className="flex-1 overflow-x-auto py-2 pl-4 pr-4">
                 {highlighted ? (

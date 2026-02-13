@@ -311,6 +311,7 @@ function TreeItem({
   expandedPaths,
   highlightPath,
   selectedPath,
+  collapseKey,
   onContextMenu,
   onFileOpen,
   onSelect,
@@ -321,6 +322,7 @@ function TreeItem({
   expandedPaths: Set<string>;
   highlightPath: string | null;
   selectedPath: string | null;
+  collapseKey: number;
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
   onFileOpen: (node: TreeNode) => void;
   onSelect: (path: string | null) => void;
@@ -330,6 +332,13 @@ function TreeItem({
   const isHighlighted = highlightPath === node.path;
   const isSelected = !node.isDir && selectedPath === node.path;
   const itemRef = useRef<HTMLButtonElement>(null);
+
+  // Collapse all folders when collapseKey changes
+  useEffect(() => {
+    if (collapseKey > 0 && node.isDir) {
+      setIsOpen(false);
+    }
+  }, [collapseKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Force open when revealFile triggers
   useEffect(() => {
@@ -405,6 +414,7 @@ function TreeItem({
           expandedPaths={expandedPaths}
           highlightPath={highlightPath}
           selectedPath={selectedPath}
+          collapseKey={collapseKey}
           onContextMenu={onContextMenu}
           onFileOpen={onFileOpen}
           onSelect={onSelect}
@@ -426,6 +436,7 @@ export function FileTree() {
   const [highlightPath, setHighlightPath] = useState<string | null>(null);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [collapseKey, setCollapseKey] = useState(0);
 
   const loadFiles = useCallback(async () => {
     if (!currentProject.path) return;
@@ -520,6 +531,16 @@ export function FileTree() {
             />
           </div>
           <button
+            onClick={() => setCollapseKey(k => k + 1)}
+            className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-primary
+                       transition-colors shrink-0"
+            title="Collapse all folders"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M4 3v10M7 6l3-3 3 3M7 10l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
             onClick={loadFiles}
             disabled={loading}
             className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-primary
@@ -557,6 +578,7 @@ export function FileTree() {
                 expandedPaths={expandedPaths}
                 highlightPath={highlightPath}
                 selectedPath={selectedFile}
+                collapseKey={collapseKey}
                 onContextMenu={handleContextMenu}
                 onFileOpen={handleFileOpen}
                 onSelect={setSelectedFile}

@@ -251,6 +251,7 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
   const isAssistant = message.role === 'assistant';
+  const showLineNumbers = useSettingsStore((s) => s.settings.appearance.showLineNumbers);
 
   const [linkMenu, setLinkMenu] = useState<LinkMenuState | null>(null);
   const closeLinkMenu = useCallback(() => setLinkMenu(null), []);
@@ -275,16 +276,33 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
     ),
     pre: ({ children, ...props }: React.HTMLAttributes<HTMLPreElement>) => {
       const code = extractTextFromChildren(children).replace(/\n$/, '');
+      const lines = code.split('\n');
       return (
         <div className="relative group/code">
-          <pre {...props}>
-            {children}
-          </pre>
+          {showLineNumbers ? (
+            <pre {...props} className={`${props.className || ''} !flex`}>
+              <span
+                className="select-none text-right pr-3 pl-1 text-text-muted/40 border-r border-border/50 shrink-0"
+                aria-hidden="true"
+              >
+                {lines.map((_, i) => (
+                  <span key={i} className="block">{i + 1}</span>
+                ))}
+              </span>
+              <span className="flex-1 overflow-x-auto pl-3">
+                {children}
+              </span>
+            </pre>
+          ) : (
+            <pre {...props}>
+              {children}
+            </pre>
+          )}
           <CodeBlockCopyButton code={code} />
         </div>
       );
     },
-  }), []);
+  }), [showLineNumbers]);
 
   if (isSystem) {
     return (
@@ -343,7 +361,7 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
       <div className="group">
         <div className="flex justify-end">
           <div className="max-w-[80%] px-4 py-3 rounded-2xl rounded-br-md bg-user-bubble text-text-primary">
-            <div className="text-[14px] leading-relaxed whitespace-pre-wrap break-words">
+            <div className="text-[length:var(--ui-font-size,14px)] leading-relaxed whitespace-pre-wrap break-words">
               {message.content}
             </div>
           </div>
@@ -381,7 +399,7 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
       <div className="flex-1 min-w-0">
         {message.content && (
           <div
-            className="text-[14px] leading-relaxed text-text-primary markdown-content"
+            className="text-[length:var(--ui-font-size,14px)] leading-relaxed text-text-primary markdown-content"
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}

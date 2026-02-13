@@ -9,6 +9,19 @@ import { ToolCard } from './ToolCard';
 import { PermissionPrompt } from './PermissionPrompt';
 import { WelcomeScreen } from './WelcomeScreen';
 import { ChatSearch } from './ChatSearch';
+import type { AppearanceSettings } from '../../types';
+
+const LAYOUT_CLASS: Record<AppearanceSettings['chatLayout'], string> = {
+  'centered-sm': 'max-w-xl mx-auto',       // 576px
+  'centered': 'max-w-3xl mx-auto',          // 768px
+  'centered-lg': 'max-w-5xl mx-auto',       // 1024px
+  'centered-xl': 'max-w-7xl mx-auto',       // 1280px
+  'full-width': 'w-full px-2',
+};
+
+function getLayoutClass(layout: AppearanceSettings['chatLayout']): string {
+  return LAYOUT_CLASS[layout] || LAYOUT_CLASS['centered'];
+}
 
 /**
  * Global ref to the chat scroll container.
@@ -116,8 +129,7 @@ export function ChatView() {
     return <WelcomeScreen />;
   }
 
-  const isFullWidth = settings.appearance.chatLayout === 'full-width';
-  const layoutClass = isFullWidth ? 'w-full px-2' : 'max-w-3xl mx-auto';
+  const layoutClass = getLayoutClass(settings.appearance.chatLayout);
 
   return (
     <div className="relative flex-1 min-h-0">
@@ -262,8 +274,7 @@ export function ChatView() {
 
 function LoadingSkeleton() {
   const { settings } = useSettingsStore();
-  const isFullWidth = settings.appearance.chatLayout === 'full-width';
-  const layoutClass = isFullWidth ? 'w-full px-2' : 'max-w-3xl mx-auto';
+  const layoutClass = getLayoutClass(settings.appearance.chatLayout);
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4">

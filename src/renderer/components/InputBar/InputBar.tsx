@@ -2,6 +2,15 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { FileSearchPopup } from './FileSearchPopup';
+import type { AppearanceSettings } from '../../types';
+
+const LAYOUT_CLASS: Record<AppearanceSettings['chatLayout'], string> = {
+  'centered-sm': 'max-w-xl mx-auto',
+  'centered': 'max-w-3xl mx-auto',
+  'centered-lg': 'max-w-5xl mx-auto',
+  'centered-xl': 'max-w-7xl mx-auto',
+  'full-width': 'w-full px-2',
+};
 
 interface Attachment {
   name: string;
@@ -375,7 +384,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
 
   return (
     <div className="shrink-0 bg-bg px-4 py-3">
-      <div className={chatLayout === 'full-width' ? 'w-full px-2' : 'max-w-3xl mx-auto'}>
+      <div className={LAYOUT_CLASS[chatLayout] || LAYOUT_CLASS['centered']}>
         <div className="relative flex flex-col bg-surface rounded-xl border border-border focus-within:border-border-light transition-colors">
           {/* Top border resize handle — invisible overlay on top edge */}
           <div

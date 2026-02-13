@@ -355,8 +355,7 @@ export interface AppearanceSettings {
   editorFontSize: number;
   editorFontFamily: string;
   showLineNumbers: boolean;
-  opaqueBackground: boolean;
-  chatLayout: 'centered' | 'full-width';
+  chatLayout: 'centered-sm' | 'centered' | 'centered-lg' | 'centered-xl' | 'full-width';
   streamingCursor: StreamingCursorStyle;
 }
 
