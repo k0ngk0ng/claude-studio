@@ -890,6 +890,13 @@ export function useClaude() {
     const { addMessage, setIsStreaming, clearStreamingContent, clearToolActivities, toolActivities } =
       useAppStore.getState();
 
+    // Eagerly sync processIdRef from store — the useEffect may not have fired yet
+    // after a tab switch + restoreRuntime
+    const storeProcessId = useAppStore.getState().currentSession.processId;
+    if (storeProcessId && !processIdRef.current) {
+      processIdRef.current = storeProcessId;
+    }
+
     // If no process, need to spawn one first
     const pid = processIdRef.current;
     if (!pid) return;

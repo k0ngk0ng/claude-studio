@@ -192,6 +192,23 @@ export default function App() {
     async (tabId: string) => {
       const appState = useAppStore.getState();
 
+      // Check if this tab has a streaming process
+      let isStreaming = false;
+      if (appState.currentSession.id === tabId) {
+        isStreaming = appState.currentSession.isStreaming;
+      } else {
+        const runtime = appState.sessionRuntimes.get(tabId);
+        if (runtime?.isStreaming) isStreaming = true;
+      }
+
+      // Confirm before closing a streaming tab
+      if (isStreaming) {
+        const confirmed = window.confirm(
+          'This conversation is still in progress. Close it anyway?'
+        );
+        if (!confirmed) return;
+      }
+
       // Find the process to kill — check current session or background runtimes
       let processIdToKill: string | null = null;
       if (appState.currentSession.id === tabId && appState.currentSession.processId) {
