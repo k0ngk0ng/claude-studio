@@ -29,18 +29,16 @@ export function TabBar({ onTabSelect, onTabClose, onNewThread }: TabBarProps) {
     <div
       className="flex items-center bg-bg border-b border-border shrink-0 h-10 min-h-[40px]"
       onDoubleClick={(e) => {
-        // Double-click on empty area (not on a tab or button) → new thread
         if (e.target === e.currentTarget || (e.target as HTMLElement).closest('[data-tab-empty]')) {
           onNewThread();
         }
       }}
     >
-      {/* Scrollable tab area */}
+      {/* Tab area — tabs shrink like Chrome when space is tight */}
       <div
         ref={scrollRef}
-        className="flex-1 flex items-stretch overflow-x-auto min-w-0 scrollbar-none"
+        className="flex-1 flex items-stretch overflow-hidden min-w-0"
         onDoubleClick={(e) => {
-          // Double-click on empty space within scroll area → new thread
           if (e.target === e.currentTarget) {
             onNewThread();
           }
@@ -58,13 +56,14 @@ export function TabBar({ onTabSelect, onTabClose, onNewThread }: TabBarProps) {
               onDoubleClick={(e) => e.stopPropagation()}
               className={`
                 group relative flex items-center gap-1.5 px-3 h-full
-                cursor-pointer select-none shrink-0 max-w-[200px] min-w-[100px]
+                cursor-pointer select-none max-w-[200px] min-w-[40px]
                 border-r border-border text-xs transition-colors
                 ${isActive
-                  ? 'bg-surface text-text-primary'
-                  : 'bg-bg text-text-secondary hover:bg-surface-hover hover:text-text-primary'
+                  ? 'bg-surface text-text-primary shrink-0'
+                  : 'bg-bg text-text-secondary hover:bg-surface-hover hover:text-text-primary shrink'
                 }
               `}
+              style={{ flexBasis: '160px' }}
             >
               {/* Active tab top indicator */}
               {isActive && (
@@ -77,7 +76,7 @@ export function TabBar({ onTabSelect, onTabClose, onNewThread }: TabBarProps) {
               )}
 
               {/* Title */}
-              <span className="truncate flex-1">
+              <span className="truncate flex-1 min-w-0">
                 {tab.isNew ? 'New Thread' : (tab.title || 'Thread')}
               </span>
 
@@ -109,7 +108,7 @@ export function TabBar({ onTabSelect, onTabClose, onNewThread }: TabBarProps) {
           );
         })}
 
-        {/* New tab button — right after the last tab, same height as tabs */}
+        {/* New tab button — right after the last tab */}
         <button
           onClick={onNewThread}
           onDoubleClick={(e) => e.stopPropagation()}

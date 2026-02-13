@@ -428,16 +428,16 @@ export default function App() {
         {/* Top bar with drag region */}
         <TopBar />
 
-        {/* Tab bar */}
-        <TabBar
-          onTabSelect={handleTabSelect}
-          onTabClose={handleTabClose}
-          onNewThread={handleNewThread}
-        />
-
         {/* Chat area */}
         <div className="flex flex-1 min-h-0">
           <div className="flex flex-1 flex-col min-w-0">
+            {/* Tab bar — inside the chat column so it doesn't span over RightPanel */}
+            <TabBar
+              onTabSelect={handleTabSelect}
+              onTabClose={handleTabClose}
+              onNewThread={handleNewThread}
+            />
+
             {/* Messages */}
             <ChatView />
 
