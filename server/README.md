@@ -74,13 +74,24 @@ In dev (server directory): `npm run admin -- users`
 
 ## Update
 
-部署后，升级只需一条命令：
+从 GitHub Release 下载最新的 server tarball 并更新：
 
 ```bash
-sudo claude-studio-upgrade
+# 1. 下载并解压新版本
+cd /tmp
+curl -L https://github.com/k0ngk0ng/claude-studio/releases/latest/download/claude-studio-server.tar.gz -o claude-studio-server.tar.gz
+mkdir -p claude-studio-server && tar xzf claude-studio-server.tar.gz -C claude-studio-server
+
+# 2. 更新（只替换代码并重启，不动配置和数据）
+cd claude-studio-server
+sudo bash upgrade.sh
+
+# 3. 清理
+rm -rf /tmp/claude-studio-server /tmp/claude-studio-server.tar.gz
 ```
 
-会自动下载最新 release 并重启服务。
+`upgrade.sh` 从 `/etc/claude-studio/server.env` 读取配置，只更新应用文件并重启服务。
+首次部署请用 `deploy.sh`。
 
 ### 修改配置后重新部署
 

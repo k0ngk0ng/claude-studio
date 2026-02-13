@@ -85,10 +85,6 @@ exec node ${APP_DIR}/admin.mjs "\$@"
 WRAPPER
 chmod +x /usr/local/bin/cs-admin
 
-# Install upgrade script
-cp "$SCRIPT_DIR/claude-studio-upgrade.sh" /usr/local/bin/claude-studio-upgrade
-chmod +x /usr/local/bin/claude-studio-upgrade
-
 # 7. Install systemd service
 echo "  Installing systemd service..."
 cp "$SCRIPT_DIR/claude-studio-server.service" /etc/systemd/system/"$SERVICE_NAME".service

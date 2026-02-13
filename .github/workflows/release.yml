@@ -247,7 +247,6 @@ jobs:
           cp server/claude-studio-server.service server-release/
           cp server/deploy.sh server-release/
           cp server/upgrade.sh server-release/
-          cp server/claude-studio-upgrade.sh server-release/
           cp server/README.md server-release/
           # Install production deps into tarball (no --ignore-scripts, better-sqlite3 needs native build)
           cd server-release
