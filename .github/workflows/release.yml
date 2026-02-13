@@ -248,6 +248,10 @@ jobs:
           cp server/deploy.sh server-release/
           cp server/upgrade.sh server-release/
           cp server/README.md server-release/
+          # Install production deps into tarball
+          cd server-release
+          npm install --omit=dev --ignore-scripts
+          cd ..
           tar -czf claude-studio-server.tar.gz -C server-release .
 
       - name: Upload server artifact
