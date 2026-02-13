@@ -1,6 +1,7 @@
 import React, { useEffect, useCallback } from 'react';
 import { useAppStore } from './stores/appStore';
 import { useSettingsStore } from './stores/settingsStore';
+import { useAuthStore } from './stores/authStore';
 import { useTabStore, type TabInfo } from './stores/tabStore';
 import { debugLog } from './stores/debugLogStore';
 import { useSessions } from './hooks/useSessions';
@@ -15,12 +16,14 @@ import { InputBar } from './components/InputBar/InputBar';
 import { BottomPanel } from './components/BottomPanel/BottomPanel';
 import { RightPanel } from './components/DiffPanel/RightPanel';
 import { Settings } from './components/Settings/Settings';
+import { LoginModal } from './components/Auth/LoginModal';
 import { LOCAL_COMMANDS, TERMINAL_ONLY_COMMANDS, SDK_SESSION_COMMANDS, BUILTIN_COMMANDS } from './components/InputBar/SlashCommandPopup';
 
 export default function App() {
   const { panels, togglePanel, setCurrentProject, setPlatform, currentProject } =
     useAppStore();
   const { isOpen: settingsOpen, openSettings, closeSettings, settings } = useSettingsStore();
+  const { validateSession: validateAuthSession } = useAuthStore();
   const { loadSessions, selectSession } = useSessions();
   const { startSession, sendMessage, stopSession, isStreaming } = useClaude();
 
@@ -80,6 +83,9 @@ export default function App() {
 
         // Load existing sessions
         await loadSessions();
+
+        // Validate auth session
+        validateAuthSession();
 
         // Get git branch
         try {
@@ -392,6 +398,9 @@ export default function App() {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg">
+      {/* Login modal */}
+      <LoginModal />
+
       {/* Sidebar */}
       {panels.sidebar && (
         <Sidebar onNewThread={handleNewThread} />

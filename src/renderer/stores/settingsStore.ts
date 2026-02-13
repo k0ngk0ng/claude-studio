@@ -13,6 +13,7 @@ import type {
   GitSettings,
   AppearanceSettings,
   KeyBinding,
+  ServerSettings,
 } from '../types';
 
 const STORAGE_KEY = 'claude-studio-settings';
@@ -67,6 +68,9 @@ const defaultSettings: AppSettings = {
     { id: 'send-message', label: 'Send Message', keys: 'Enter', action: 'sendMessage' },
     { id: 'new-line', label: 'New Line in Input', keys: 'Shift+Enter', action: 'newLine' },
   ],
+  server: {
+    serverUrl: 'http://localhost:3456',
+  },
 };
 
 function saveSettings(settings: AppSettings) {
@@ -93,6 +97,7 @@ function mergeWithDefaults(parsed: Record<string, unknown>): AppSettings {
     git: { ...defaultSettings.git, ...(parsed.git as Partial<GitSettings>) },
     appearance: { ...defaultSettings.appearance, ...(parsed.appearance as Partial<AppearanceSettings>) },
     keybindings: (parsed.keybindings as KeyBinding[])?.length ? (parsed.keybindings as KeyBinding[]) : defaultSettings.keybindings,
+    server: { ...defaultSettings.server, ...(parsed.server as Partial<ServerSettings>) },
   };
 
   // Migrate old autoApprove values to new permission mode values
@@ -160,6 +165,7 @@ interface SettingsStore {
   updatePermissions: (updates: Partial<PermissionSettings>) => void;
   updateGit: (updates: Partial<GitSettings>) => void;
   updateAppearance: (updates: Partial<AppearanceSettings>) => void;
+  updateServer: (updates: Partial<ServerSettings>) => void;
   updateKeybinding: (id: string, keys: string) => void;
 
   // Provider env vars
@@ -241,6 +247,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const newSettings = {
         ...state.settings,
         appearance: { ...state.settings.appearance, ...updates },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  updateServer: (updates) => {
+    set((state) => {
+      const newSettings = {
+        ...state.settings,
+        server: { ...state.settings.server, ...updates },
       };
       saveSettings(newSettings);
       return { settings: newSettings };

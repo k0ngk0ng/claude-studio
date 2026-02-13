@@ -100,17 +100,17 @@ const config: ForgeConfig = {
       // Copy externalized node_modules into the build directory so they end up in the asar
       const projectRoot = process.cwd();
 
-      // 0. Rebuild node-pty for Electron's Node ABI (prebuilds are for system Node.js)
+      // 0. Rebuild native modules for Electron's Node ABI
       try {
-        console.log('  ⏳ Rebuilding node-pty for Electron...');
+        console.log('  ⏳ Rebuilding native modules for Electron...');
         execSync('npx electron-rebuild -m . -o node-pty', {
           cwd: projectRoot,
           stdio: 'inherit',
           timeout: 120000,
         });
-        console.log('  ✓ node-pty rebuilt for Electron');
+        console.log('  ✓ Native modules rebuilt for Electron');
       } catch (err) {
-        console.warn('  ⚠ electron-rebuild failed, node-pty may not work:', err);
+        console.warn('  ⚠ electron-rebuild failed:', err);
       }
 
       // 1. Copy node-pty (skip source/build-system files, keep build/Release with rebuilt .node)

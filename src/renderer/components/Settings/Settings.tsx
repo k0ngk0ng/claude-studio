@@ -11,6 +11,7 @@ import { CommandsSection } from './CommandsSection';
 import { GitSection } from './GitSection';
 import { AppearanceSection } from './AppearanceSection';
 import { KeybindingsSection } from './KeybindingsSection';
+import { ServerSection } from './ServerSection';
 import { AboutSection } from './AboutSection';
 
 export function Settings() {
@@ -38,6 +39,8 @@ export function Settings() {
         return <AppearanceSection />;
       case 'keybindings':
         return <KeybindingsSection />;
+      case 'server':
+        return <ServerSection />;
       case 'about':
         return <AboutSection />;
       default:

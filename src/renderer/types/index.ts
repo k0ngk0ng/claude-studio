@@ -137,6 +137,33 @@ export interface CommandsAPI {
   remove: (filePath: string) => Promise<boolean>;
 }
 
+// ─── Auth types ────────────────────────────────────────────────────
+
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+  avatarUrl?: string | null;
+  createdAt: number;
+}
+
+export interface AuthResult {
+  success: boolean;
+  user?: User;
+  token?: string;
+  error?: string;
+}
+
+export interface AuthAPI {
+  register: (email: string, username: string, password: string) => Promise<AuthResult>;
+  login: (emailOrUsername: string, password: string) => Promise<AuthResult>;
+  logout: (token: string) => Promise<boolean>;
+  validate: (token: string) => Promise<AuthResult>;
+  updateProfile: (token: string, updates: Partial<Pick<User, 'username' | 'avatarUrl'>>) => Promise<AuthResult>;
+  getSettings: (token: string) => Promise<Record<string, unknown>>;
+  setSettings: (token: string, key: string, value: unknown) => Promise<boolean>;
+}
+
 export interface FileReadResult {
   content?: string;
   error?: string;
@@ -158,6 +185,7 @@ export interface WindowAPI {
   settings: SettingsFileAPI;
   skills: SkillsAPI;
   commands: CommandsAPI;
+  auth: AuthAPI;
 }
 
 export interface DependencyStatus {
@@ -282,6 +310,7 @@ export type SettingsTab =
   | 'git'
   | 'appearance'
   | 'keybindings'
+  | 'server'
   | 'about';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
@@ -366,6 +395,10 @@ export interface KeyBinding {
   action: string;
 }
 
+export interface ServerSettings {
+  serverUrl: string;
+}
+
 export interface AppSettings {
   general: GeneralSettings;
   provider: ProviderSettings;
@@ -374,6 +407,7 @@ export interface AppSettings {
   git: GitSettings;
   appearance: AppearanceSettings;
   keybindings: KeyBinding[];
+  server: ServerSettings;
 }
 
 // ─── App state ──────────────────────────────────────────────────────

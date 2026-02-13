@@ -106,6 +106,16 @@ export interface CommandsAPI {
   remove: (filePath: string) => Promise<boolean>;
 }
 
+export interface AuthAPI {
+  register: (email: string, username: string, password: string) => Promise<{ success: boolean; user?: unknown; token?: string; error?: string }>;
+  login: (emailOrUsername: string, password: string) => Promise<{ success: boolean; user?: unknown; token?: string; error?: string }>;
+  logout: (token: string) => Promise<boolean>;
+  validate: (token: string) => Promise<{ success: boolean; user?: unknown; token?: string; error?: string }>;
+  updateProfile: (token: string, updates: { username?: string; avatarUrl?: string }) => Promise<{ success: boolean; user?: unknown; error?: string }>;
+  getSettings: (token: string) => Promise<Record<string, unknown>>;
+  setSettings: (token: string, key: string, value: unknown) => Promise<boolean>;
+}
+
 export interface AppAPI {
   getProjectPath: () => Promise<string>;
   selectDirectory: () => Promise<string | null>;
@@ -374,4 +384,21 @@ contextBridge.exposeInMainWorld('api', {
     update: (filePath: string, content: string) => ipcRenderer.invoke('commands:update', filePath, content),
     remove: (filePath: string) => ipcRenderer.invoke('commands:remove', filePath),
   } satisfies CommandsAPI,
+
+  auth: {
+    register: (email: string, username: string, password: string) =>
+      ipcRenderer.invoke('auth:register', email, username, password),
+    login: (emailOrUsername: string, password: string) =>
+      ipcRenderer.invoke('auth:login', emailOrUsername, password),
+    logout: (token: string) =>
+      ipcRenderer.invoke('auth:logout', token),
+    validate: (token: string) =>
+      ipcRenderer.invoke('auth:validate', token),
+    updateProfile: (token: string, updates: { username?: string; avatarUrl?: string }) =>
+      ipcRenderer.invoke('auth:updateProfile', token, updates),
+    getSettings: (token: string) =>
+      ipcRenderer.invoke('auth:getSettings', token),
+    setSettings: (token: string, key: string, value: unknown) =>
+      ipcRenderer.invoke('auth:setSettings', token, key, value),
+  } satisfies AuthAPI,
 });

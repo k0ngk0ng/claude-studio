@@ -119,6 +119,20 @@ const navItems: NavItem[] = [
       </svg>
     ),
   },
+  {
+    id: 'server',
+    label: 'Server',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <rect x="2" y="2" width="12" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+        <rect x="2" y="9" width="12" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+        <circle cx="4.5" cy="4.5" r="0.75" fill="currentColor" />
+        <circle cx="4.5" cy="11.5" r="0.75" fill="currentColor" />
+        <path d="M7 4.5h4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+        <path d="M7 11.5h4" stroke="currentColor" strokeWidth="1" strokeLinecap="round" />
+      </svg>
+    ),
+  },
 ];
 
 export function SettingsNav() {

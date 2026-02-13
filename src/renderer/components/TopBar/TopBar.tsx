@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppStore } from '../../stores/appStore';
+import { UserButton } from './UserButton';
 
 export function TopBar() {
   const { currentSession, currentProject, panels, togglePanel, platform, gitStatus } =
@@ -32,9 +33,9 @@ export function TopBar() {
       `}
     >
       {/* Left: title */}
-      <div className="flex items-center gap-3 min-w-0">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         {/* Title */}
-        <h1 className="text-sm font-medium text-text-primary truncate">
+        <h1 className="text-sm font-medium text-text-primary truncate min-w-0">
           {title}
         </h1>
 
@@ -47,12 +48,15 @@ export function TopBar() {
       </div>
 
       {/* Right: action buttons + panel toggles */}
-      <div className="flex items-center gap-2 titlebar-no-drag">
+      <div className="flex items-center gap-2 titlebar-no-drag shrink-0">
         {/* Open button */}
         <OpenButton />
 
         {/* Commit button */}
         <CommitButton />
+
+        {/* User button */}
+        <UserButton />
 
         {/* Separator */}
         <div className="w-px h-5 bg-border mx-0.5" />

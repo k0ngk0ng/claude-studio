@@ -5,6 +5,7 @@ import { gitManager } from './git-manager';
 import { fileManager } from './file-manager';
 import { terminalManager } from './terminal-manager';
 import { getPlatform, getClaudeBinary, getClaudeModel, checkDependencies, readClaudeConfig, writeClaudeConfig } from './platform';
+import { registerAuthIpcHandlers } from './auth-ipc-handlers';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
@@ -1189,6 +1190,9 @@ export function registerIpcHandlers(): void {
       return false;
     }
   });
+
+  // ─── Auth ────────────────────────────────────────────────────────
+  registerAuthIpcHandlers();
 
   // ─── Auto-watch sessions directory for changes ────────────────────
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
