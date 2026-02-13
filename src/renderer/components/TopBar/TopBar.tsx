@@ -336,8 +336,9 @@ function CommitButton() {
     setIsPushing(true);
     setStatus(null);
     try {
-      await window.api.git.push(currentProject.path);
-      setStatus('Pushed!');
+      const output = await window.api.git.push(currentProject.path);
+      const isUpToDate = /Everything up-to-date|already up to date/i.test(output);
+      setStatus(isUpToDate ? 'Already up to date' : 'Pushed!');
       setTimeout(() => setStatus(null), 2000);
     } catch (err: any) {
       setStatus(`Error: ${err.message || 'Push failed'}`);
@@ -351,8 +352,9 @@ function CommitButton() {
     setIsPushing(true);
     setStatus(null);
     try {
-      await window.api.git.pushTags(currentProject.path);
-      setStatus('Tags pushed!');
+      const output = await window.api.git.pushTags(currentProject.path);
+      const isUpToDate = /Everything up-to-date|already up to date/i.test(output);
+      setStatus(isUpToDate ? 'Tags already up to date' : 'Tags pushed!');
       setTimeout(() => setStatus(null), 2000);
     } catch (err: any) {
       setStatus(`Error: ${err.message || 'Push tags failed'}`);
