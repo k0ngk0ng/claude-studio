@@ -41,6 +41,16 @@ function authHeaders(token: string): Record<string, string> {
 }
 
 export function registerAuthIpcHandlers(): void {
+  // Expose the effective server URL to renderer (for Settings display)
+  ipcMain.handle('auth:getServerUrl', async () => {
+    return getServerUrl();
+  });
+
+  // Expose the build-time default (so renderer knows what the "default" is)
+  ipcMain.handle('auth:getDefaultServerUrl', async () => {
+    return process.env.CLAUDE_STUDIO_SERVER_URL || DEFAULT_SERVER_URL;
+  });
+
   ipcMain.handle('auth:register', async (_event, email: string, username: string, password: string) => {
     try {
       if (!email || !username || !password) {

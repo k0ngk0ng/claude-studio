@@ -114,6 +114,8 @@ export interface AuthAPI {
   updateProfile: (token: string, updates: { username?: string; avatarUrl?: string }) => Promise<{ success: boolean; user?: unknown; error?: string }>;
   getSettings: (token: string) => Promise<Record<string, unknown>>;
   setSettings: (token: string, key: string, value: unknown) => Promise<boolean>;
+  getServerUrl: () => Promise<string>;
+  getDefaultServerUrl: () => Promise<string>;
 }
 
 export interface AppAPI {
@@ -400,5 +402,9 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.invoke('auth:getSettings', token),
     setSettings: (token: string, key: string, value: unknown) =>
       ipcRenderer.invoke('auth:setSettings', token, key, value),
+    getServerUrl: () =>
+      ipcRenderer.invoke('auth:getServerUrl'),
+    getDefaultServerUrl: () =>
+      ipcRenderer.invoke('auth:getDefaultServerUrl'),
   } satisfies AuthAPI,
 });

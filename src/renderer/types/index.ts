@@ -162,6 +162,8 @@ export interface AuthAPI {
   updateProfile: (token: string, updates: Partial<Pick<User, 'username' | 'avatarUrl'>>) => Promise<AuthResult>;
   getSettings: (token: string) => Promise<Record<string, unknown>>;
   setSettings: (token: string, key: string, value: unknown) => Promise<boolean>;
+  getServerUrl: () => Promise<string>;
+  getDefaultServerUrl: () => Promise<string>;
 }
 
 export interface FileReadResult {
