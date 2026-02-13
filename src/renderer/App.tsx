@@ -15,7 +15,7 @@ import { InputBar } from './components/InputBar/InputBar';
 import { BottomPanel } from './components/BottomPanel/BottomPanel';
 import { RightPanel } from './components/DiffPanel/RightPanel';
 import { Settings } from './components/Settings/Settings';
-import { LOCAL_COMMANDS, TERMINAL_ONLY_COMMANDS, BUILTIN_COMMANDS } from './components/InputBar/SlashCommandPopup';
+import { LOCAL_COMMANDS, TERMINAL_ONLY_COMMANDS, SDK_SESSION_COMMANDS, BUILTIN_COMMANDS } from './components/InputBar/SlashCommandPopup';
 
 export default function App() {
   const { panels, togglePanel, setCurrentProject, setPlatform, currentProject } =
@@ -305,6 +305,21 @@ export default function App() {
 
       const state = useAppStore.getState();
       const projectPath = state.currentSession.projectPath || currentProject.path;
+
+      // SDK slash commands need a running process — don't spawn a throwaway session
+      const trimmed = content.trim();
+      if (trimmed.startsWith('/')) {
+        const cmd = trimmed.slice(1).split(/\s+/)[0].toLowerCase();
+        if (SDK_SESSION_COMMANDS.has(cmd) && !state.currentSession.processId) {
+          useAppStore.getState().addMessage({
+            id: `local-${cmd}-${Date.now()}`,
+            role: 'system',
+            content: `\`/${cmd}\` requires an active conversation. Send a message first to start a session, then use \`/${cmd}\`.`,
+            timestamp: new Date().toISOString(),
+          });
+          return;
+        }
+      }
 
       // Start a new process if we don't have one
       if (!state.currentSession.processId) {
