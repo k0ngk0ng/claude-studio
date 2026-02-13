@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ThreadList } from './ThreadList';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -12,6 +12,9 @@ export function Sidebar({ onNewThread }: SidebarProps) {
   const { platform, setCurrentProject, panelSizes, setPanelSize } = useAppStore();
   const { openSettings } = useSettingsStore();
   const isMac = platform === 'mac';
+  const [collapseAllKey, setCollapseAllKey] = useState(0);
+  const [expandAllKey, setExpandAllKey] = useState(0);
+  const [isAllCollapsed, setIsAllCollapsed] = useState(false);
 
   const { handleMouseDown } = useResizable({
     direction: 'horizontal',
@@ -96,12 +99,36 @@ export function Sidebar({ onNewThread }: SidebarProps) {
 
       {/* Threads section */}
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="px-4 py-2">
+        <div className="flex items-center justify-between px-4 py-2">
           <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
             Threads
           </span>
+          <button
+            onClick={() => {
+              if (isAllCollapsed) {
+                setExpandAllKey(k => k + 1);
+                setIsAllCollapsed(false);
+              } else {
+                setCollapseAllKey(k => k + 1);
+                setIsAllCollapsed(true);
+              }
+            }}
+            className="p-0.5 rounded hover:bg-surface-hover text-text-muted hover:text-text-primary
+                       transition-colors"
+            title={isAllCollapsed ? 'Expand all folders' : 'Collapse all folders'}
+          >
+            {isAllCollapsed ? (
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M4 3v10M7 10l3-3 3 3M7 6l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M4 3v10M7 6l3-3 3 3M7 10l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </button>
         </div>
-        <ThreadList />
+        <ThreadList collapseAllKey={collapseAllKey} expandAllKey={expandAllKey} />
       </div>
 
       {/* Settings link */}

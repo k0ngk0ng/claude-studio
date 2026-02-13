@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useMemo, useState, useCallback, useEffect } from 'react';
 import { ThreadItem } from './ThreadItem';
 import { useAppStore } from '../../stores/appStore';
 import { useSessions } from '../../hooks/useSessions';
@@ -54,7 +54,7 @@ function formatRelativeTime(dateStr: string): string {
   return `${diffMonths}mo`;
 }
 
-export function ThreadList() {
+export function ThreadList({ collapseAllKey, expandAllKey }: { collapseAllKey: number; expandAllKey: number }) {
   const { sessions, currentSession, currentProject, sessionRuntimes } = useAppStore();
   const { createNewSession } = useSessions();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
@@ -124,6 +124,21 @@ export function ThreadList() {
     });
   };
 
+  // Collapse all when collapseAllKey bumps
+  useEffect(() => {
+    if (collapseAllKey > 0) {
+      const allKeys = new Set(projectGroups.map((g) => g.projectPath || g.projectName));
+      setCollapsedProjects(allKeys);
+    }
+  }, [collapseAllKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Expand all when expandAllKey bumps
+  useEffect(() => {
+    if (expandAllKey > 0) {
+      setCollapsedProjects(new Set());
+    }
+  }, [expandAllKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleNewThreadInProject = useCallback((projectPath: string, projectName: string) => {
     createNewSession(projectPath);
     useAppStore.getState().setCurrentProject({ path: projectPath, name: projectName });
@@ -165,6 +180,7 @@ export function ThreadList() {
           </div>
         </div>
       )}
+
       {projectGroups.map((group) => {
         const key = group.projectPath || group.projectName;
         const isCollapsed = collapsedProjects.has(key);

@@ -312,6 +312,7 @@ function TreeItem({
   highlightPath,
   selectedPath,
   collapseKey,
+  expandKey,
   onContextMenu,
   onFileOpen,
   onSelect,
@@ -323,6 +324,7 @@ function TreeItem({
   highlightPath: string | null;
   selectedPath: string | null;
   collapseKey: number;
+  expandKey: number;
   onContextMenu: (e: React.MouseEvent, node: TreeNode) => void;
   onFileOpen: (node: TreeNode) => void;
   onSelect: (path: string | null) => void;
@@ -339,6 +341,13 @@ function TreeItem({
       setIsOpen(false);
     }
   }, [collapseKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Expand first level when expandKey changes
+  useEffect(() => {
+    if (expandKey > 0 && node.isDir && depth < 1) {
+      setIsOpen(true);
+    }
+  }, [expandKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Force open when revealFile triggers
   useEffect(() => {
@@ -415,6 +424,7 @@ function TreeItem({
           highlightPath={highlightPath}
           selectedPath={selectedPath}
           collapseKey={collapseKey}
+          expandKey={expandKey}
           onContextMenu={onContextMenu}
           onFileOpen={onFileOpen}
           onSelect={onSelect}
@@ -437,6 +447,8 @@ export function FileTree() {
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [collapseKey, setCollapseKey] = useState(0);
+  const [expandKey, setExpandKey] = useState(0);
+  const [isAllCollapsed, setIsAllCollapsed] = useState(false);
 
   const loadFiles = useCallback(async () => {
     if (!currentProject.path) return;
@@ -531,14 +543,28 @@ export function FileTree() {
             />
           </div>
           <button
-            onClick={() => setCollapseKey(k => k + 1)}
+            onClick={() => {
+              if (isAllCollapsed) {
+                setExpandKey(k => k + 1);
+                setIsAllCollapsed(false);
+              } else {
+                setCollapseKey(k => k + 1);
+                setIsAllCollapsed(true);
+              }
+            }}
             className="p-1 rounded hover:bg-surface-hover text-text-muted hover:text-text-primary
                        transition-colors shrink-0"
-            title="Collapse all folders"
+            title={isAllCollapsed ? 'Expand folders' : 'Collapse all folders'}
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M4 3v10M7 6l3-3 3 3M7 10l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            {isAllCollapsed ? (
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M4 3v10M7 10l3-3 3 3M7 6l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                <path d="M4 3v10M7 6l3-3 3 3M7 10l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
           </button>
           <button
             onClick={loadFiles}
@@ -579,6 +605,7 @@ export function FileTree() {
                 highlightPath={highlightPath}
                 selectedPath={selectedFile}
                 collapseKey={collapseKey}
+                expandKey={expandKey}
                 onContextMenu={handleContextMenu}
                 onFileOpen={handleFileOpen}
                 onSelect={setSelectedFile}
