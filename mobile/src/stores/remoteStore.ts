@@ -175,23 +175,32 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
     try {
       let processId = get().activeProcessId;
 
-      // Spawn a Claude process if we don't have one yet
-      if (!processId) {
+      // Helper: spawn a new Claude process
+      const spawnProcess = async (): Promise<string> => {
         const sessionId = get().currentSessionId;
-        // Use the session's projectPath if available, otherwise fall back to desktop's current project
         const session = get().sessions.find(s => s.id === sessionId);
         const cwd = session?.projectPath || await get().executeCommand('app:getProjectPath');
-        // Spawn with session resume if we have a session selected
-        processId = await get().executeCommand('claude:spawn', [
+        const pid = await get().executeCommand('claude:spawn', [
           cwd,
           sessionId || undefined,
-          'bypassPermissions', // Mobile uses bypass mode for simplicity
+          'bypassPermissions',
         ]) as string;
-        set({ activeProcessId: processId });
+        set({ activeProcessId: pid });
+        return pid;
+      };
+
+      // Spawn a Claude process if we don't have one yet
+      if (!processId) {
+        processId = await spawnProcess();
       }
 
-      // Send message with processId
-      await get().executeCommand('claude:send', [processId, content]);
+      // Send message — if it returns false, the process has ended (result received),
+      // so we need to spawn a new one and retry.
+      const sent = await get().executeCommand('claude:send', [processId, content]);
+      if (!sent) {
+        processId = await spawnProcess();
+        await get().executeCommand('claude:send', [processId, content]);
+      }
     } catch (err: any) {
       set(s => ({
         isStreaming: false,
@@ -347,8 +356,9 @@ export function initRelayListeners(): () => void {
       }
 
       case 'claude:stream-end': {
-        // Streaming finished
-        useRemoteStore.setState({ isStreaming: false });
+        // Streaming finished — process has exited, clear activeProcessId
+        // so next message will spawn a fresh process.
+        useRemoteStore.setState({ isStreaming: false, activeProcessId: null });
         break;
       }
     }
