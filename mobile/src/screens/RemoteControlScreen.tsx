@@ -107,8 +107,8 @@ export function RemoteControlScreen({ onBack }: Props) {
         ))}
       </View>
 
-      {/* Content */}
-      {activeTab === 'chat' && (
+      {/* Content — keep ChatTab mounted to preserve scroll position */}
+      <View style={{ flex: 1, display: activeTab === 'chat' ? 'flex' : 'none' }}>
         <ChatTab
           messages={messages}
           input={input}
@@ -119,7 +119,7 @@ export function RemoteControlScreen({ onBack }: Props) {
           flatListRef={flatListRef}
           projectPath={projectPath}
         />
-      )}
+      </View>
       {activeTab === 'sessions' && (
         <SessionsTab
           sessions={sessions}
