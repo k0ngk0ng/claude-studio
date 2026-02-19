@@ -149,8 +149,9 @@ class ClaudeProcessManager extends EventEmitter {
     permissionMode?: string,
     envVars?: Array<{ key: string; value: string; enabled: boolean }>,
     language?: string,
+    mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>,
   ): Promise<string> {
-    debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode, 'envVars:', envVars?.length || 0, 'language:', language);
+    debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode, 'envVars:', envVars?.length || 0, 'language:', language, 'mcpServers:', mcpServers?.length || 0);
 
     // Apply enabled env vars to process.env so the SDK child process inherits them
     if (envVars && envVars.length > 0) {
@@ -177,7 +178,7 @@ class ClaudeProcessManager extends EventEmitter {
     this.sessions.set(processId, managed);
 
     // Start the SDK query in background
-    this._runQuery(processId, managed, permissionMode).catch((err) => {
+    this._runQuery(processId, managed, permissionMode, mcpServers).catch((err) => {
       this.emit('error', processId, err?.message || String(err));
     });
 
@@ -188,6 +189,7 @@ class ClaudeProcessManager extends EventEmitter {
     processId: string,
     managed: ManagedSession,
     permissionMode?: string,
+    mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>,
   ) {
     const query = await getQuery();
 
@@ -237,6 +239,24 @@ class ClaudeProcessManager extends EventEmitter {
     // Resume session
     if (managed.sessionId) {
       options.resume = managed.sessionId;
+    }
+
+    // MCP servers - pass directly to SDK instead of writing to file (security: avoid leaking API keys to disk)
+    if (mcpServers && mcpServers.length > 0) {
+      const enabledServers = mcpServers.filter((s) => s.enabled);
+      if (enabledServers.length > 0) {
+        const mcpServersConfig: Record<string, unknown> = {};
+        for (const server of enabledServers) {
+          mcpServersConfig[server.name] = {
+            type: 'stdio',
+            command: server.command,
+            args: server.args,
+            env: server.env,
+          };
+        }
+        options.mcpServers = mcpServersConfig;
+        debugLog('MCP servers configured:', enabledServers.map((s) => s.name).join(', '));
+      }
     }
 
     // canUseTool callback — bridges permission requests to renderer

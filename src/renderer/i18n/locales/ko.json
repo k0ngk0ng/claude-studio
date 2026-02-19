@@ -48,7 +48,14 @@
     "resend": "다시 보내기",
     "copyCode": "코드 복사",
     "copied": "복사됨!",
-    "regenerate": "다시 생성"
+    "regenerate": "다시 생성",
+    "sendMessage": "메시지 전송 (Enter)",
+    "addImage": "이미지 추가",
+    "chars": "글자",
+    "shiftEnter": "Shift+Enter로 줄바꿈"
+  },
+  "input": {
+    "newBranchName": "새 브랜치 이름"
   },
   "settings": {
     "title": "설정",
@@ -118,6 +125,9 @@
     "title": "터미널",
     "clear": "지우기",
     "kill": "프로세스 종료"
+  },
+  "bottomPanel": {
+    "debugLogs": "디버그 로그"
   },
   "topBar": {
     "newThread": "새 스레드",

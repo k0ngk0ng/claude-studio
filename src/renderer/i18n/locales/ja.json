@@ -48,7 +48,14 @@
     "resend": "再送信",
     "copyCode": "コードをコピー",
     "copied": "コピーしました!",
-    "regenerate": "再生成"
+    "regenerate": "再生成",
+    "sendMessage": "メッセージを送信 (Enter)",
+    "addImage": "画像を追加",
+    "chars": "文字",
+    "shiftEnter": "Shift+Enter で改行"
+  },
+  "input": {
+    "newBranchName": "新しいブランチ名"
   },
   "settings": {
     "title": "設定",
@@ -118,6 +125,9 @@
     "title": "ターミナル",
     "clear": "クリア",
     "kill": "プロセス終了"
+  },
+  "bottomPanel": {
+    "debugLogs": "デバッグログ"
   },
   "topBar": {
     "newThread": "新しいスレッド",

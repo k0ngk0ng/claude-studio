@@ -26,52 +26,6 @@ function debugLog(...args: unknown[]) {
 
 class McpManager {
   private runningServers: Map<string, McpServerProcess> = new Map();
-  private mcpConfigPath: string | null = null;
-
-  /**
-   * Write MCP servers config to project's mcp.json file
-   * Returns the path to the config file
-   */
-  writeMcpConfig(cwd: string, servers: McpServerConfig[]): string | null {
-    const mcpConfigPath = path.join(cwd, 'mcp.json');
-
-    try {
-      // Filter only enabled servers
-      const enabledServers = servers.filter((s) => s.enabled);
-
-      if (enabledServers.length === 0) {
-        // Don't write anything - let Claude Code use its global config
-        debugLog('No MCP servers enabled, not writing mcp.json');
-        return null;
-      }
-
-      // Build mcp.json content in Claude Code format
-      const mcpConfig: Record<string, unknown> = {
-        mcpServers: {},
-      };
-
-      for (const server of enabledServers) {
-        (mcpConfig.mcpServers as Record<string, unknown>)[server.name] = {
-          command: server.command,
-          args: server.args,
-          env: server.env,
-        };
-      }
-
-      // Write to file
-      fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig, null, 2), 'utf-8');
-      this.mcpConfigPath = mcpConfigPath;
-
-      debugLog('Written mcp.json:', mcpConfigPath);
-      debugLog('MCP servers configured:', enabledServers.map((s) => s.name).join(', '));
-
-      return mcpConfigPath;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      debugLog('Failed to write mcp.json:', msg);
-      return null;
-    }
-  }
 
   /**
    * Get list of configured (enabled) MCP servers
@@ -173,13 +127,6 @@ class McpManager {
       name: s.name,
       uptime: now - s.startTime,
     }));
-  }
-
-  /**
-   * Get MCP config path for current project
-   */
-  getMcpConfigPath(): string | null {
-    return this.mcpConfigPath;
   }
 }
 

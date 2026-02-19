@@ -48,7 +48,14 @@
     "resend": "Отправить снова",
     "copyCode": "Копировать код",
     "copied": "Скопировано!",
-    "regenerate": "Перегенерировать"
+    "regenerate": "Перегенерировать",
+    "sendMessage": "Отправить сообщение (Enter)",
+    "addImage": "Добавить изображение",
+    "chars": "символов",
+    "shiftEnter": "Shift+Enter для новой строки"
+  },
+  "input": {
+    "newBranchName": "имя-новой-ветки"
   },
   "settings": {
     "title": "Настройки",
@@ -118,6 +125,9 @@
     "title": "Терминал",
     "clear": "Очистить",
     "kill": "Завершить процесс"
+  },
+  "bottomPanel": {
+    "debugLogs": "Журналы отладки"
   },
   "topBar": {
     "newThread": "Новая тема",

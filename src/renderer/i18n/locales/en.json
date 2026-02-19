@@ -33,14 +33,18 @@
     "addFolder": "Add folder"
   },
   "welcome": {
-    "title": "Welcome to Claude Studio",
+    "title": "What can I help you build?",
     "subtitle": "Desktop GUI for Claude Code",
     "startChat": "Start a new conversation",
     "recentThreads": "Recent Threads",
-    "noRecentThreads": "No recent threads"
+    "noRecentThreads": "No recent threads",
+    "workingIn": "Working in",
+    "on": "on",
+    "notFound": "not found",
+    "install": "Install"
   },
   "chat": {
-    "placeholder": "Ask anything...",
+    "placeholder": "Ask anything, @ to add files, / for commands",
     "thinking": "Thinking...",
     "toolUse": "Using tool",
     "attachFiles": "Attach files",
@@ -48,7 +52,14 @@
     "resend": "Resend",
     "copyCode": "Copy code",
     "copied": "Copied!",
-    "regenerate": "Regenerate"
+    "regenerate": "Regenerate",
+    "sendMessage": "Send message (Enter)",
+    "addImage": "Add image",
+    "chars": "chars",
+    "shiftEnter": "Shift+Enter for new line"
+  },
+  "input": {
+    "newBranchName": "new-branch-name"
   },
   "settings": {
     "title": "Settings",
@@ -118,6 +129,9 @@
     "title": "Terminal",
     "clear": "Clear",
     "kill": "Kill Process"
+  },
+  "bottomPanel": {
+    "debugLogs": "Debug Logs"
   },
   "topBar": {
     "newThread": "New Thread",

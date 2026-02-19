@@ -48,7 +48,14 @@
     "resend": "Reenviar",
     "copyCode": "Copiar código",
     "copied": "¡Copiado!",
-    "regenerate": "Regenerar"
+    "regenerate": "Regenerar",
+    "sendMessage": "Enviar mensaje (Enter)",
+    "addImage": "Añadir imagen",
+    "chars": "caracteres",
+    "shiftEnter": "Shift+Enter para nueva línea"
+  },
+  "input": {
+    "newBranchName": "nombre-de-rama-nueva"
   },
   "settings": {
     "title": "Configuración",
@@ -118,6 +125,9 @@
     "title": "Terminal",
     "clear": "Limpiar",
     "kill": "Terminar proceso"
+  },
+  "bottomPanel": {
+    "debugLogs": "Registros de depuración"
   },
   "topBar": {
     "newThread": "Nuevo hilo",

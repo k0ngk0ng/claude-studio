@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { FileSearchPopup } from './FileSearchPopup';
@@ -36,6 +37,7 @@ interface InputBarProps {
 }
 
 export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
+  const { t } = useTranslation();
   const { currentProject, setBranch } = useAppStore();
   const defaultMode = useSettingsStore(s => s.settings.general.autoApprove) as ClaudeMode;
   const chatLayout = useSettingsStore(s => s.settings.appearance.chatLayout);
@@ -586,7 +588,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
-            placeholder="Ask Claude anything, @ to add files, / for commands"
+            placeholder={t('chat.placeholder')}
             rows={2}
             style={{ height: `${inputHeight}px` }}
             className="bg-transparent text-sm text-text-primary placeholder-text-muted
@@ -601,7 +603,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
               className="flex items-center justify-center w-8 h-8 rounded-lg
                          text-text-muted hover:text-text-primary hover:bg-surface-hover
                          transition-colors"
-              title="Add image"
+              title={t('chat.addImage')}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path
@@ -770,7 +772,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
                 onClick={onStop}
                 className="flex items-center justify-center w-8 h-8 rounded-lg
                            bg-error/20 text-error hover:bg-error/30 transition-colors"
-                title="Stop generation"
+                title={t('chat.stopGenerating')}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <rect x="3" y="3" width="8" height="8" rx="1" fill="currentColor" />
@@ -786,7 +788,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
                          bg-accent text-white hover:bg-accent-hover
                          disabled:opacity-30 disabled:cursor-not-allowed
                          transition-colors"
-              title="Send message (Enter)"
+              title={t('chat.sendMessage')}
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path
@@ -814,7 +816,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
         {/* Bottom hint row */}
         <div className="flex items-center justify-between mt-1.5 px-1">
           <span className="text-[11px] text-text-muted">
-            {value.length > 0 ? `${value.length} chars • ` : ''}Shift+Enter for new line
+            {value.length > 0 ? `${value.length} ${t('chat.chars')} • ` : ''}{t('chat.shiftEnter')}
           </span>
 
           {/* Git branch switcher */}
@@ -901,7 +903,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
                               setNewBranchName('');
                             }
                           }}
-                          placeholder="new-branch-name"
+                          placeholder={t('input.newBranchName')}
                           className="flex-1 bg-bg border border-border rounded px-2 py-1 text-xs
                                      text-text-primary placeholder-text-muted outline-none
                                      focus:border-accent"

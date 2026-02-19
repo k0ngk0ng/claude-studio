@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../stores/appStore';
 import { SuggestionCards } from './SuggestionCards';
 import type { DependencyStatus } from '../../types';
 
 export function WelcomeScreen() {
+  const { t } = useTranslation();
   const { currentProject } = useAppStore();
   const [missingDeps, setMissingDeps] = useState<DependencyStatus[]>([]);
 
@@ -68,20 +70,20 @@ export function WelcomeScreen() {
 
         {/* Heading */}
         <h1 className="text-2xl font-semibold text-text-primary mb-2">
-          What can I help you build?
+          {t('welcome.title')}
         </h1>
 
         {/* Project name */}
         {currentProject.name && (
           <p className="text-sm text-text-muted mb-8">
-            Working in{' '}
+            {t('welcome.workingIn')}{' '}
             <span className="text-text-secondary font-medium">
               {currentProject.name}
             </span>
             {currentProject.branch && (
               <>
                 {' '}
-                on{' '}
+                {t('welcome.on')}{' '}
                 <span className="text-text-secondary font-mono text-xs">
                   {currentProject.branch}
                 </span>
@@ -105,10 +107,10 @@ export function WelcomeScreen() {
                 </svg>
                 <div>
                   <div className="text-sm font-medium text-text-primary">
-                    {dep.name} not found
+                    {dep.name} {t('welcome.notFound')}
                   </div>
                   <div className="text-xs text-text-muted mt-0.5">
-                    Install: <code className="px-1.5 py-0.5 rounded bg-surface text-text-secondary font-mono text-[11px]">{dep.installHint}</code>
+                    {t('welcome.install')}: <code className="px-1.5 py-0.5 rounded bg-surface text-text-secondary font-mono text-[11px]">{dep.installHint}</code>
                   </div>
                 </div>
               </div>

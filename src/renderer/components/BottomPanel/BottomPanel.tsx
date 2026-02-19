@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useResizable } from '../../hooks/useResizable';
@@ -8,6 +9,7 @@ import { LogPanel } from '../Debug/LogPanel';
 type BottomTab = 'terminal' | 'logs';
 
 export function BottomPanel({ visible }: { visible?: boolean }) {
+  const { t } = useTranslation();
   const { panels, togglePanel, panelSizes, setPanelSize } = useAppStore();
   const debugMode = useSettingsStore(s => s.settings.general.debugMode);
 
@@ -75,7 +77,7 @@ export function BottomPanel({ visible }: { visible?: boolean }) {
               <path d="M4.5 6l2.5 2-2.5 2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               <line x1="8.5" y1="10" x2="11.5" y2="10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
-            Terminal
+            {t('terminal.title')}
           </button>
 
           {/* Logs tab — only when debug mode is on */}
@@ -91,7 +93,7 @@ export function BottomPanel({ visible }: { visible?: boolean }) {
               <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
                 <path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               </svg>
-              Debug Logs
+              {t('bottomPanel.debugLogs')}
             </button>
           )}
         </div>

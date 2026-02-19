@@ -48,7 +48,14 @@
     "resend": "重新傳送",
     "copyCode": "複製程式碼",
     "copied": "已複製!",
-    "regenerate": "重新產生"
+    "regenerate": "重新產生",
+    "sendMessage": "傳送訊息 (Enter)",
+    "addImage": "新增圖片",
+    "chars": "字元",
+    "shiftEnter": "Shift+Enter 換行"
+  },
+  "input": {
+    "newBranchName": "新分支名稱"
   },
   "settings": {
     "title": "設定",
@@ -118,6 +125,9 @@
     "title": "終端機",
     "clear": "清空",
     "kill": "終止程序"
+  },
+  "bottomPanel": {
+    "debugLogs": "調試日誌"
   },
   "topBar": {
     "newThread": "新對話",

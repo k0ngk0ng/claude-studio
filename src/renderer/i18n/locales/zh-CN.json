@@ -33,14 +33,18 @@
     "addFolder": "添加文件夹"
   },
   "welcome": {
-    "title": "欢迎使用 Claude Studio",
+    "title": "有什么我可以帮你构建的？",
     "subtitle": "Claude Code 桌面客户端",
     "startChat": "开始新对话",
     "recentThreads": "最近的对话",
-    "noRecentThreads": "暂无最近对话"
+    "noRecentThreads": "暂无最近对话",
+    "workingIn": "工作目录",
+    "on": "分支",
+    "notFound": "未找到",
+    "install": "安装"
   },
   "chat": {
-    "placeholder": "向 Claude 提问...",
+    "placeholder": "向 Claude 提问，@ 添加文件，/ 使用命令",
     "thinking": "思考中...",
     "toolUse": "使用工具中",
     "attachFiles": "附加文件",
@@ -48,7 +52,14 @@
     "resend": "重新发送",
     "copyCode": "复制代码",
     "copied": "已复制!",
-    "regenerate": "重新生成"
+    "regenerate": "重新生成",
+    "sendMessage": "发送消息（回车）",
+    "addImage": "添加图片",
+    "chars": "字符",
+    "shiftEnter": "Shift+Enter 换行"
+  },
+  "input": {
+    "newBranchName": "新分支名"
   },
   "settings": {
     "title": "设置",
@@ -118,6 +129,9 @@
     "title": "终端",
     "clear": "清空",
     "kill": "终止进程"
+  },
+  "bottomPanel": {
+    "debugLogs": "调试日志"
   },
   "topBar": {
     "newThread": "新建对话",
