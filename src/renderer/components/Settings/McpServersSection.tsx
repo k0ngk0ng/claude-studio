@@ -299,6 +299,15 @@ export function McpServersSection() {
                                text-text-primary font-mono focus:outline-none focus:border-accent resize-none"
                   />
                 </div>
+                <div className="flex gap-2 pt-1">
+                  <button
+                    onClick={() => setEditingId(null)}
+                    className="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm
+                               rounded-lg transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             )}
           </div>
