@@ -192,6 +192,24 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  handle(
+    'sessions:archive',
+    (_event, projectPath: string, sessionId: string) => {
+      return sessionManager.archiveSession(projectPath, sessionId);
+    }
+  );
+
+  handle(
+    'sessions:unarchive',
+    (_event, archivedSessionId: string) => {
+      return sessionManager.unarchiveSession(archivedSessionId);
+    }
+  );
+
+  handle('sessions:listArchived', () => {
+    return sessionManager.listArchivedSessions();
+  });
+
   // ─── Git ──────────────────────────────────────────────────────────
   handle('git:status', (_event, cwd: string) => {
     return gitManager.getStatus(cwd);

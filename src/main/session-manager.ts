@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
-import { getSessionsDir, encodePath } from './platform';
+import { getSessionsDir, encodePath, getArchivedSessionsDir } from './platform';
 
 const isWindows = process.platform === 'win32';
 
@@ -88,6 +88,17 @@ export interface SessionInfo {
   title: string;
   lastMessage: string;
   updatedAt: string;
+}
+
+export interface ArchivedSessionInfo {
+  id: string;
+  projectPath: string;
+  projectName: string;
+  title: string;
+  lastMessage: string;
+  archivedAt: string;
+  originalProjectPath: string;
+  originalSessionId: string;
 }
 
 interface SessionIndexEntry {
@@ -590,6 +601,157 @@ class SessionManager {
     } catch {
       return null;
     }
+  }
+
+  /**
+   * Archive a session: move the JSONL file to the archived-sessions directory.
+   * Creates a metadata file with original location info.
+   */
+  archiveSession(projectPath: string, sessionId: string): boolean {
+    try {
+      const encodedDir = this.findEncodedDir(projectPath);
+      if (!encodedDir) {
+        console.error('[session] archive: could not find dir for', projectPath);
+        return false;
+      }
+
+      const srcPath = path.join(this.sessionsDir, encodedDir, `${sessionId}.jsonl`);
+      if (!fs.existsSync(srcPath)) {
+        console.error('[session] archive: source file not found:', srcPath);
+        return false;
+      }
+
+      const archiveDir = getArchivedSessionsDir();
+      if (!fs.existsSync(archiveDir)) {
+        fs.mkdirSync(archiveDir, { recursive: true });
+      }
+
+      // Create unique archive ID
+      const archivedId = `${Date.now()}-${sessionId}`;
+      const destPath = path.join(archiveDir, `${archivedId}.jsonl`);
+      const metaPath = path.join(archiveDir, `${archivedId}.meta.json`);
+
+      // Read the first prompt for title
+      const firstPrompt = this.readFirstPromptFromJsonl(srcPath);
+      const title = this.cleanPrompt(firstPrompt.slice(0, 80) || '');
+
+      // Move the file
+      fs.renameSync(srcPath, destPath);
+
+      // Write metadata
+      const meta = {
+        id: archivedId,
+        originalProjectPath: projectPath,
+        originalSessionId: sessionId,
+        projectName: projectPath.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || 'Unknown',
+        title,
+        lastMessage: firstPrompt,
+        archivedAt: new Date().toISOString(),
+      };
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
+
+      console.log('[session] archived', sessionId, '→', archivedId);
+      return true;
+    } catch (err) {
+      console.error('[session] archive error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Unarchive a session: move it back to the original location.
+   */
+  unarchiveSession(archivedSessionId: string): boolean {
+    try {
+      const archiveDir = getArchivedSessionsDir();
+      const metaPath = path.join(archiveDir, `${archivedSessionId}.meta.json`);
+
+      if (!fs.existsSync(metaPath)) {
+        console.error('[session] unarchive: meta not found:', metaPath);
+        return false;
+      }
+
+      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+      const srcPath = path.join(archiveDir, `${archivedSessionId}.jsonl`);
+
+      if (!fs.existsSync(srcPath)) {
+        console.error('[session] unarchive: source file not found:', srcPath);
+        return false;
+      }
+
+      // Find the original project directory
+      const encodedDir = this.findEncodedDir(meta.originalProjectPath);
+      if (!encodedDir) {
+        console.error('[session] unarchive: could not find original dir for', meta.originalProjectPath);
+        return false;
+      }
+
+      const destDir = path.join(this.sessionsDir, encodedDir);
+      if (!fs.existsSync(destDir)) {
+        fs.mkdirSync(destDir, { recursive: true });
+      }
+
+      // Move back to original location with original session ID
+      const destPath = path.join(destDir, `${meta.originalSessionId}.jsonl`);
+      fs.renameSync(srcPath, destPath);
+
+      // Remove metadata
+      fs.unlinkSync(metaPath);
+
+      console.log('[session] unarchived', archivedSessionId, '→', meta.originalSessionId);
+      return true;
+    } catch (err) {
+      console.error('[session] unarchive error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * List all archived sessions.
+   */
+  listArchivedSessions(): ArchivedSessionInfo[] {
+    const archived: ArchivedSessionInfo[] = [];
+
+    try {
+      const archiveDir = getArchivedSessionsDir();
+      if (!fs.existsSync(archiveDir)) {
+        return archived;
+      }
+
+      const files = fs.readdirSync(archiveDir);
+      for (const file of files) {
+        if (!file.endsWith('.meta.json')) continue;
+
+        try {
+          const metaPath = path.join(archiveDir, file);
+          const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+
+          archived.push({
+            id: meta.id,
+            projectPath: path.join(getArchivedSessionsDir(), meta.id),
+            projectName: meta.projectName || 'Unknown',
+            title: meta.title || '',
+            lastMessage: meta.lastMessage || '',
+            archivedAt: meta.archivedAt || '',
+            originalProjectPath: meta.originalProjectPath,
+            originalSessionId: meta.originalSessionId,
+          });
+        } catch {
+          // Skip invalid meta files
+        }
+      }
+    } catch {
+      // Archive directory doesn't exist
+    }
+
+    // Sort by archived date descending
+    archived.sort((a, b) => {
+      const dateA = a.archivedAt ? new Date(a.archivedAt).getTime() : 0;
+      const dateB = b.archivedAt ? new Date(b.archivedAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    return archived;
   }
 }
 
