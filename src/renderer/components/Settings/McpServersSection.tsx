@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
 import type { McpServer } from '../../types';
 
@@ -8,6 +8,7 @@ export function McpServersSection() {
   const { mcpServers } = settings;
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [newServer, setNewServer] = useState({
     name: '',
@@ -41,6 +42,63 @@ export function McpServersSection() {
     addMcpServer(server);
     setNewServer({ name: '', command: '', args: '', env: '' });
     setIsAdding(false);
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const content = reader.result as string;
+        const parsed = JSON.parse(content);
+
+        // Support both Claude Code format and simple array format
+        let servers: McpServer[] = [];
+
+        if (parsed.mcpServers) {
+          // Claude Code format: { mcpServers: { "name": { command, args, env } } }
+          Object.entries(parsed.mcpServers).forEach(([name, config]: [string, any]) => {
+            servers.push({
+              id: crypto.randomUUID(),
+              name,
+              command: config.command || '',
+              args: Array.isArray(config.args) ? config.args : config.args?.split(' ') || [],
+              env: typeof config.env === 'object' ? config.env : {},
+              enabled: true,
+            });
+          });
+        } else if (Array.isArray(parsed)) {
+          // Simple array format: [{ name, command, args, env }]
+          servers = parsed.map((s: any) => ({
+            id: crypto.randomUUID(),
+            name: s.name || '',
+            command: s.command || '',
+            args: Array.isArray(s.args) ? s.args : s.args?.split(' ') || [],
+            env: typeof s.env === 'object' ? s.env : {},
+            enabled: true,
+          }));
+        }
+
+        // Add all imported servers
+        servers.forEach((server) => {
+          if (server.name && server.command) {
+            addMcpServer(server);
+          }
+        });
+
+        alert(`Imported ${servers.length} MCP server(s)`);
+      } catch (err) {
+        alert('Failed to parse JSON file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      }
+    };
+    reader.readAsText(file);
+
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   return (
@@ -270,17 +328,38 @@ export function McpServersSection() {
           </div>
         </div>
       ) : (
-        <button
-          onClick={() => setIsAdding(true)}
-          className="flex items-center gap-2 px-4 py-2 border border-dashed border-border
-                     rounded-lg text-sm text-text-secondary hover:text-text-primary
-                     hover:border-text-muted transition-colors w-full justify-center"
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-          </svg>
-          Add MCP Server
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsAdding(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-dashed border-border
+                       rounded-lg text-sm text-text-secondary hover:text-text-primary
+                       hover:border-text-muted transition-colors flex-1 justify-center"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+            Add MCP Server
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 px-4 py-2 border border-dashed border-border
+                       rounded-lg text-sm text-text-secondary hover:text-text-primary
+                       hover:border-text-muted transition-colors justify-center"
+            title="Import from JSON"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3M8 2v8M5 5l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Import
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleImport}
+            className="hidden"
+          />
+        </div>
       )}
     </div>
   );
