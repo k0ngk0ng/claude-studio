@@ -465,6 +465,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 loadSettingsFromFile().then((settings) => {
   useSettingsStore.setState({ settings });
 
+  // Apply prevent sleep setting (if enabled in settings)
+  if (settings.general.preventSleep) {
+    window.api.preventSleep(true);
+  }
+
   // Sync debug mode to debugLogStore (no circular dependency)
   if (settings.general.debugMode) {
     useDebugLogStore.getState().setDebugEnabled(true);

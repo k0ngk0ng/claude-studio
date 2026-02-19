@@ -40,13 +40,13 @@ class McpManager {
       const enabledServers = servers.filter((s) => s.enabled);
 
       if (enabledServers.length === 0) {
-        // If no enabled servers, remove the mcp.json file if it exists
-        if (fs.existsSync(mcpConfigPath)) {
-          fs.unlinkSync(mcpConfigPath);
-          debugLog('Removed mcp.json (no enabled servers)');
-        }
-        this.mcpConfigPath = null;
-        return null;
+        // If no enabled servers, write an empty mcpServers object to override global config
+        // (don't delete the file - that would cause Claude Code to fall back to global ~/.claude/mcp.json)
+        const emptyConfig = { mcpServers: {} };
+        fs.writeFileSync(mcpConfigPath, JSON.stringify(emptyConfig, null, 2), 'utf-8');
+        this.mcpConfigPath = mcpConfigPath;
+        debugLog('Written empty mcp.json to override global config:', mcpConfigPath);
+        return mcpConfigPath;
       }
 
       // Build mcp.json content in Claude Code format

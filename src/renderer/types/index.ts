@@ -93,6 +93,7 @@ export interface AppAPI {
   showItemInFolder: (fullPath: string) => Promise<boolean>;
   openFile: (fullPath: string) => Promise<boolean>;
   openExternal: (url: string) => Promise<boolean>;
+  preventSleep: (prevent: boolean) => Promise<number | null>;
   checkForUpdates: () => Promise<{
     version: string;
     tagName: string;
