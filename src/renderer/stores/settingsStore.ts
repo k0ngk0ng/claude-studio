@@ -25,6 +25,7 @@ const defaultSettings: AppSettings = {
     sendKey: 'enter',
     autoApprove: 'acceptEdits',
     language: 'auto',
+    uiLanguage: 'auto',
     notifyOnComplete: true,
     preventSleep: false,
     debugMode: false,

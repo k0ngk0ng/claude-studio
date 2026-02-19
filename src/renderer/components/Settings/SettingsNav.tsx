@@ -1,17 +1,18 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settingsStore';
 import type { SettingsTab } from '../../types';
 
 interface NavItem {
   id: SettingsTab;
-  label: string;
+  labelKey: string;
   icon: React.ReactNode;
 }
 
 const navItems: NavItem[] = [
   {
     id: 'general',
-    label: 'General',
+    labelKey: 'settings.general',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" strokeWidth="1.5" />
@@ -25,7 +26,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'claude-code',
-    label: 'Claude Code',
+    labelKey: 'settings.claudeCode',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="1.5" y="2.5" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.3" />
@@ -36,7 +37,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'permissions',
-    label: 'Permissions',
+    labelKey: 'settings.permissions',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path
@@ -51,7 +52,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'skills',
-    label: 'Skills',
+    labelKey: 'settings.skills',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M4 2.5l8 5.5-8 5.5V2.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
@@ -60,7 +61,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'commands',
-    label: 'Commands',
+    labelKey: 'settings.commands',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M4.5 6l2 1.5-2 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
@@ -71,7 +72,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'mcp-servers',
-    label: 'MCP Servers',
+    labelKey: 'settings.mcpServers',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="2" y="3" width="12" height="4" rx="1" stroke="currentColor" strokeWidth="1.3" />
@@ -83,7 +84,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'appearance',
-    label: 'Appearance',
+    labelKey: 'settings.appearance',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path
@@ -99,7 +100,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'keybindings',
-    label: 'Keybindings',
+    labelKey: 'settings.keybindings',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="1.5" y="4" width="13" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
@@ -109,7 +110,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'account',
-    label: 'Account',
+    labelKey: 'settings.account',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.3" />
@@ -119,7 +120,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'archived',
-    label: 'Archived Threads',
+    labelKey: 'settings.archivedThreads',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <path d="M13 4.5H3a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1v-8a1 1 0 00-1-1z" stroke="currentColor" strokeWidth="1.2" />
@@ -130,7 +131,7 @@ const navItems: NavItem[] = [
   },
   {
     id: 'remote',
-    label: 'Remote Control',
+    labelKey: 'settings.remoteControl',
     icon: (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
         <rect x="4" y="1.5" width="8" height="13" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
@@ -142,6 +143,7 @@ const navItems: NavItem[] = [
 ];
 
 export function SettingsNav() {
+  const { t } = useTranslation();
   const { activeTab, setActiveTab } = useSettingsStore();
 
   return (
@@ -160,7 +162,7 @@ export function SettingsNav() {
                         }`}
           >
             <span className="shrink-0 opacity-80">{item.icon}</span>
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </button>
         ))}
 
@@ -183,7 +185,7 @@ export function SettingsNav() {
               <circle cx="8" cy="5" r="0.75" fill="currentColor" />
             </svg>
           </span>
-          <span>About</span>
+          <span>{t('settings.about')}</span>
         </button>
       </div>
     </nav>

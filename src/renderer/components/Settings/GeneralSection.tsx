@@ -1,40 +1,60 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SettingsToggle } from './controls/SettingsToggle';
 import { SettingsSelect } from './controls/SettingsSelect';
+import { supportedLanguages, changeLanguage } from '../../i18n';
 
 export function GeneralSection() {
+  const { t } = useTranslation();
   const { settings, updateGeneral } = useSettingsStore();
   const { general } = settings;
 
+  const handleUiLanguageChange = (v: string) => {
+    updateGeneral({ uiLanguage: v });
+    changeLanguage(v);
+  };
+
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-1">General</h2>
+      <h2 className="text-lg font-semibold text-text-primary mb-1">{t('settings.general')}</h2>
       <p className="text-sm text-text-muted mb-6">
-        Configure general behavior and preferences.
+        {t('general.configureDesc')}
       </p>
 
       <div className="space-y-6">
         {/* Send key */}
         <SettingsSelect
-          label="Send message with"
-          description="Choose the key combination to send messages."
+          label={t('general.sendMessageWith')}
+          description={t('general.sendMessageWithDesc')}
           value={general.sendKey}
           onChange={(v) => updateGeneral({ sendKey: v as 'enter' | 'cmd-enter' })}
           options={[
-            { value: 'enter', label: 'Enter' },
-            { value: 'cmd-enter', label: '⌘ Enter' },
+            { value: 'enter', label: t('general.enter') },
+            { value: 'cmd-enter', label: t('general.cmdEnter') },
           ]}
         />
 
-        {/* Language */}
+        {/* UI Language */}
         <SettingsSelect
-          label="Response language"
-          description="Set the language Claude uses to respond. 'Auto' follows your input language."
+          label={t('general.uiLanguage')}
+          description={t('general.uiLanguageDesc')}
+          value={general.uiLanguage}
+          onChange={handleUiLanguageChange}
+          options={supportedLanguages.map(lang => ({
+            value: lang.code,
+            label: lang.nativeName,
+          }))}
+        />
+
+        {/* Response Language */}
+        <SettingsSelect
+          label={t('general.responseLanguage')}
+          description={t('general.responseLanguageDesc')}
           value={general.language}
           onChange={(v) => updateGeneral({ language: v })}
           options={[
-            { value: 'auto', label: 'Auto (follow input language)' },
+            { value: 'auto', label: t('general.autoFollowInput') },
             { value: 'en', label: 'English' },
             { value: 'zh-CN', label: '简体中文' },
             { value: 'zh-TW', label: '繁體中文' },
@@ -50,16 +70,16 @@ export function GeneralSection() {
 
         {/* Notify on complete */}
         <SettingsToggle
-          label="Notify on completion"
-          description="Show a system notification when a long-running task completes."
+          label={t('general.notifyOnComplete')}
+          description={t('general.notifyOnCompleteDesc')}
           checked={general.notifyOnComplete}
           onChange={(v) => updateGeneral({ notifyOnComplete: v })}
         />
 
         {/* Prevent sleep */}
         <SettingsToggle
-          label="Prevent system sleep"
-          description="Keep the system awake while Claude is processing a task."
+          label={t('general.preventSleep')}
+          description={t('general.preventSleepDesc')}
           checked={general.preventSleep}
           onChange={(v) => {
             updateGeneral({ preventSleep: v });
@@ -72,8 +92,8 @@ export function GeneralSection() {
 
         {/* Debug mode */}
         <SettingsToggle
-          label="Debug mode"
-          description="Enable DevTools (⌘⌥I / F12), show Debug Logs tab in the bottom panel, and log all Claude CLI communication details for troubleshooting."
+          label={t('general.debugMode')}
+          description={t('general.debugModeDesc')}
           checked={general.debugMode}
           onChange={(v) => updateGeneral({ debugMode: v })}
         />

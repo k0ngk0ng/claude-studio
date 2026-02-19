@@ -377,6 +377,7 @@ export interface GeneralSettings {
   sendKey: SendKeyMode;
   autoApprove: PermissionMode;
   language: string;
+  uiLanguage: string;
   notifyOnComplete: boolean;
   preventSleep: boolean;
   debugMode: boolean;

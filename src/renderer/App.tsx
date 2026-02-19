@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { useAppStore } from './stores/appStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useAuthStore } from './stores/authStore';
@@ -20,6 +20,7 @@ import { LoginModal } from './components/Auth/LoginModal';
 import { LockOverlay } from './components/Remote/LockOverlay';
 import { initRemoteListeners } from './stores/remoteStore';
 import { LOCAL_COMMANDS, TERMINAL_ONLY_COMMANDS, SDK_SESSION_COMMANDS, BUILTIN_COMMANDS } from './components/InputBar/SlashCommandPopup';
+import { initI18n } from './i18n';
 
 export default function App() {
   const { panels, togglePanel, setCurrentProject, setPlatform, currentProject } =
@@ -28,6 +29,16 @@ export default function App() {
   const { validateSession: validateAuthSession } = useAuthStore();
   const { loadSessions, selectSession } = useSessions();
   const { startSession, sendMessage, stopSession, isStreaming } = useClaude();
+  const [i18nInitialized, setI18nInitialized] = useState(false);
+
+  // Initialize i18n after settings are loaded
+  useEffect(() => {
+    if (!i18nInitialized && settings) {
+      initI18n(settings.general.uiLanguage).then(() => {
+        setI18nInitialized(true);
+      });
+    }
+  }, [settings, i18nInitialized]);
 
   // Keep git status polling active at app level so commit badge always updates
   useGit();

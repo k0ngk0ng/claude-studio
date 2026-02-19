@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ThreadList } from './ThreadList';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
@@ -9,6 +10,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ onNewThread }: SidebarProps) {
+  const { t } = useTranslation();
   const { platform, setCurrentProject, panelSizes, setPanelSize } = useAppStore();
   const { openSettings } = useSettingsStore();
   const isMac = platform === 'mac';
@@ -72,14 +74,14 @@ export function Sidebar({ onNewThread }: SidebarProps) {
               strokeLinecap="round"
             />
           </svg>
-          <span>New thread</span>
+          <span>{t('sidebar.newThread')}</span>
         </button>
         <button
           onClick={handleAddFolder}
           className="flex items-center justify-center w-9 h-9 rounded-lg
                      bg-surface hover:bg-surface-hover text-text-secondary hover:text-text-primary
                      transition-colors duration-150 titlebar-no-drag shrink-0"
-          title="Add folder"
+          title={t('sidebar.addFolder')}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
             <path
@@ -101,7 +103,7 @@ export function Sidebar({ onNewThread }: SidebarProps) {
       <div className="flex-1 min-h-0 flex flex-col">
         <div className="flex items-center justify-between px-4 py-2">
           <span className="text-[11px] font-medium text-text-muted uppercase tracking-wider">
-            Threads
+            {t('sidebar.threads')}
           </span>
           <button
             onClick={() => {
@@ -155,7 +157,7 @@ export function Sidebar({ onNewThread }: SidebarProps) {
               strokeLinejoin="round"
             />
           </svg>
-          <span>Settings</span>
+          <span>{t('sidebar.settings')}</span>
         </button>
       </div>
 

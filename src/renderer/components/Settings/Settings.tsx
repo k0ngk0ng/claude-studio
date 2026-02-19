@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAppStore } from '../../stores/appStore';
 import { SettingsNav } from './SettingsNav';
@@ -16,6 +17,7 @@ import { ArchivedThreadsSection } from './ArchivedThreadsSection';
 import { AboutSection } from './AboutSection';
 
 export function Settings() {
+  const { t } = useTranslation();
   const { activeTab, closeSettings } = useSettingsStore();
   const { platform } = useAppStore();
   const isMac = platform === 'mac';
@@ -78,7 +80,7 @@ export function Settings() {
                   strokeLinejoin="round"
                 />
               </svg>
-              <span>Back to app</span>
+              <span>{t('common.backToApp')}</span>
             </button>
           </div>
 
