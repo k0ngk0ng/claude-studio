@@ -49,9 +49,9 @@ export function Settings() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/50">
       {/* Settings modal */}
-      <div className="flex h-[90vh] w-[90vw] max-w-5xl bg-bg rounded-xl shadow-2xl overflow-hidden">
+      <div className="flex h-full w-full bg-bg shadow-2xl overflow-hidden">
         {/* Left navigation sidebar */}
         <div className="flex flex-col w-60 min-w-60 bg-sidebar border-r border-border h-full">
           {/* Drag region for macOS traffic lights */}
