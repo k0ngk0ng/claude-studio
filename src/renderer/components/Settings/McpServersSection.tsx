@@ -1,10 +1,15 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
 import type { McpServer } from '../../types';
 
 export function McpServersSection() {
-  const { settings, addMcpServer, updateMcpServer, removeMcpServer, toggleMcpServer } =
+  const { settings, addMcpServer, updateMcpServer, removeMcpServer, toggleMcpServer, reloadSettings } =
     useSettingsStore();
+
+  // Reload settings from file when component mounts (in case external changes were made)
+  useEffect(() => {
+    reloadSettings();
+  }, []);
   const { mcpServers } = settings;
   const [isAdding, setIsAdding] = useState(false);
   const [addMode, setAddMode] = useState<'form' | 'paste'>('form');
