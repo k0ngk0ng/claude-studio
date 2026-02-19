@@ -298,6 +298,14 @@ jobs:
             const fs = require('fs');
             const app = JSON.parse(fs.readFileSync('app.json', 'utf-8'));
             app.expo.version = '$VERSION';
+            if (!app.expo.cli) app.expo.cli = {};
+            app.expo.cli.appVersionSource = 'remote';
+            // Set project ID if not already set
+            if (!app.expo.extra?.eas?.projectId) {
+              if (!app.expo.extra) app.expo.extra = {};
+              if (!app.expo.extra.eas) app.expo.extra.eas = {};
+              app.expo.extra.eas.projectId = 'claude-studio-mobile';
+            }
             fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
           "
 
@@ -306,6 +314,10 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Initialize EAS project
+        working-directory: mobile
+        run: eas init --project-id claude-studio-mobile --non-interactive --yes
 
       - name: Build iOS
         working-directory: mobile

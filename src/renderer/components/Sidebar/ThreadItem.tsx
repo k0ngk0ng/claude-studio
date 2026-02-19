@@ -69,10 +69,10 @@ export function ThreadItem({ session, isActive, isRunning, timeLabel }: ThreadIt
       </span>
 
       {/* Right side: time label + archive button overlapping */}
-      <div className="relative w-[40px] h-[18px] flex items-center justify-end">
+      <div className="relative min-w-[40px] h-[18px] flex items-center justify-end">
         {/* Time label - hidden on hover but reserves space */}
         {timeLabel && (
-          <span className="text-[11px] text-text-muted group-hover:invisible">
+          <span className="text-[11px] text-text-muted group-hover:invisible whitespace-nowrap">
             {timeLabel}
           </span>
         )}
