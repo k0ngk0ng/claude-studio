@@ -10,6 +10,7 @@ export function McpServersSection() {
   const [addMode, setAddMode] = useState<'form' | 'paste'>('form');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingOriginal, setEditingOriginal] = useState<McpServer | null>(null);
+  const [editingArgs, setEditingArgs] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pasteJson, setPasteJson] = useState('');
 
@@ -208,20 +209,17 @@ export function McpServersSection() {
                 <button
                   onClick={() => {
                     if (editingId === server.id) {
-                      // Closing edit - restore original if exists
-                      if (editingOriginal) {
-                        updateMcpServer(server.id, {
-                          name: editingOriginal.name,
-                          command: editingOriginal.command,
-                          args: editingOriginal.args,
-                          env: editingOriginal.env,
-                        });
-                        setEditingOriginal(null);
-                      }
+                      // Closing edit - save the edited args before closing
+                      updateMcpServer(server.id, {
+                        args: editingArgs.split(' ').filter(Boolean),
+                      });
+                      setEditingOriginal(null);
+                      setEditingArgs('');
                       setEditingId(null);
                     } else {
-                      // Opening edit - save original
+                      // Opening edit - save original and initialize args input
                       setEditingOriginal({ ...server });
+                      setEditingArgs(server.args.join(' '));
                       setEditingId(server.id);
                     }
                   }}
@@ -287,12 +285,8 @@ export function McpServersSection() {
                   <label className="text-xs text-text-muted mb-1 block">Arguments (space-separated)</label>
                   <input
                     type="text"
-                    value={server.args.join(' ')}
-                    onChange={(e) =>
-                      updateMcpServer(server.id, {
-                        args: e.target.value.split(' ').filter(Boolean),
-                      })
-                    }
+                    value={editingId === server.id ? editingArgs : server.args.join(' ')}
+                    onChange={(e) => setEditingArgs(e.target.value)}
                     className="w-full px-3 py-1.5 bg-bg border border-border rounded text-sm
                                text-text-primary font-mono focus:outline-none focus:border-accent"
                   />
@@ -321,7 +315,12 @@ export function McpServersSection() {
                 <div className="flex gap-2 pt-1">
                   <button
                     onClick={() => {
+                      // Save - parse args and save
+                      updateMcpServer(server.id, {
+                        args: editingArgs.split(' ').filter(Boolean),
+                      });
                       setEditingOriginal(null);
+                      setEditingArgs('');
                       setEditingId(null);
                     }}
                     className="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm
@@ -341,6 +340,7 @@ export function McpServersSection() {
                         });
                       }
                       setEditingOriginal(null);
+                      setEditingArgs('');
                       setEditingId(null);
                     }}
                     className="px-4 py-1.5 bg-surface-hover hover:bg-surface-active text-text-secondary
