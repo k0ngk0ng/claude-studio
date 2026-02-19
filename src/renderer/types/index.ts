@@ -83,6 +83,7 @@ export interface AppAPI {
   getAgentSdkVersion: () => Promise<string>;
   getClaudeCodeVersion: () => Promise<string>;
   getGitVersion: () => Promise<string>;
+  getSystemLocale: () => Promise<string>;
   installClaudeCode: () => Promise<{ success: boolean; error?: string; message?: string }>;
   installGit: () => Promise<{ success: boolean; error?: string; message?: string }>;
   openInEditor: (cwd: string, editor: string) => Promise<boolean>;
@@ -105,7 +106,7 @@ export interface AppAPI {
     htmlUrl: string;
     assets: { name: string; size: number; downloadUrl: string; cdnUrl?: string | null }[];
   }>;
-  downloadUpdate: () => Promise<void>;
+  downloadUpdate: (platform: string) => Promise<void>;
   installUpdate: () => Promise<boolean>;
   onUpdateStatus: (callback: (data: {
     state: string;

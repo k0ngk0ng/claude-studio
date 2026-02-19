@@ -589,7 +589,7 @@ export function registerIpcHandlers(): void {
       let cdnUrls: Record<string, string> = {};
       if (CDN_BASE_URL) {
         try {
-          const cdnData = await fetchJson<Record<string, string>>(`${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`);
+          const cdnData = await fetchJson<{ files: Record<string, string> }>(`${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`);
           cdnUrls = cdnData.files || {};
         } catch {
           // CDN not available, will use GitHub URLs only
@@ -668,7 +668,7 @@ export function registerIpcHandlers(): void {
         // Also fetch CDN URLs for this tag
         if (CDN_BASE_URL) {
           try {
-            const cdnData = await fetchJson<Record<string, string>>(`${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`);
+            const cdnData = await fetchJson<{ files: Record<string, string> }>(`${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`);
             cdnUrls = { ...cdnUrls, ...(cdnData.files || {}) };
           } catch {
             // CDN not available

@@ -100,14 +100,14 @@ export async function initI18n(uiLanguage: string): Promise<typeof i18n> {
   return i18n;
 }
 
-export function changeLanguage(language: string): Promise<void> {
+export async function changeLanguage(language: string): Promise<void> {
   if (language === 'auto') {
-    return window.api.app.getSystemLocale().then(locale => {
-      const resolved = getLanguageFromLocale(locale);
-      return i18n.changeLanguage(resolved);
-    });
+    const locale = await window.api.app.getSystemLocale();
+    const resolved = getLanguageFromLocale(locale);
+    await i18n.changeLanguage(resolved);
+  } else {
+    await i18n.changeLanguage(language);
   }
-  return i18n.changeLanguage(language);
 }
 
 export default i18n;
