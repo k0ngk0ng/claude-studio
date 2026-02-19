@@ -120,10 +120,6 @@ export function registerIpcHandlers(): void {
       // Log configured servers
       const enabledServers = mcpServers.filter(s => s.enabled);
       console.log('[mcp-manager] Enabled MCP servers:', enabledServers.map(s => s.name).join(', ') || 'none');
-    } else {
-      // No MCP servers configured, write empty config to override global
-      mcpManager.writeMcpConfig(cwd, []);
-      console.log('[mcp-manager] No MCP servers configured, written empty config to override global');
     }
     return claudeProcessManager.spawn(cwd, sessionId, permissionMode, envVars, language);
   });

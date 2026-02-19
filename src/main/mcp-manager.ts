@@ -40,13 +40,9 @@ class McpManager {
       const enabledServers = servers.filter((s) => s.enabled);
 
       if (enabledServers.length === 0) {
-        // If no enabled servers, write an empty mcpServers object to override global config
-        // (don't delete the file - that would cause Claude Code to fall back to global ~/.claude/mcp.json)
-        const emptyConfig = { mcpServers: {} };
-        fs.writeFileSync(mcpConfigPath, JSON.stringify(emptyConfig, null, 2), 'utf-8');
-        this.mcpConfigPath = mcpConfigPath;
-        debugLog('Written empty mcp.json to override global config:', mcpConfigPath);
-        return mcpConfigPath;
+        // Don't write anything - let Claude Code use its global config
+        debugLog('No MCP servers enabled, not writing mcp.json');
+        return null;
       }
 
       // Build mcp.json content in Claude Code format
