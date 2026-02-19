@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settingsStore';
 import type { McpServer } from '../../types';
 
 export function McpServersSection() {
+  const { t } = useTranslation();
   const { settings, addMcpServer, updateMcpServer, removeMcpServer, toggleMcpServer, reloadSettings } =
     useSettingsStore();
 
@@ -97,9 +99,9 @@ export function McpServersSection() {
           }
         });
 
-        alert(`Imported ${servers.length} MCP server(s)`);
+        alert(t('mcpServers.importSuccess', { count: servers.length }));
       } catch (err) {
-        alert('Failed to parse JSON file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+        alert(t('mcpServers.parseFailed', { error: err instanceof Error ? err.message : 'Unknown error' }));
       }
     };
     reader.readAsText(file);
@@ -151,17 +153,17 @@ export function McpServersSection() {
       setPasteJson('');
       setIsAdding(false);
       setAddMode('form');
-      alert(`Added ${servers.length} MCP server(s)`);
+      alert(t('mcpServers.importSuccess', { count: servers.length }));
     } catch (err) {
-      alert('Invalid JSON: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      alert(t('mcpServers.invalidJson', { error: err instanceof Error ? err.message : 'Unknown error' }));
     }
   };
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-1">MCP Servers</h2>
+      <h2 className="text-lg font-semibold text-text-primary mb-1">{t('mcpServers.title')}</h2>
       <p className="text-sm text-text-muted mb-6">
-        Configure Model Context Protocol servers to extend Claude's capabilities with custom tools.
+        {t('mcpServers.description')}
       </p>
 
       {/* Server list */}
@@ -180,9 +182,9 @@ export function McpServersSection() {
               <circle cx="4.5" cy="5" r="0.75" fill="currentColor" />
               <circle cx="4.5" cy="11" r="0.75" fill="currentColor" />
             </svg>
-            <p className="text-sm text-text-muted">No MCP servers configured</p>
+            <p className="text-sm text-text-muted">{t('mcpServers.noServers')}</p>
             <p className="text-xs text-text-muted mt-1">
-              Add a server to extend Claude with custom tools
+              {t('mcpServers.addServerHint')}
             </p>
           </div>
         )}
@@ -230,7 +232,7 @@ export function McpServersSection() {
                   }}
                   className="p-1.5 rounded text-text-muted hover:text-text-primary
                              hover:bg-surface-hover transition-colors"
-                  title="Edit"
+                  title={t('mcpServers.edit')}
                 >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                     <path
@@ -243,13 +245,13 @@ export function McpServersSection() {
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(`Remove MCP server "${server.name}"?`)) {
+                    if (confirm(t('mcpServers.removeConfirm', { name: server.name }))) {
                       removeMcpServer(server.id);
                     }
                   }}
                   className="p-1.5 rounded text-text-muted hover:text-error
                              hover:bg-surface-hover transition-colors"
-                  title="Remove"
+                  title={t('mcpServers.remove')}
                 >
                   <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                     <path
@@ -267,7 +269,7 @@ export function McpServersSection() {
             {editingId === server.id && (
               <div className="mt-3 pt-3 border-t border-border space-y-3">
                 <div>
-                  <label className="text-xs text-text-muted mb-1 block">Name</label>
+                  <label className="text-xs text-text-muted mb-1 block">{t('mcpServers.name')}</label>
                   <input
                     type="text"
                     value={server.name}
@@ -277,7 +279,7 @@ export function McpServersSection() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-text-muted mb-1 block">Command</label>
+                  <label className="text-xs text-text-muted mb-1 block">{t('mcpServers.command')}</label>
                   <input
                     type="text"
                     value={server.command}
@@ -287,7 +289,7 @@ export function McpServersSection() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs text-text-muted mb-1 block">Arguments (space-separated)</label>
+                  <label className="text-xs text-text-muted mb-1 block">{t('mcpServers.arguments')}</label>
                   <input
                     type="text"
                     value={editingId === server.id ? editingArgs : server.args.join(' ')}
@@ -298,7 +300,7 @@ export function McpServersSection() {
                 </div>
                 <div>
                   <label className="text-xs text-text-muted mb-1 block">
-                    Environment variables (one per line, KEY=VALUE)
+                    {t('mcpServers.envVars')}
                   </label>
                   <textarea
                     value={Object.entries(server.env).map(([k, v]) => `${k}=${v}`).join('\n')}
@@ -331,7 +333,7 @@ export function McpServersSection() {
                     className="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm
                                rounded-lg transition-colors"
                   >
-                    Save
+                    {t('mcpServers.save')}
                   </button>
                   <button
                     onClick={() => {
@@ -351,7 +353,7 @@ export function McpServersSection() {
                     className="px-4 py-1.5 bg-surface-hover hover:bg-surface-active text-text-secondary
                                text-sm rounded-lg transition-colors"
                   >
-                    Cancel
+                    {t('mcpServers.cancel')}
                   </button>
                 </div>
               </div>
@@ -373,7 +375,7 @@ export function McpServersSection() {
                   : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
               }`}
             >
-              Manual
+              {t('mcpServers.manual')}
             </button>
             <button
               onClick={() => setAddMode('paste')}
@@ -383,15 +385,15 @@ export function McpServersSection() {
                   : 'text-text-secondary hover:text-text-primary hover:bg-surface-hover'
               }`}
             >
-              Paste JSON
+              {t('mcpServers.pasteJson')}
             </button>
           </div>
 
           {addMode === 'form' ? (
             <>
-              <h3 className="text-sm font-medium text-text-primary">Add MCP Server</h3>
+              <h3 className="text-sm font-medium text-text-primary">{t('mcpServers.addMcpServer')}</h3>
               <div>
-                <label className="text-xs text-text-muted mb-1 block">Name</label>
+                <label className="text-xs text-text-muted mb-1 block">{t('mcpServers.name')}</label>
                 <input
                   type="text"
                   value={newServer.name}
@@ -402,7 +404,7 @@ export function McpServersSection() {
                 />
               </div>
               <div>
-                <label className="text-xs text-text-muted mb-1 block">Command</label>
+                <label className="text-xs text-text-muted mb-1 block">{t('mcpServers.command')}</label>
                 <input
                   type="text"
                   value={newServer.command}
@@ -413,7 +415,7 @@ export function McpServersSection() {
                 />
               </div>
               <div>
-                <label className="text-xs text-text-muted mb-1 block">Arguments (space-separated)</label>
+                <label className="text-xs text-text-muted mb-1 block">{t('mcpServers.arguments')}</label>
                 <input
                   type="text"
                   value={newServer.args}
@@ -425,7 +427,7 @@ export function McpServersSection() {
               </div>
               <div>
                 <label className="text-xs text-text-muted mb-1 block">
-                  Environment variables (one per line, KEY=VALUE)
+                  {t('mcpServers.envVars')}
                 </label>
                 <textarea
                   value={newServer.env}
@@ -443,7 +445,7 @@ export function McpServersSection() {
                   className="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm
                              rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Add Server
+                  {t('mcpServers.addServer')}
                 </button>
                 <button
                   onClick={() => {
@@ -453,15 +455,15 @@ export function McpServersSection() {
                   className="px-4 py-1.5 bg-surface-hover hover:bg-surface-active text-text-secondary
                              text-sm rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('mcpServers.cancel')}
                 </button>
               </div>
             </>
           ) : (
             <>
-              <h3 className="text-sm font-medium text-text-primary">Paste MCP Server JSON</h3>
+              <h3 className="text-sm font-medium text-text-primary">{t('mcpServers.pasteJsonTitle')}</h3>
               <p className="text-xs text-text-muted mb-2">
-                Supports Claude Code format or simple array format
+                {t('mcpServers.pasteJsonHint')}
               </p>
               <textarea
                 value={pasteJson}
@@ -486,7 +488,7 @@ export function McpServersSection() {
                   className="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm
                              rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Add Server(s)
+                  {t('mcpServers.addServers')}
                 </button>
                 <button
                   onClick={() => {
@@ -497,7 +499,7 @@ export function McpServersSection() {
                   className="px-4 py-1.5 bg-surface-hover hover:bg-surface-active text-text-secondary
                              text-sm rounded-lg transition-colors"
                 >
-                  Cancel
+                  {t('mcpServers.cancel')}
                 </button>
               </div>
             </>
@@ -514,19 +516,19 @@ export function McpServersSection() {
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            Add MCP Server
+            {t('mcpServers.addMcpServer')}
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
             className="flex items-center gap-2 px-4 py-2 border border-dashed border-border
                        rounded-lg text-sm text-text-secondary hover:text-text-primary
                        hover:border-text-muted transition-colors justify-center"
-            title="Import from JSON"
+            title={t('mcpServers.import')}
           >
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M14 10v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-3M8 2v8M5 5l3-3 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            Import
+            {t('mcpServers.import')}
           </button>
           <input
             ref={fileInputRef}

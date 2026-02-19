@@ -14,13 +14,14 @@ interface ChangeContextMenuProps {
   y: number;
   file: FileChange;
   activeTab: TabType;
+  t: (key: string) => string;
   onViewDiff: () => void;
   onRevealInFiles: () => void;
   onStageUnstage: () => void;
   onClose: () => void;
 }
 
-function ChangeContextMenu({ x, y, file, activeTab, onViewDiff, onRevealInFiles, onStageUnstage, onClose }: ChangeContextMenuProps) {
+function ChangeContextMenu({ x, y, file, activeTab, t, onViewDiff, onRevealInFiles, onStageUnstage, onClose }: ChangeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -295,6 +296,7 @@ export function DiffPanel() {
           y={contextMenu.y}
           file={contextMenu.file}
           activeTab={activeTab}
+          t={t}
           onViewDiff={() => handleViewDiff(contextMenu.file)}
           onRevealInFiles={() => handleRevealInFiles(contextMenu.file)}
           onStageUnstage={() => handleStageUnstage(contextMenu.file)}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 
 interface ChangePasswordModalProps {
@@ -7,6 +8,7 @@ interface ChangePasswordModalProps {
 }
 
 export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps) {
+  const { t } = useTranslation();
   const { changePassword } = useAuthStore();
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -40,15 +42,15 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
   const handleSubmit = async () => {
     setError('');
     if (!oldPassword || !newPassword) {
-      setError('Please fill in all fields');
+      setError(t('changePassword.fillAllFields'));
       return;
     }
     if (newPassword.length < 6) {
-      setError('New password must be at least 6 characters');
+      setError(t('changePassword.minLength'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('changePassword.passwordsNotMatch'));
       return;
     }
     setIsSubmitting(true);
@@ -58,10 +60,10 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
         setSuccess(true);
         setTimeout(() => onClose(), 1200);
       } else {
-        setError(result.error || 'Failed to change password');
+        setError(result.error || t('changePassword.failedToChange'));
       }
     } catch {
-      setError('An error occurred');
+      setError(t('changePassword.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -76,7 +78,7 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
       <div className="w-80 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-          <h3 className="text-sm font-medium text-text-primary">Change Password</h3>
+          <h3 className="text-sm font-medium text-text-primary">{t('changePassword.title')}</h3>
           <button
             onClick={onClose}
             className="text-text-muted hover:text-text-primary transition-colors"
@@ -91,12 +93,12 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
         <div className="px-4 py-4 space-y-3">
           {success ? (
             <div className="text-sm text-green-400 text-center py-4">
-              ✓ Password changed successfully
+              ✓ {t('changePassword.success')}
             </div>
           ) : (
             <>
               <div>
-                <label className="block text-[11px] text-text-muted mb-1">Current Password</label>
+                <label className="block text-[11px] text-text-muted mb-1">{t('changePassword.currentPassword')}</label>
                 <input
                   type="password"
                   autoFocus
@@ -108,7 +110,7 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-text-muted mb-1">New Password</label>
+                <label className="block text-[11px] text-text-muted mb-1">{t('changePassword.newPassword')}</label>
                 <input
                   type="password"
                   value={newPassword}
@@ -119,7 +121,7 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
                 />
               </div>
               <div>
-                <label className="block text-[11px] text-text-muted mb-1">Confirm New Password</label>
+                <label className="block text-[11px] text-text-muted mb-1">{t('changePassword.confirmNewPassword')}</label>
                 <input
                   type="password"
                   value={confirmPassword}
@@ -145,7 +147,7 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
               className="px-3 py-1.5 rounded-md text-xs
                          text-text-muted hover:text-text-secondary hover:bg-surface-hover transition-colors"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               onClick={handleSubmit}
@@ -154,7 +156,7 @@ export function ChangePasswordModal({ open, onClose }: ChangePasswordModalProps)
                          bg-accent/20 text-accent hover:bg-accent/30 transition-colors
                          disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isSubmitting ? 'Saving…' : 'Save'}
+              {isSubmitting ? t('changePassword.saving') : t('common.save')}
             </button>
           </div>
         )}

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../stores/authStore';
 import { useRemoteStore } from '../../stores/remoteStore';
 import { RelayStatus } from '../Remote/RemoteIndicator';
@@ -10,6 +11,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ open, onClose }: UserMenuProps) {
+  const { t } = useTranslation();
   const { user, logout } = useAuthStore();
   const { qrDataUrl, isGeneratingQR, relayConnected, connect, generateQR } = useRemoteStore();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -88,7 +90,7 @@ export function UserMenu({ open, onClose }: UserMenuProps) {
               <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
               <path d="M5.5 7V5a2.5 2.5 0 015 0v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
-            <span>Change Password</span>
+            <span>{t('userMenu.changePassword')}</span>
           </button>
 
           {/* Remote QR Code */}
@@ -119,7 +121,7 @@ export function UserMenu({ open, onClose }: UserMenuProps) {
               <rect x="9.5" y="12" width="1.5" height="1.5" fill="currentColor" />
               <rect x="12" y="12" width="1.5" height="1.5" fill="currentColor" />
             </svg>
-            <span>{isGeneratingQR ? 'Generating…' : 'Remote QR Code'}</span>
+            <span>{isGeneratingQR ? t('userMenu.generating') : t('userMenu.remoteQRCode')}</span>
           </button>
 
           {/* Inline QR display */}
@@ -132,7 +134,7 @@ export function UserMenu({ open, onClose }: UserMenuProps) {
                 style={{ imageRendering: 'pixelated' }}
               />
               <p className="text-[10px] text-text-muted text-center leading-tight">
-                Scan with mobile app to pair.<br />Expires in 5 minutes.
+                {t('userMenu.scanToPair')}
               </p>
               <button
                 onClick={async () => { await generateQR(); }}
@@ -140,7 +142,7 @@ export function UserMenu({ open, onClose }: UserMenuProps) {
                 className="text-[10px] text-accent hover:text-accent/80 transition-colors
                            disabled:opacity-50"
               >
-                Regenerate
+                {t('userMenu.regenerate')}
               </button>
             </div>
           )}
@@ -157,7 +159,7 @@ export function UserMenu({ open, onClose }: UserMenuProps) {
               <path d="M6 2H4a2 2 0 00-2 2v8a2 2 0 002 2h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
               <path d="M10.5 11.5L14 8l-3.5-3.5M14 8H6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            <span>Sign Out</span>
+            <span>{t('userMenu.signOut')}</span>
           </button>
         </div>
       </div>

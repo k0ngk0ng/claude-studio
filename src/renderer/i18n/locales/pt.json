@@ -153,5 +153,52 @@
     "title": "Sobre o Claude Studio",
     "version": "Versão",
     "description": "Cliente de desktop para Claude Code CLI"
+  },
+  "userMenu": {
+    "changePassword": "Alterar senha",
+    "remoteQRCode": "Código QR remoto",
+    "generating": "Gerando...",
+    "scanToPair": "Escaneie com o app mobile para parear. Expira em 5 minutos.",
+    "regenerate": "Regenerar",
+    "signOut": "Sair"
+  },
+  "changePassword": {
+    "title": "Alterar senha",
+    "currentPassword": "Senha atual",
+    "newPassword": "Nova senha",
+    "confirmNewPassword": "Confirmar nova senha",
+    "fillAllFields": "Por favor, preencha todos os campos",
+    "minLength": "A nova senha deve ter pelo menos 6 caracteres",
+    "passwordsNotMatch": "As senhas não coincidem",
+    "failedToChange": "Falha ao alterar a senha",
+    "success": "Senha alterada com sucesso",
+    "error": "Ocorreu um erro",
+    "saving": "Salvando..."
+  },
+  "mcpServers": {
+    "title": "Servidores MCP",
+    "description": "Configure servidores Model Context Protocol para estender as capacidades do Claude com ferramentas personalizadas.",
+    "noServers": "Nenhum servidor MCP configurado",
+    "addServerHint": "Adicione um servidor para estender o Claude com ferramentas personalizadas",
+    "edit": "Editar",
+    "remove": "Remover",
+    "removeConfirm": "Remover servidor MCP \"{{name}}\"?",
+    "name": "Nome",
+    "command": "Comando",
+    "arguments": "Argumentos (separados por espaço)",
+    "envVars": "Variáveis de ambiente (uma por linha, CHAVE=VALOR)",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "addServer": "Adicionar servidor",
+    "addServers": "Adicionar servidores",
+    "manual": "Manual",
+    "pasteJson": "Colar JSON",
+    "pasteJsonTitle": "Colar JSON do servidor MCP",
+    "pasteJsonHint": "Suporta formato Claude Code ou formato de array simples",
+    "import": "Importar",
+    "importSuccess": "{{count}} servidor(es) MCP importado(s)",
+    "parseFailed": "Falha ao analisar arquivo JSON: {{error}}",
+    "invalidJson": "JSON inválido: {{error}}",
+    "addMcpServer": "Adicionar servidor MCP"
   }
 }

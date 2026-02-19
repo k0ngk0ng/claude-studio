@@ -21,13 +21,14 @@ const STATUS_COLORS: Record<string, string> = {
 interface FileContextMenuProps {
   x: number;
   y: number;
+  t: (key: string) => string;
   onViewDiff: () => void;
   onRevealInFiles: () => void;
   onCopyPath: () => void;
   onClose: () => void;
 }
 
-function FileContextMenu({ x, y, onViewDiff, onRevealInFiles, onCopyPath, onClose }: FileContextMenuProps) {
+function FileContextMenu({ x, y, t, onViewDiff, onRevealInFiles, onCopyPath, onClose }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -387,6 +388,7 @@ export function HistoryPanel() {
         <FileContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
+          t={t}
           onViewDiff={() => handleViewDiff(contextMenu.hash, contextMenu.file.path)}
           onRevealInFiles={() => handleRevealInFiles(contextMenu.file.path)}
           onCopyPath={() => handleCopyPath(contextMenu.file.path)}
