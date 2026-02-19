@@ -9,6 +9,7 @@ export function McpServersSection() {
   const [isAdding, setIsAdding] = useState(false);
   const [addMode, setAddMode] = useState<'form' | 'paste'>('form');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingOriginal, setEditingOriginal] = useState<McpServer | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pasteJson, setPasteJson] = useState('');
 
@@ -205,7 +206,25 @@ export function McpServersSection() {
               </div>
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setEditingId(editingId === server.id ? null : server.id)}
+                  onClick={() => {
+                    if (editingId === server.id) {
+                      // Closing edit - restore original if exists
+                      if (editingOriginal) {
+                        updateMcpServer(server.id, {
+                          name: editingOriginal.name,
+                          command: editingOriginal.command,
+                          args: editingOriginal.args,
+                          env: editingOriginal.env,
+                        });
+                        setEditingOriginal(null);
+                      }
+                      setEditingId(null);
+                    } else {
+                      // Opening edit - save original
+                      setEditingOriginal({ ...server });
+                      setEditingId(server.id);
+                    }
+                  }}
                   className="p-1.5 rounded text-text-muted hover:text-text-primary
                              hover:bg-surface-hover transition-colors"
                   title="Edit"
@@ -301,11 +320,33 @@ export function McpServersSection() {
                 </div>
                 <div className="flex gap-2 pt-1">
                   <button
-                    onClick={() => setEditingId(null)}
+                    onClick={() => {
+                      setEditingOriginal(null);
+                      setEditingId(null);
+                    }}
                     className="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm
                                rounded-lg transition-colors"
                   >
                     Done
+                  </button>
+                  <button
+                    onClick={() => {
+                      // Cancel - restore original values
+                      if (editingOriginal) {
+                        updateMcpServer(server.id, {
+                          name: editingOriginal.name,
+                          command: editingOriginal.command,
+                          args: editingOriginal.args,
+                          env: editingOriginal.env,
+                        });
+                      }
+                      setEditingOriginal(null);
+                      setEditingId(null);
+                    }}
+                    className="px-4 py-1.5 bg-surface-hover hover:bg-surface-active text-text-secondary
+                               text-sm rounded-lg transition-colors"
+                  >
+                    Cancel
                   </button>
                 </div>
               </div>
