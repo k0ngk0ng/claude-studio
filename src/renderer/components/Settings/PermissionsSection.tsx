@@ -1,32 +1,34 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SettingsToggle } from './controls/SettingsToggle';
 import { SettingsSelect } from './controls/SettingsSelect';
 import { SettingsTagInput } from './controls/SettingsTagInput';
 
 export function PermissionsSection() {
+  const { t } = useTranslation();
   const { settings, updateGeneral, updatePermissions } = useSettingsStore();
   const { general, permissions } = settings;
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-1">Permissions</h2>
+      <h2 className="text-lg font-semibold text-text-primary mb-1">{t('permissions.title')}</h2>
       <p className="text-sm text-text-muted mb-6">
-        Control what Claude is allowed to do on your system.
+        {t('permissions.description')}
       </p>
 
       <div className="space-y-6">
         {/* Permission mode */}
         <SettingsSelect
-          label="Permission mode"
-          description="Control how Claude handles tool permissions. This sets the default for new sessions."
+          label={t('permissions.permissionMode')}
+          description={t('permissions.permissionModeDesc')}
           value={general.autoApprove}
           onChange={(v) => updateGeneral({ autoApprove: v as any })}
           options={[
-            { value: 'acceptEdits', label: 'Accept edits — Auto-approve file edits' },
-            { value: 'bypassPermissions', label: 'Bypass permissions — Skip all prompts (⚠️ unsafe)' },
-            { value: 'plan', label: 'Plan mode — Analyze only, no modifications' },
-            { value: 'dontAsk', label: "Don't ask — Auto-deny unless pre-approved" },
+            { value: 'acceptEdits', label: t('permissions.acceptEdits') },
+            { value: 'bypassPermissions', label: t('permissions.bypassPermissions') },
+            { value: 'plan', label: t('permissions.plan') },
+            { value: 'dontAsk', label: t('permissions.dontAsk') },
           ]}
         />
 
@@ -35,43 +37,43 @@ export function PermissionsSection() {
 
         {/* File read */}
         <SettingsToggle
-          label="Allow file reading"
-          description="Allow Claude to read files from your project directory."
+          label={t('permissions.allowFileRead')}
+          description={t('permissions.allowFileReadDesc')}
           checked={permissions.allowFileRead}
           onChange={(v) => updatePermissions({ allowFileRead: v })}
         />
 
         {/* File write */}
         <SettingsToggle
-          label="Allow file writing"
-          description="Allow Claude to create and modify files in your project."
+          label={t('permissions.allowFileWrite')}
+          description={t('permissions.allowFileWriteDesc')}
           checked={permissions.allowFileWrite}
           onChange={(v) => updatePermissions({ allowFileWrite: v })}
         />
 
         {/* Bash */}
         <SettingsToggle
-          label="Allow bash commands"
-          description="Allow Claude to execute shell commands. Disable for a read-only experience."
+          label={t('permissions.allowBash')}
+          description={t('permissions.allowBashDesc')}
           checked={permissions.allowBash}
           onChange={(v) => updatePermissions({ allowBash: v })}
         />
 
         {/* MCP */}
         <SettingsToggle
-          label="Allow MCP tool use"
-          description="Allow Claude to use tools provided by MCP servers."
+          label={t('permissions.allowMcp')}
+          description={t('permissions.allowMcpDesc')}
           checked={permissions.allowMcp}
           onChange={(v) => updatePermissions({ allowMcp: v })}
         />
 
         {/* Disallowed commands */}
         <SettingsTagInput
-          label="Disallowed commands"
-          description="Commands that Claude should never execute, even in full-auto mode."
+          label={t('permissions.disallowedCommands')}
+          description={t('permissions.disallowedCommandsDesc')}
           tags={permissions.disallowedCommands}
           onChange={(tags) => updatePermissions({ disallowedCommands: tags })}
-          placeholder="Add a command..."
+          placeholder={t('permissions.addCommand')}
         />
       </div>
     </div>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRemoteStore } from '../../stores/remoteStore';
 
 /**
@@ -6,14 +7,15 @@ import { useRemoteStore } from '../../stores/remoteStore';
  * The "relay connected" status has moved to UserMenu.
  */
 export function RemoteControlBanner() {
+  const { t } = useTranslation();
   const { controlMode, controllingDeviceName } = useRemoteStore();
 
   if (controlMode !== 'remote' && controlMode !== 'unlocking') return null;
 
   return (
-    <div className="flex items-center gap-1.5" title={`Controlled by ${controllingDeviceName}`}>
+    <div className="flex items-center gap-1.5" title={t('remoteStatus.controlledBy', { device: controllingDeviceName })}>
       <div className="w-2 h-2 rounded-full bg-error animate-pulse" />
-      <span className="text-xs text-error font-medium">Remote</span>
+      <span className="text-xs text-error font-medium">{t('remoteControl.title')}</span>
     </div>
   );
 }
@@ -22,6 +24,7 @@ export function RemoteControlBanner() {
  * Relay connection status shown inside the UserMenu dropdown.
  */
 export function RelayStatus() {
+  const { t } = useTranslation();
   const { relayConnected, controlMode, controllingDeviceName, pairedDevices } = useRemoteStore();
 
   return (
@@ -34,14 +37,14 @@ export function RelayStatus() {
       <div className="min-w-0">
         <div className="text-xs text-text-secondary">
           {!relayConnected
-            ? 'Relay disconnected'
+            ? t('remoteStatus.relayDisconnected')
             : controlMode === 'remote' || controlMode === 'unlocking'
-              ? `Controlled by ${controllingDeviceName || 'mobile'}`
-              : `Relay connected`}
+              ? t('remoteStatus.controlledBy', { device: controllingDeviceName || t('common.mobile') })
+              : t('remoteStatus.relayConnected')}
         </div>
         {relayConnected && pairedDevices.length > 0 && controlMode === 'local' && (
           <div className="text-[10px] text-text-muted">
-            {pairedDevices.length} paired device{pairedDevices.length !== 1 ? 's' : ''}
+            {t('remoteStatus.pairedDevices', { count: pairedDevices.length })}
           </div>
         )}
       </div>
