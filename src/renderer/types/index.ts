@@ -1,7 +1,20 @@
 // ─── API types exposed via preload ──────────────────────────────────
 
+export interface McpServer {
+  id: string;
+  name: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  enabled: boolean;
+}
+
+export interface McpAPI {
+  getRunningServers: () => Promise<Array<{ id: string; name: string; uptime: number }>>;
+}
+
 export interface ClaudeAPI {
-  spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string) => Promise<string>;
+  spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: McpServer[]) => Promise<string>;
   send: (processId: string, content: string) => Promise<boolean>;
   kill: (processId: string) => Promise<boolean>;
   onMessage: (callback: (processId: string, message: ClaudeStreamEvent) => void) => void;
@@ -196,6 +209,7 @@ export interface WindowAPI {
   commands: CommandsAPI;
   auth: AuthAPI;
   remote: RemoteAPI;
+  mcp: McpAPI;
 }
 
 export interface DependencyStatus {

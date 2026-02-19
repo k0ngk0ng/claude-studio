@@ -875,7 +875,7 @@ export function useClaude() {
   }, []);
 
   const startSession = useCallback(
-    async (cwd: string, sessionId?: string, permissionMode?: string) => {
+    async (cwd: string, sessionId?: string, permissionMode?: string, mcpServersOverride?: { id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }[]) => {
       const mode = permissionMode || 'default';
 
       // Read env vars from provider settings to pass to the main process
@@ -885,11 +885,17 @@ export function useClaude() {
       // Read language setting
       const language = useSettingsStore.getState().settings.general.language || 'auto';
 
-      debugLog('claude', `spawning SDK session — cwd: ${cwd}${sessionId ? ', resume: ' + sessionId : ''}, mode: ${mode}, envVars: ${envVars.length}`, {
+      // Use MCP servers from parameter (InputBar selection) or fall back to settings
+      const settingsMcpServers = useSettingsStore.getState().settings.mcpServers;
+      const mcpServers = mcpServersOverride ?? settingsMcpServers;
+
+      debugLog('claude', `spawning SDK session — cwd: ${cwd}${sessionId ? ', resume: ' + sessionId : ''}, mode: ${mode}, envVars: ${envVars.length}, mcpServers: ${mcpServers.filter(s => s.enabled).length}`, {
         cwd,
         sessionId,
         permissionMode: mode,
         envVarCount: envVars.length,
+        mcpServerCount: mcpServers.filter(s => s.enabled).length,
+        mcpServerNames: mcpServers.filter(s => s.enabled).map(s => s.name).join(', '),
       });
 
       // Save current process to background runtime before starting new one
@@ -907,7 +913,7 @@ export function useClaude() {
       // Clear any pending permission requests from previous session
       usePermissionStore.getState().clearRequests();
 
-      const pid = await window.api.claude.spawn(cwd, sessionId, mode, envVars, language);
+      const pid = await window.api.claude.spawn(cwd, sessionId, mode, envVars, language, mcpServers);
       processIdRef.current = pid;
       useAppStore.getState().setProcessId(pid);
       useAppStore.getState().setIsStreaming(false);

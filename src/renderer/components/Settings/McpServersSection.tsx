@@ -138,6 +138,16 @@ export function McpServersSection() {
             {editingId === server.id && (
               <div className="mt-3 pt-3 border-t border-border space-y-3">
                 <div>
+                  <label className="text-xs text-text-muted mb-1 block">Name</label>
+                  <input
+                    type="text"
+                    value={server.name}
+                    onChange={(e) => updateMcpServer(server.id, { name: e.target.value })}
+                    className="w-full px-3 py-1.5 bg-bg border border-border rounded text-sm
+                               text-text-primary font-mono focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div>
                   <label className="text-xs text-text-muted mb-1 block">Command</label>
                   <input
                     type="text"
@@ -159,6 +169,27 @@ export function McpServersSection() {
                     }
                     className="w-full px-3 py-1.5 bg-bg border border-border rounded text-sm
                                text-text-primary font-mono focus:outline-none focus:border-accent"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-text-muted mb-1 block">
+                    Environment variables (one per line, KEY=VALUE)
+                  </label>
+                  <textarea
+                    value={Object.entries(server.env).map(([k, v]) => `${k}=${v}`).join('\n')}
+                    onChange={(e) =>
+                      updateMcpServer(server.id, {
+                        env: Object.fromEntries(
+                          e.target.value.split('\n').map((line) => {
+                            const [key, ...rest] = line.split('=');
+                            return [key.trim(), rest.join('=').trim()];
+                          }).filter(([k]) => k)
+                        ),
+                      })
+                    }
+                    rows={2}
+                    className="w-full px-3 py-1.5 bg-bg border border-border rounded text-sm
+                               text-text-primary font-mono focus:outline-none focus:border-accent resize-none"
                   />
                 </div>
               </div>

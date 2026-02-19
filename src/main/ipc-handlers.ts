@@ -7,6 +7,7 @@ import { terminalManager } from './terminal-manager';
 import { getPlatform, getClaudeBinary, getClaudeModel, checkDependencies, readClaudeConfig, writeClaudeConfig } from './platform';
 import { registerAuthIpcHandlers } from './auth-ipc-handlers';
 import { registerRemoteIpcHandlers, registerExternalHandler } from './remote-ipc-handlers';
+import { mcpManager } from './mcp-manager';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
@@ -70,7 +71,19 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  handle('claude:spawn', async (_event, cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string) => {
+  handle('claude:spawn', async (_event, cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>) => {
+    // Write MCP config to project's mcp.json before starting Claude
+    if (mcpServers && mcpServers.length > 0) {
+      const mcpConfigPath = mcpManager.writeMcpConfig(cwd, mcpServers);
+      console.log('[mcp-manager] MCP config written to:', mcpConfigPath);
+      // Log configured servers
+      const enabledServers = mcpServers.filter(s => s.enabled);
+      console.log('[mcp-manager] Enabled MCP servers:', enabledServers.map(s => s.name).join(', ') || 'none');
+    } else {
+      // No MCP servers configured, clear the config
+      mcpManager.writeMcpConfig(cwd, []);
+      console.log('[mcp-manager] No MCP servers configured');
+    }
     return claudeProcessManager.spawn(cwd, sessionId, permissionMode, envVars, language);
   });
 
@@ -80,6 +93,11 @@ export function registerIpcHandlers(): void {
 
   handle('claude:kill', (_event, processId: string) => {
     return claudeProcessManager.kill(processId);
+  });
+
+  // MCP servers info
+  handle('mcp:getRunningServers', () => {
+    return mcpManager.getRunningServers();
   });
 
   // Permission response from renderer → forward to SDK canUseTool resolver

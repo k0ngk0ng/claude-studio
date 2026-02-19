@@ -330,7 +330,7 @@ export default function App() {
 
   // ─── Send message ─────────────────────────────────────────────────
   const handleSendMessage = useCallback(
-    async (content: string, permissionMode?: string) => {
+    async (content: string, permissionMode?: string, mcpServers?: { id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }[]) => {
       // Intercept local commands first
       if (handleLocalCommand(content)) return;
 
@@ -358,7 +358,7 @@ export default function App() {
         const rawId = state.currentSession.id || '';
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId);
         const sessionId = isUUID ? rawId : undefined;
-        await startSession(projectPath, sessionId, permissionMode);
+        await startSession(projectPath, sessionId, permissionMode, mcpServers);
       }
 
       await sendMessage(content);

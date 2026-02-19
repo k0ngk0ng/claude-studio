@@ -30,7 +30,7 @@ const MODE_OPTIONS: { value: ClaudeMode; label: string; description: string }[] 
 ];
 
 interface InputBarProps {
-  onSend: (content: string, permissionMode: string) => void;
+  onSend: (content: string, permissionMode: string, mcpServers?: { id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }[]) => void;
   isStreaming: boolean;
   onStop: () => void;
 }
@@ -39,10 +39,16 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
   const { currentProject, setBranch } = useAppStore();
   const defaultMode = useSettingsStore(s => s.settings.general.autoApprove) as ClaudeMode;
   const chatLayout = useSettingsStore(s => s.settings.appearance.chatLayout);
+  const allMcpServers = useSettingsStore(s => s.settings.mcpServers);
+  const configuredMcpServers = allMcpServers.filter(m => m.enabled);
   const [value, setValue] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [mode, setMode] = useState<ClaudeMode>(defaultMode || 'default');
   const [modeOpen, setModeOpen] = useState(false);
+  const [mcpDropdownOpen, setMcpDropdownOpen] = useState(false);
+  const [selectedMcpServers, setSelectedMcpServers] = useState<Set<string>>(
+    () => new Set(configuredMcpServers.map(s => s.id))
+  );
   const [modelName, setModelName] = useState('');
   const [branchOpen, setBranchOpen] = useState(false);
   const [branches, setBranches] = useState<{ name: string; current: boolean }[]>([]);
@@ -63,6 +69,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modeDropdownRef = useRef<HTMLDivElement>(null);
+  const mcpDropdownRef = useRef<HTMLDivElement>(null);
   const branchDropdownRef = useRef<HTMLDivElement>(null);
   const newBranchInputRef = useRef<HTMLInputElement>(null);
 
@@ -191,13 +198,16 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
       if (modeDropdownRef.current && !modeDropdownRef.current.contains(e.target as Node)) {
         setModeOpen(false);
       }
+      if (mcpDropdownRef.current && !mcpDropdownRef.current.contains(e.target as Node)) {
+        setMcpDropdownOpen(false);
+      }
       if (branchDropdownRef.current && !branchDropdownRef.current.contains(e.target as Node)) {
         setBranchOpen(false);
         setShowNewBranch(false);
         setNewBranchName('');
       }
     }
-    if (modeOpen || branchOpen) {
+    if (modeOpen || mcpDropdownOpen || branchOpen) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
@@ -391,12 +401,17 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
         : `[Attached files:\n${filePaths}]`;
     }
 
-    onSend(message, mode);
+    // Build selected MCP servers list
+    const selectedMcpList = configuredMcpServers
+      .filter(s => selectedMcpServers.has(s.id))
+      .map(s => ({ id: s.id, name: s.name, command: s.command, args: s.args, env: s.env, enabled: true }));
+
+    onSend(message, mode, selectedMcpList);
     setValue('');
     setAttachments([]);
     // Reset to default height after sending
     setInputHeight(64);
-  }, [value, attachments, isStreaming, onSend, fileSearchVisible, slashVisible]);
+  }, [value, attachments, isStreaming, onSend, fileSearchVisible, slashVisible, selectedMcpServers, configuredMcpServers]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -677,6 +692,61 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
 
             {/* Spacer */}
             <div className="flex-1" />
+
+            {/* MCP servers dropdown */}
+            {configuredMcpServers.length > 0 && (
+              <div className="relative" ref={mcpDropdownRef}>
+                <button
+                  onClick={() => setMcpDropdownOpen(!mcpDropdownOpen)}
+                  className="flex items-center gap-1.5 px-2 h-8 rounded-lg text-xs
+                             text-text-secondary hover:text-text-primary hover:bg-surface-hover
+                             transition-colors"
+                  title="Select MCP servers"
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none" className="shrink-0 opacity-60">
+                    <rect x="2" y="3" width="12" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                    <rect x="2" y="9" width="12" height="4" rx="1" stroke="currentColor" strokeWidth="1.2" />
+                    <circle cx="4.5" cy="5" r="0.75" fill="currentColor" />
+                    <circle cx="4.5" cy="11" r="0.75" fill="currentColor" />
+                  </svg>
+                  <span>{selectedMcpServers.size}/{configuredMcpServers.length}</span>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={`transition-transform ${mcpDropdownOpen ? 'rotate-180' : ''}`}>
+                    <path d="M2.5 3.5L5 6.5l2.5-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+
+                {mcpDropdownOpen && (
+                  <div className="absolute bottom-full left-0 mb-1 w-48 bg-surface border border-border
+                                  rounded-lg shadow-lg py-1 z-50">
+                    <div className="px-3 py-1.5 border-b border-border">
+                      <span className="text-xs font-medium text-text-secondary">MCP Servers</span>
+                    </div>
+                    {configuredMcpServers.map((server) => (
+                      <label
+                        key={server.id}
+                        className="flex items-center gap-2 px-3 py-1.5 hover:bg-surface-hover cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedMcpServers.has(server.id)}
+                          onChange={(e) => {
+                            const newSet = new Set(selectedMcpServers);
+                            if (e.target.checked) {
+                              newSet.add(server.id);
+                            } else {
+                              newSet.delete(server.id);
+                            }
+                            setSelectedMcpServers(newSet);
+                          }}
+                          className="rounded border-border text-accent focus:ring-accent"
+                        />
+                        <span className="text-xs text-text-primary truncate">{server.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Model name display */}
             {modelName && (

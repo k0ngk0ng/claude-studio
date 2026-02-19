@@ -381,9 +381,15 @@ class ClaudeProcessManager extends EventEmitter {
         // Forward SDK messages to renderer (same format as stream-json)
         this.emit('message', processId, message);
 
-        // Track session ID
+        // Track session ID and log MCP tools
         if (message.type === 'system' && (message as any).subtype === 'init') {
           managed.sessionId = (message as any).session_id;
+          // Log MCP tools from init message
+          const msg = message as any;
+          if (msg.tools && Array.isArray(msg.tools)) {
+            debugLog('MCP tools available:', msg.tools.map((t: any) => t.name || t).join(', '));
+            console.log('[claude-process] MCP tools available:', msg.tools.map((t: any) => t.name || t).join(', '));
+          }
         }
 
         // Check if result

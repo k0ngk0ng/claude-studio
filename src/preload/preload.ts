@@ -1,7 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
+export interface McpServer {
+  id: string;
+  name: string;
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+  enabled: boolean;
+}
+
 export interface ClaudeAPI {
-  spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string) => Promise<string>;
+  spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: McpServer[]) => Promise<string>;
   send: (processId: string, content: string) => Promise<boolean>;
   kill: (processId: string) => Promise<boolean>;
   onMessage: (
@@ -22,6 +31,10 @@ export interface ClaudeAPI {
     response: { behavior: 'allow' | 'deny'; updatedInput?: Record<string, unknown>; message?: string }
   ) => Promise<boolean>;
   setPermissionMode: (processId: string, mode: string) => Promise<boolean>;
+}
+
+export interface McpAPI {
+  getRunningServers: () => Promise<Array<{ id: string; name: string; uptime: number }>>;
 }
 
 export interface SessionsAPI {
@@ -189,8 +202,8 @@ const remoteControlRequestListeners = new Map<Function, (...args: any[]) => void
 
 contextBridge.exposeInMainWorld('api', {
   claude: {
-    spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string) =>
-      ipcRenderer.invoke('claude:spawn', cwd, sessionId, permissionMode, envVars, language),
+    spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: McpServer[]) =>
+      ipcRenderer.invoke('claude:spawn', cwd, sessionId, permissionMode, envVars, language, mcpServers),
     send: (processId: string, content: string) =>
       ipcRenderer.invoke('claude:send', processId, content),
     kill: (processId: string) => ipcRenderer.invoke('claude:kill', processId),
@@ -240,6 +253,10 @@ contextBridge.exposeInMainWorld('api', {
     setPermissionMode: (processId: string, mode: string) =>
       ipcRenderer.invoke('claude:setPermissionMode', processId, mode),
   } satisfies ClaudeAPI,
+
+  mcp: {
+    getRunningServers: () => ipcRenderer.invoke('mcp:getRunningServers'),
+  } satisfies McpAPI,
 
   sessions: {
     list: () => ipcRenderer.invoke('sessions:list'),
