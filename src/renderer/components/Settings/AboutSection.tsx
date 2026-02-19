@@ -259,15 +259,15 @@ export function AboutSection() {
 
   const handleDownload = useCallback(async () => {
     if (updateStatus.state !== 'available') return;
-    // Trigger autoUpdater download - progress will come via event listener
+    // Trigger download - progress will come via event listener
     setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: 0 });
     try {
-      await window.api.app.downloadUpdate();
+      await window.api.app.downloadUpdate(platform);
     } catch (err: any) {
       debugLog('app', `Download failed: ${err?.message}`, err, 'error');
       setUpdateStatus({ state: 'error', message: err?.message || 'Download failed' });
     }
-  }, [updateStatus]);
+  }, [updateStatus, platform]);
 
   const handleInstall = useCallback(async () => {
     if (updateStatus.state !== 'downloaded') return;

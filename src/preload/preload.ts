@@ -160,6 +160,7 @@ export interface AppAPI {
   getProjectPath: () => Promise<string>;
   selectDirectory: () => Promise<string | null>;
   getPlatform: () => Promise<'mac' | 'windows' | 'linux'>;
+  getSystemLocale: () => Promise<string>;
   getHomePath: () => Promise<string>;
   getVersion: () => Promise<string>;
   getModel: () => Promise<string>;
@@ -188,7 +189,7 @@ export interface AppAPI {
     htmlUrl: string;
     assets: { name: string; size: number; downloadUrl: string; cdnUrl?: string | null }[];
   }>;
-  downloadUpdate: () => Promise<void>;
+  downloadUpdate: (platform: string) => Promise<void>;
   installUpdate: () => Promise<boolean>;
   onUpdateStatus: (callback: (data: {
     state: string;
@@ -367,6 +368,7 @@ contextBridge.exposeInMainWorld('api', {
     getProjectPath: () => ipcRenderer.invoke('app:getProjectPath'),
     selectDirectory: () => ipcRenderer.invoke('app:selectDirectory'),
     getPlatform: () => ipcRenderer.invoke('app:getPlatform'),
+    getSystemLocale: () => ipcRenderer.invoke('app:getSystemLocale'),
     getHomePath: () => ipcRenderer.invoke('app:getHomePath'),
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     getModel: () => ipcRenderer.invoke('app:getModel'),
@@ -400,7 +402,7 @@ contextBridge.exposeInMainWorld('api', {
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
     preventSleep: (prevent: boolean) => ipcRenderer.invoke('app:preventSleep', prevent),
     checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
-    downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),
+    downloadUpdate: (platform: string) => ipcRenderer.invoke('app:downloadUpdate', platform),
     installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
     onUpdateStatus: (callback: (data: {
       state: string;
