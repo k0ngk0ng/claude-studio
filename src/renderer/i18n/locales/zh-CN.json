@@ -161,5 +161,52 @@
     "title": "关于 Claude Studio",
     "version": "版本",
     "description": "Claude Code 桌面客户端"
+  },
+  "userMenu": {
+    "changePassword": "修改密码",
+    "remoteQRCode": "远程二维码",
+    "generating": "生成中...",
+    "scanToPair": "使用手机应用扫码配对。有效期5分钟。",
+    "regenerate": "重新生成",
+    "signOut": "退出登录"
+  },
+  "changePassword": {
+    "title": "修改密码",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "confirmNewPassword": "确认新密码",
+    "fillAllFields": "请填写所有字段",
+    "minLength": "新密码至少需要6个字符",
+    "passwordsNotMatch": "两次输入的密码不一致",
+    "failedToChange": "修改密码失败",
+    "success": "密码修改成功",
+    "error": "发生错误",
+    "saving": "保存中..."
+  },
+  "mcpServers": {
+    "title": "MCP 服务器",
+    "description": "配置 Model Context Protocol 服务器以扩展 Claude 的自定义工具能力。",
+    "noServers": "未配置 MCP 服务器",
+    "addServerHint": "添加服务器以扩展 Claude 的自定义工具",
+    "edit": "编辑",
+    "remove": "删除",
+    "removeConfirm": "删除 MCP 服务器 \"{{name}}\"？",
+    "name": "名称",
+    "command": "命令",
+    "arguments": "参数（空格分隔）",
+    "envVars": "环境变量（每行一个，KEY=VALUE）",
+    "save": "保存",
+    "cancel": "取消",
+    "addServer": "添加服务器",
+    "addServers": "添加服务器",
+    "manual": "手动输入",
+    "pasteJson": "粘贴 JSON",
+    "pasteJsonTitle": "粘贴 MCP 服务器 JSON",
+    "pasteJsonHint": "支持 Claude Code 格式或简单数组格式",
+    "import": "导入",
+    "importSuccess": "已导入 {{count}} 个 MCP 服务器",
+    "parseFailed": "解析 JSON 文件失败：{{error}}",
+    "invalidJson": "无效的 JSON：{{error}}",
+    "addMcpServer": "添加 MCP 服务器"
   }
 }

@@ -153,5 +153,52 @@
     "title": "Acerca de Claude Studio",
     "version": "Versión",
     "description": "Cliente de escritorio para Claude Code CLI"
+  },
+  "userMenu": {
+    "changePassword": "Cambiar contraseña",
+    "remoteQRCode": "Código QR remoto",
+    "generating": "Generando...",
+    "scanToPair": "Escanea con la app móvil para emparejar. Expira en 5 minutos.",
+    "regenerate": "Regenerar",
+    "signOut": "Cerrar sesión"
+  },
+  "changePassword": {
+    "title": "Cambiar contraseña",
+    "currentPassword": "Contraseña actual",
+    "newPassword": "Nueva contraseña",
+    "confirmNewPassword": "Confirmar nueva contraseña",
+    "fillAllFields": "Por favor completa todos los campos",
+    "minLength": "La nueva contraseña debe tener al menos 6 caracteres",
+    "passwordsNotMatch": "Las contraseñas no coinciden",
+    "failedToChange": "Error al cambiar la contraseña",
+    "success": "Contraseña cambiada exitosamente",
+    "error": "Ocurrió un error",
+    "saving": "Guardando..."
+  },
+  "mcpServers": {
+    "title": "Servidores MCP",
+    "description": "Configura servidores Model Context Protocol para extender las capacidades de Claude con herramientas personalizadas.",
+    "noServers": "No hay servidores MCP configurados",
+    "addServerHint": "Añade un servidor para extender Claude con herramientas personalizadas",
+    "edit": "Editar",
+    "remove": "Eliminar",
+    "removeConfirm": "¿Eliminar servidor MCP \"{{name}}\"?",
+    "name": "Nombre",
+    "command": "Comando",
+    "arguments": "Argumentos (separados por espacio)",
+    "envVars": "Variables de entorno (una por línea, KEY=VALUE)",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "addServer": "Añadir servidor",
+    "addServers": "Añadir servidores",
+    "manual": "Manual",
+    "pasteJson": "Pegar JSON",
+    "pasteJsonTitle": "Pegar JSON de servidor MCP",
+    "pasteJsonHint": "Soporta formato Claude Code o formato de arreglo simple",
+    "import": "Importar",
+    "importSuccess": "Se importaron {{count}} servidor(es) MCP",
+    "parseFailed": "Error al analizar archivo JSON: {{error}}",
+    "invalidJson": "JSON inválido: {{error}}",
+    "addMcpServer": "Añadir servidor MCP"
   }
 }

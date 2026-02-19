@@ -153,5 +153,52 @@
     "title": "Claude Studio について",
     "version": "バージョン",
     "description": "Claude Code デスクトップクライアント"
+  },
+  "userMenu": {
+    "changePassword": "パスワードを変更",
+    "remoteQRCode": "リモート QR コード",
+    "generating": "生成中...",
+    "scanToPair": "スマホでスキャンしてペアリング。有効期限5分。",
+    "regenerate": "再生成",
+    "signOut": "サインアウト"
+  },
+  "changePassword": {
+    "title": "パスワードを変更",
+    "currentPassword": "現在のパスワード",
+    "newPassword": "新しいパスワード",
+    "confirmNewPassword": "新しいパスワードを確認",
+    "fillAllFields": "すべてのフィールドを入力してください",
+    "minLength": "新しいパスワードは6文字以上必要です",
+    "passwordsNotMatch": "パスワードが一致しません",
+    "failedToChange": "パスワードの変更に失敗しました",
+    "success": "パスワードが変更されました",
+    "error": "エラーが発生しました",
+    "saving": "保存中..."
+  },
+  "mcpServers": {
+    "title": "MCP サーバー",
+    "description": "Model Context Protocol サーバーを設定して、Claude のカスタムツール機能を拡張します。",
+    "noServers": "MCP サーバーが設定されていません",
+    "addServerHint": "サーバーを追加して Claude のカスタムツールを拡張",
+    "edit": "編集",
+    "remove": "削除",
+    "removeConfirm": "MCP サーバー「{{name}}」を削除しますか？",
+    "name": "名前",
+    "command": "コマンド",
+    "arguments": "引数（スペース区切り）",
+    "envVars": "環境変数（1行に1つ、KEY=VALUE）",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "addServer": "サーバーを追加",
+    "addServers": "サーバーを追加",
+    "manual": "手動入力",
+    "pasteJson": "JSON を貼り付け",
+    "pasteJsonTitle": "MCP サーバー JSON を貼り付け",
+    "pasteJsonHint": "Claude Code 形式または単純な配列形式をサポート",
+    "import": "インポート",
+    "importSuccess": "{{count}} 個の MCP サーバーをインポートしました",
+    "parseFailed": "JSON ファイルの解析に失敗しました：{{error}}",
+    "invalidJson": "無効な JSON：{{error}}",
+    "addMcpServer": "MCP サーバーを追加"
   }
 }

@@ -162,5 +162,52 @@
     "title": "About Claude Studio",
     "version": "Version",
     "description": "Desktop GUI for Claude Code CLI"
+  },
+  "userMenu": {
+    "changePassword": "Change Password",
+    "remoteQRCode": "Remote QR Code",
+    "generating": "Generating…",
+    "scanToPair": "Scan with mobile app to pair. Expires in 5 minutes.",
+    "regenerate": "Regenerate",
+    "signOut": "Sign Out"
+  },
+  "changePassword": {
+    "title": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "fillAllFields": "Please fill in all fields",
+    "minLength": "New password must be at least 6 characters",
+    "passwordsNotMatch": "Passwords do not match",
+    "failedToChange": "Failed to change password",
+    "success": "Password changed successfully",
+    "error": "An error occurred",
+    "saving": "Saving…"
+  },
+  "mcpServers": {
+    "title": "MCP Servers",
+    "description": "Configure Model Context Protocol servers to extend Claude's capabilities with custom tools.",
+    "noServers": "No MCP servers configured",
+    "addServerHint": "Add a server to extend Claude with custom tools",
+    "edit": "Edit",
+    "remove": "Remove",
+    "removeConfirm": "Remove MCP server \"{{name}}\"?",
+    "name": "Name",
+    "command": "Command",
+    "arguments": "Arguments (space-separated)",
+    "envVars": "Environment variables (one per line, KEY=VALUE)",
+    "save": "Save",
+    "cancel": "Cancel",
+    "addServer": "Add Server",
+    "addServers": "Add Server(s)",
+    "manual": "Manual",
+    "pasteJson": "Paste JSON",
+    "pasteJsonTitle": "Paste MCP Server JSON",
+    "pasteJsonHint": "Supports Claude Code format or simple array format",
+    "import": "Import",
+    "importSuccess": "Imported {{count}} MCP server(s)",
+    "parseFailed": "Failed to parse JSON file: {{error}}",
+    "invalidJson": "Invalid JSON: {{error}}",
+    "addMcpServer": "Add MCP Server"
   }
 }

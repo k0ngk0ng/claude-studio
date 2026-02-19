@@ -153,5 +153,52 @@
     "title": "О Claude Studio",
     "version": "Версия",
     "description": "Клиент Claude Code для desktop"
+  },
+  "userMenu": {
+    "changePassword": "Изменить пароль",
+    "remoteQRCode": "Удалённый QR-код",
+    "generating": "Генерация...",
+    "scanToPair": "Сканируйте мобильным приложением для сопряжения. Истекает через 5 минут.",
+    "regenerate": "Перегенерировать",
+    "signOut": "Выйти"
+  },
+  "changePassword": {
+    "title": "Изменить пароль",
+    "currentPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "confirmNewPassword": "Подтвердите новый пароль",
+    "fillAllFields": "Пожалуйста, заполните все поля",
+    "minLength": "Новый пароль должен содержать не менее 6 символов",
+    "passwordsNotMatch": "Пароли не совпадают",
+    "failedToChange": "Не удалось изменить пароль",
+    "success": "Пароль успешно изменён",
+    "error": "Произошла ошибка",
+    "saving": "Сохранение..."
+  },
+  "mcpServers": {
+    "title": "MCP серверы",
+    "description": "Настройте серверы Model Context Protocol для расширения возможностей Claude с помощью пользовательских инструментов.",
+    "noServers": "MCP серверы не настроены",
+    "addServerHint": "Добавьте сервер для расширения Claude пользовательскими инструментами",
+    "edit": "Редактировать",
+    "remove": "Удалить",
+    "removeConfirm": "Удалить MCP сервер \"{{name}}\"?",
+    "name": "Имя",
+    "command": "Команда",
+    "arguments": "Аргументы (через пробел)",
+    "envVars": "Переменные окружения (по одному в строке, КЛЮЧ=ЗНАЧЕНИЕ)",
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "addServer": "Добавить сервер",
+    "addServers": "Добавить серверы",
+    "manual": "Вручную",
+    "pasteJson": "Вставить JSON",
+    "pasteJsonTitle": "Вставить JSON MCP сервера",
+    "pasteJsonHint": "Поддерживается формат Claude Code или простой массив",
+    "import": "Импорт",
+    "importSuccess": "Импортировано {{count}} MCP сервер(ов)",
+    "parseFailed": "Не удалось разобрать JSON файл: {{error}}",
+    "invalidJson": "Неверный JSON: {{error}}",
+    "addMcpServer": "Добавить MCP сервер"
   }
 }
