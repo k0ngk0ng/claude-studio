@@ -547,7 +547,7 @@ export function registerIpcHandlers(): void {
           version: string;
           cdnBase: string;
           files: Record<string, string>;
-        }>(`${CDN_BASE_URL}/releases/latest/cdn-urls.json`);
+        }>(`${CDN_BASE_URL}/claude-studio/releases/latest/cdn-urls.json`);
 
         if (cdnData.version) {
           const tagName = `v${cdnData.version}`;
@@ -587,7 +587,7 @@ export function registerIpcHandlers(): void {
       let cdnUrls: Record<string, string> = {};
       if (CDN_BASE_URL) {
         try {
-          const cdnData = await fetchJson<{ files: Record<string, string> }>(`${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`);
+          const cdnData = await fetchJson<{ files: Record<string, string> }>(`${CDN_BASE_URL}/claude-studio/releases/${tagName}/cdn-urls.json`);
           cdnUrls = cdnData.files || {};
         } catch {
           // CDN not available, will use GitHub URLs only
@@ -631,7 +631,7 @@ export function registerIpcHandlers(): void {
           version: string;
           cdnBase: string;
           files: Record<string, string>;
-        }>(`${CDN_BASE_URL}/releases/latest/cdn-urls.json`);
+        }>(`${CDN_BASE_URL}/claude-studio/releases/latest/cdn-urls.json`);
         cdnUrls = cdnData.files || {};
         tagName = `v${cdnData.version}`;
       } catch {
@@ -666,7 +666,7 @@ export function registerIpcHandlers(): void {
         // Also fetch CDN URLs for this tag
         if (CDN_BASE_URL) {
           try {
-            const cdnData = await fetchJson<{ files: Record<string, string> }>(`${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`);
+            const cdnData = await fetchJson<{ files: Record<string, string> }>(`${CDN_BASE_URL}/claude-studio/releases/${tagName}/cdn-urls.json`);
             cdnUrls = { ...cdnUrls, ...(cdnData.files || {}) };
           } catch {
             // CDN not available
