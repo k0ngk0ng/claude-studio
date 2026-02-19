@@ -305,7 +305,9 @@
     "emailOrUsername": "Эл. почта или имя пользователя",
     "passwordPlaceholder": "Пароль",
     "pleaseWait": "Пожалуйста, подождите…",
-    "alreadyHaveAccount": "Уже есть аккаунт?"
+    "alreadyHaveAccount": "Уже есть аккаунт?",
+    "authenticationFailed": "Ошибка аутентификации.",
+    "updateFailed": "Ошибка обновления."
   },
   "remoteStatus": {
     "relayDisconnected": "Релей отключён",

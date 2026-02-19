@@ -305,7 +305,9 @@
     "emailOrUsername": "Correo o nombre de usuario",
     "passwordPlaceholder": "Contraseña",
     "pleaseWait": "Por favor espera…",
-    "alreadyHaveAccount": "¿Ya tienes una cuenta?"
+    "alreadyHaveAccount": "¿Ya tienes una cuenta?",
+    "authenticationFailed": "Error de autenticación.",
+    "updateFailed": "Error al actualizar."
   },
   "remoteStatus": {
     "relayDisconnected": "Relay desconectado",

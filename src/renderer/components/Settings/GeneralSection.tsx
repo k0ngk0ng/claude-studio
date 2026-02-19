@@ -23,18 +23,6 @@ export function GeneralSection() {
       </p>
 
       <div className="space-y-6">
-        {/* Send key */}
-        <SettingsSelect
-          label={t('general.sendMessageWith')}
-          description={t('general.sendMessageWithDesc')}
-          value={general.sendKey}
-          onChange={(v) => updateGeneral({ sendKey: v as 'enter' | 'cmd-enter' })}
-          options={[
-            { value: 'enter', label: t('general.enter') },
-            { value: 'cmd-enter', label: t('general.cmdEnter') },
-          ]}
-        />
-
         {/* UI Language */}
         <SettingsSelect
           label={t('general.uiLanguage')}

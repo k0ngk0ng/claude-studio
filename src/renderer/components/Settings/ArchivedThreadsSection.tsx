@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ArchivedSessionInfo } from '../../types';
 
 export function ArchivedThreadsSection() {
+  const { t } = useTranslation();
   const [archivedSessions, setArchivedSessions] = useState<ArchivedSessionInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,14 +22,14 @@ export function ArchivedThreadsSection() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-1">Archived Threads</h2>
+      <h2 className="text-lg font-semibold text-text-primary mb-1">{t('archivedThreads.title')}</h2>
       <p className="text-sm text-text-muted mb-6">
-        View and restore archived conversation threads.
+        {t('archivedThreads.description')}
       </p>
 
       {isLoading ? (
         <div className="text-center py-8">
-          <p className="text-sm text-text-muted">Loading...</p>
+          <p className="text-sm text-text-muted">{t('archivedThreads.loading')}</p>
         </div>
       ) : archivedSessions.length === 0 ? (
         <div className="text-center py-8 border border-dashed border-border rounded-lg">
@@ -42,7 +44,7 @@ export function ArchivedThreadsSection() {
             <path d="M3 5.5v7h10v-7" stroke="currentColor" strokeWidth="1.3" />
             <path d="M6 8.5h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
-          <p className="text-sm text-text-muted">No archived threads</p>
+          <p className="text-sm text-text-muted">{t('archivedThreads.noArchivedThreads')}</p>
         </div>
       ) : (
         <div className="space-y-1">
@@ -53,7 +55,7 @@ export function ArchivedThreadsSection() {
                          hover:bg-surface-hover transition-colors group"
             >
               <div className="min-w-0 flex-1">
-                <div className="text-sm text-text-primary truncate">{session.title || 'Untitled'}</div>
+                <div className="text-sm text-text-primary truncate">{session.title || t('archivedThreads.untitled')}</div>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs text-text-muted">{session.projectName}</span>
                   {session.archivedAt && (
@@ -71,7 +73,7 @@ export function ArchivedThreadsSection() {
                 className="shrink-0 px-2 py-1 rounded text-xs
                            text-accent hover:bg-surface transition-colors"
               >
-                Unarchive
+                {t('archivedThreads.unarchive')}
               </button>
             </div>
           ))}

@@ -305,7 +305,9 @@
     "emailOrUsername": "電子郵件或使用者名稱",
     "passwordPlaceholder": "密碼",
     "pleaseWait": "請稍候...",
-    "alreadyHaveAccount": "已有帳戶？"
+    "alreadyHaveAccount": "已有帳戶？",
+    "authenticationFailed": "認證失敗。",
+    "updateFailed": "更新失敗。"
   },
   "remoteStatus": {
     "relayDisconnected": "中繼已中斷",

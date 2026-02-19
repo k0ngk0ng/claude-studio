@@ -1,8 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { SettingsSelect } from './controls/SettingsSelect';
 
 // IDs that are controlled elsewhere (General → Send key) and should not appear here
-const HIDDEN_KEYBINDINGS = new Set(['send-message', 'new-line']);
+const HIDDEN_KEYBINDINGS = new Set(['new-line']);
 
 function formatKeyEvent(e: KeyboardEvent): string | null {
   // Ignore lone modifier presses
@@ -24,8 +26,9 @@ function formatKeyEvent(e: KeyboardEvent): string | null {
 }
 
 export function KeybindingsSection() {
-  const { settings, updateKeybinding } = useSettingsStore();
-  const { keybindings } = settings;
+  const { t } = useTranslation();
+  const { settings, updateKeybinding, updateGeneral } = useSettingsStore();
+  const { keybindings, general } = settings;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingKeys, setPendingKeys] = useState<string>('');
   const inputRef = useRef<HTMLButtonElement>(null);
@@ -86,17 +89,31 @@ export function KeybindingsSection() {
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-1">Keybindings</h2>
+      <h2 className="text-lg font-semibold text-text-primary mb-1">{t('keybindings.title')}</h2>
       <p className="text-sm text-text-muted mb-6">
-        Keyboard shortcuts for common actions. Click a shortcut to change it.
+        {t('keybindings.description')}
       </p>
+
+      <div className="space-y-6 mb-6">
+        {/* Send key */}
+        <SettingsSelect
+          label={t('general.sendMessageWith')}
+          description={t('general.sendMessageWithDesc')}
+          value={general.sendKey}
+          onChange={(v) => updateGeneral({ sendKey: v as 'enter' | 'cmd-enter' })}
+          options={[
+            { value: 'enter', label: t('general.enter') },
+            { value: 'cmd-enter', label: t('general.cmdEnter') },
+          ]}
+        />
+      </div>
 
       <div className="border border-border rounded-lg overflow-hidden">
         <table className="w-full">
           <thead>
             <tr className="bg-surface">
-              <th className="text-left text-xs font-medium text-text-muted px-4 py-2.5">Action</th>
-              <th className="text-right text-xs font-medium text-text-muted px-4 py-2.5">Shortcut</th>
+              <th className="text-left text-xs font-medium text-text-muted px-4 py-2.5">{t('keybindings.action')}</th>
+              <th className="text-right text-xs font-medium text-text-muted px-4 py-2.5">{t('keybindings.shortcut')}</th>
             </tr>
           </thead>
           <tbody>
@@ -120,7 +137,7 @@ export function KeybindingsSection() {
                                    outline-none animate-pulse"
                         onBlur={cancelEditing}
                       >
-                        {pendingKeys || 'Press keys…'}
+                        {pendingKeys || t('keybindings.pressKeys')}
                       </button>
                     ) : (
                       <button
@@ -129,7 +146,7 @@ export function KeybindingsSection() {
                                    rounded text-xs font-mono text-text-secondary
                                    hover:border-accent/50 hover:text-text-primary transition-colors
                                    cursor-pointer"
-                        title="Click to change shortcut"
+                        title={t('keybindings.clickToChange')}
                       >
                         {kb.keys}
                       </button>
@@ -143,8 +160,8 @@ export function KeybindingsSection() {
       </div>
 
       <p className="text-xs text-text-muted mt-4">
-        Click a shortcut to reassign it. Press <kbd className="px-1 py-0.5 bg-surface border border-border rounded text-[10px] font-mono">Esc</kbd> to cancel.
-        Send message key is configured in General settings.
+        {t('keybindings.reassignHint', { key: t('keybindings.escKey') })}
+        {t('keybindings.sendMessageGeneral')}
       </p>
     </div>
   );

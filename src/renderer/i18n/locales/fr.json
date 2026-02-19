@@ -305,7 +305,9 @@
     "emailOrUsername": "E-mail ou nom d'utilisateur",
     "passwordPlaceholder": "Mot de passe",
     "pleaseWait": "Veuillez patienter…",
-    "alreadyHaveAccount": "Déjà un compte ?"
+    "alreadyHaveAccount": "Déjà un compte ?",
+    "authenticationFailed": "Échec de l'authentification.",
+    "updateFailed": "Échec de la mise à jour."
   },
   "remoteStatus": {
     "relayDisconnected": "Relai déconnecté",

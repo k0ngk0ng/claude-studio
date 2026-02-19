@@ -305,7 +305,9 @@
     "emailOrUsername": "メールアドレスまたはユーザー名",
     "passwordPlaceholder": "パスワード",
     "pleaseWait": "お待ちください...",
-    "alreadyHaveAccount": "すでにアカウントをお持ちですか？"
+    "alreadyHaveAccount": "すでにアカウントをお持ちですか？",
+    "authenticationFailed": "認証に失敗しました。",
+    "updateFailed": "更新に失敗しました。"
   },
   "remoteStatus": {
     "relayDisconnected": "リレーが切断されています",

@@ -305,7 +305,9 @@
     "emailOrUsername": "이메일 또는 사용자 이름",
     "passwordPlaceholder": "비밀번호",
     "pleaseWait": "잠시 기다려주세요...",
-    "alreadyHaveAccount": "이미 계정이 있으신가요?"
+    "alreadyHaveAccount": "이미 계정이 있으신가요?",
+    "authenticationFailed": "인증에 실패했습니다.",
+    "updateFailed": "업데이트에 실패했습니다."
   },
   "remoteStatus": {
     "relayDisconnected": "릴레이가 연결 해제됨",

@@ -313,7 +313,9 @@
     "emailOrUsername": "邮箱或用户名",
     "passwordPlaceholder": "密码",
     "pleaseWait": "请稍候...",
-    "alreadyHaveAccount": "已有账户？"
+    "alreadyHaveAccount": "已有账户？",
+    "authenticationFailed": "认证失败。",
+    "updateFailed": "更新失败。"
   },
   "remoteStatus": {
     "relayDisconnected": "中继已断开",
