@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow, shell, app } from 'electron';
+import { ipcMain, dialog, BrowserWindow, shell, app, powerSaveBlocker } from 'electron';
 import { claudeProcessManager } from './claude-process';
 import { sessionManager } from './session-manager';
 import { gitManager } from './git-manager';
@@ -80,9 +80,9 @@ export function registerIpcHandlers(): void {
       const enabledServers = mcpServers.filter(s => s.enabled);
       console.log('[mcp-manager] Enabled MCP servers:', enabledServers.map(s => s.name).join(', ') || 'none');
     } else {
-      // No MCP servers configured, clear the config
+      // No MCP servers configured, write empty config to override global
       mcpManager.writeMcpConfig(cwd, []);
-      console.log('[mcp-manager] No MCP servers configured');
+      console.log('[mcp-manager] No MCP servers configured, written empty config to override global');
     }
     return claudeProcessManager.spawn(cwd, sessionId, permissionMode, envVars, language);
   });
@@ -98,6 +98,24 @@ export function registerIpcHandlers(): void {
   // MCP servers info
   handle('mcp:getRunningServers', () => {
     return mcpManager.getRunningServers();
+  });
+
+  // Prevent system sleep
+  let sleepBlockerId: number | null = null;
+  handle('app:preventSleep', (_event, prevent: boolean) => {
+    if (prevent) {
+      if (sleepBlockerId === null) {
+        sleepBlockerId = powerSaveBlocker.start('prevent-display-sleep');
+        console.log('[app] Prevented system sleep, blocker ID:', sleepBlockerId);
+      }
+    } else {
+      if (sleepBlockerId !== null) {
+        powerSaveBlocker.stop(sleepBlockerId);
+        console.log('[app] Allowed system sleep, blocker ID:', sleepBlockerId);
+        sleepBlockerId = null;
+      }
+    }
+    return sleepBlockerId;
   });
 
   // Permission response from renderer → forward to SDK canUseTool resolver

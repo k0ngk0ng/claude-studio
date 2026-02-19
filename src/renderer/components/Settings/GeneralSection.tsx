@@ -69,7 +69,10 @@ export function GeneralSection() {
           label="Prevent system sleep"
           description="Keep the system awake while Claude is processing a task."
           checked={general.preventSleep}
-          onChange={(v) => updateGeneral({ preventSleep: v })}
+          onChange={(v) => {
+            updateGeneral({ preventSleep: v });
+            window.api.preventSleep(v);
+          }}
         />
 
         {/* Divider */}

@@ -176,6 +176,7 @@ export interface AppAPI {
   showItemInFolder: (fullPath: string) => Promise<boolean>;
   openFile: (fullPath: string) => Promise<boolean>;
   openExternal: (url: string) => Promise<boolean>;
+  preventSleep: (prevent: boolean) => Promise<number | null>;
   checkForUpdates: () => Promise<{
     version: string;
     tagName: string;
@@ -381,6 +382,7 @@ contextBridge.exposeInMainWorld('api', {
     showItemInFolder: (fullPath: string) => ipcRenderer.invoke('app:showItemInFolder', fullPath),
     openFile: (fullPath: string) => ipcRenderer.invoke('app:openFile', fullPath),
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+    preventSleep: (prevent: boolean) => ipcRenderer.invoke('app:preventSleep', prevent),
     checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
     downloadUpdate: (downloadUrl: string, fileName: string) => ipcRenderer.invoke('app:downloadUpdate', downloadUrl, fileName),
     installUpdate: (filePath: string) => ipcRenderer.invoke('app:installUpdate', filePath),
