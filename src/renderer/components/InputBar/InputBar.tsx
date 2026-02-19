@@ -46,9 +46,7 @@ export function InputBar({ onSend, isStreaming, onStop }: InputBarProps) {
   const [mode, setMode] = useState<ClaudeMode>(defaultMode || 'default');
   const [modeOpen, setModeOpen] = useState(false);
   const [mcpDropdownOpen, setMcpDropdownOpen] = useState(false);
-  const [selectedMcpServers, setSelectedMcpServers] = useState<Set<string>>(
-    () => new Set(configuredMcpServers.map(s => s.id))
-  );
+  const [selectedMcpServers, setSelectedMcpServers] = useState<Set<string>>(() => new Set());
   const [modelName, setModelName] = useState('');
   const [branchOpen, setBranchOpen] = useState(false);
   const [branches, setBranches] = useState<{ name: string; current: boolean }[]>([]);
