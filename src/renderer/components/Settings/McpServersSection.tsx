@@ -327,7 +327,7 @@ export function McpServersSection() {
                     className="px-4 py-1.5 bg-accent hover:bg-accent-hover text-white text-sm
                                rounded-lg transition-colors"
                   >
-                    Done
+                    保存
                   </button>
                   <button
                     onClick={() => {
@@ -346,7 +346,7 @@ export function McpServersSection() {
                     className="px-4 py-1.5 bg-surface-hover hover:bg-surface-active text-text-secondary
                                text-sm rounded-lg transition-colors"
                   >
-                    Cancel
+                    取消
                   </button>
                 </div>
               </div>
@@ -448,7 +448,7 @@ export function McpServersSection() {
                   className="px-4 py-1.5 bg-surface-hover hover:bg-surface-active text-text-secondary
                              text-sm rounded-lg transition-colors"
                 >
-                  Cancel
+                  取消
                 </button>
               </div>
             </>
@@ -492,7 +492,7 @@ export function McpServersSection() {
                   className="px-4 py-1.5 bg-surface-hover hover:bg-surface-active text-text-secondary
                              text-sm rounded-lg transition-colors"
                 >
-                  Cancel
+                  取消
                 </button>
               </div>
             </>
