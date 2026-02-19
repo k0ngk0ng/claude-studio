@@ -14,8 +14,8 @@ export type UpdateStatus =
   | { state: 'checking' }
   | { state: 'up-to-date' }
   | { state: 'available'; release: ReleaseInfo }
-  | { state: 'downloading'; progress: number; downloaded: number; totalSize: number; source?: string }
-  | { state: 'downloaded'; filePath: string }
+  | { state: 'downloading'; progress: number; downloaded: number; totalSize: number }
+  | { state: 'downloaded' }
   | { state: 'error'; message: string };
 
 interface UpdateStore {
@@ -39,7 +39,6 @@ export const useUpdateStore = create<UpdateStore>((set) => ({
           progress: data.progress,
           downloaded: data.downloaded,
           totalSize: data.totalSize,
-          source: state.status.source,
         },
       };
     }),
