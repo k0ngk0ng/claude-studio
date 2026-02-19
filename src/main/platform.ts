@@ -47,6 +47,10 @@ export function getSessionsDir(): string {
   return path.join(os.homedir(), '.claude', 'projects');
 }
 
+export function getArchivedSessionsDir(): string {
+  return path.join(os.homedir(), '.claude-studio', 'archived-sessions');
+}
+
 export function getHomePath(): string {
   return os.homedir();
 }

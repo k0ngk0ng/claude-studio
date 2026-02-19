@@ -36,6 +36,9 @@ export interface SessionsAPI {
   getMessages: (projectPath: string, sessionId: string) => Promise<RawMessage[]>;
   listProjects: () => Promise<ProjectInfo[]>;
   fork: (projectPath: string, sessionId: string, cutoffUuid: string) => Promise<string | null>;
+  archive: (projectPath: string, sessionId: string) => Promise<boolean>;
+  unarchive: (archivedSessionId: string) => Promise<boolean>;
+  listArchived: () => Promise<ArchivedSessionInfo[]>;
   onSessionsChanged: (callback: () => void) => void;
   removeSessionsChangedListener: (callback: () => void) => void;
 }
@@ -286,6 +289,17 @@ export interface SessionInfo {
   updatedAt: string;
 }
 
+export interface ArchivedSessionInfo {
+  id: string;
+  projectPath: string;
+  projectName: string;
+  title: string;
+  lastMessage: string;
+  archivedAt: string;
+  originalProjectPath: string;
+  originalSessionId: string;
+}
+
 export interface ProjectInfo {
   name: string;
   path: string;
@@ -351,6 +365,7 @@ export type SettingsTab =
   | 'keybindings'
   | 'remote'
   | 'account'
+  | 'archived'
   | 'about';
 
 export type ThemeMode = 'dark' | 'light' | 'system';
@@ -365,6 +380,7 @@ export interface GeneralSettings {
   notifyOnComplete: boolean;
   preventSleep: boolean;
   debugMode: boolean;
+  showArchivedThreads: boolean;
 }
 
 export interface ModelSettings {

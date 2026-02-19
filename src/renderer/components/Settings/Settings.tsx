@@ -12,6 +12,7 @@ import { AppearanceSection } from './AppearanceSection';
 import { KeybindingsSection } from './KeybindingsSection';
 import { RemoteControlSection } from './RemoteControlSection';
 import { AccountSection } from './AccountSection';
+import { ArchivedThreadsSection } from './ArchivedThreadsSection';
 import { AboutSection } from './AboutSection';
 
 export function Settings() {
@@ -41,6 +42,8 @@ export function Settings() {
         return <RemoteControlSection />;
       case 'account':
         return <AccountSection />;
+      case 'archived':
+        return <ArchivedThreadsSection />;
       case 'about':
         return <AboutSection />;
       default:

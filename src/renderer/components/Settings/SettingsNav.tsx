@@ -118,6 +118,17 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    id: 'archived',
+    label: 'Archived Threads',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M13 4.5H3a1 1 0 00-1 1v8a1 1 0 001 1h10a1 1 0 001-1v-8a1 1 0 00-1-1z" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M2 4.5l1.5 9h9l1.5-9" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" />
+        <path d="M6 4.5V3.5a1 1 0 011-1h2a1 1 0 011 1v1" stroke="currentColor" strokeWidth="1.2" />
+      </svg>
+    ),
+  },
+  {
     id: 'remote',
     label: 'Remote Control',
     icon: (

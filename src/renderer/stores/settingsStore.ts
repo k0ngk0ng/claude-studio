@@ -28,6 +28,7 @@ const defaultSettings: AppSettings = {
     notifyOnComplete: true,
     preventSleep: false,
     debugMode: false,
+    showArchivedThreads: false,
   },
   provider: {
     defaultModel: 'claude-sonnet-4-20250514',
