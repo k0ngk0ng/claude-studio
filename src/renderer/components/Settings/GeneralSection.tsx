@@ -48,14 +48,6 @@ export function GeneralSection() {
           ]}
         />
 
-        {/* Show cost info */}
-        <SettingsToggle
-          label="Show cost information"
-          description="Display token usage and estimated cost for each response."
-          checked={general.showCostInfo}
-          onChange={(v) => updateGeneral({ showCostInfo: v })}
-        />
-
         {/* Notify on complete */}
         <SettingsToggle
           label="Notify on completion"
