@@ -23,6 +23,7 @@ const CDN_BASE_URL = process.env.ALIYUN_OSS_CDN_URL || process.env.CLAUDE_STUDIO
 // GitHub repository info for updates
 const GITHUB_OWNER = 'k0ngk0ng';
 const GITHUB_REPO = 'claude-studio';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
 
 // Configure electron-updater
 autoUpdater.autoDownload = false; // We trigger download manually
@@ -512,10 +513,15 @@ export function registerIpcHandlers(): void {
   // Events are already forwarded to renderer via autoUpdater.on() listeners above
 
   // Helper: fetch JSON from URL
-  function fetchJson<T>(url: string): Promise<T> {
+  function fetchJson<T>(url: string, useGithubAuth: boolean = false): Promise<T> {
     return new Promise((resolve, reject) => {
       const mod = url.startsWith('https') ? https : http;
-      mod.get(url, { timeout: 10000 }, (res: any) => {
+      const headers: Record<string, string> = {};
+      if (useGithubAuth && GITHUB_TOKEN) {
+        headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+      }
+      const options: any = { timeout: 10000, headers };
+      const request = mod.get(url, options, (res: any) => {
         if (res.statusCode !== 200) {
           reject(new Error(`HTTP ${res.statusCode}`));
           return;
@@ -539,7 +545,7 @@ export function registerIpcHandlers(): void {
   handle('app:checkForUpdates', async () => {
     try {
       // Fetch latest release from GitHub API
-      const release: any = await fetchJson(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`);
+      const release: any = await fetchJson(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`, true);
       const tagName = release.tag_name || '';
       const version = tagName.replace(/^v/, '');
 
@@ -583,7 +589,7 @@ export function registerIpcHandlers(): void {
 
     // Fetch release info again to get the assets
     try {
-      const release: any = await fetchJson(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`);
+      const release: any = await fetchJson(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`, true);
       const tagName = release.tag_name || '';
 
       // Get CDN URLs if available
