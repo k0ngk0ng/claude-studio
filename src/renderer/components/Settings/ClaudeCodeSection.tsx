@@ -12,7 +12,7 @@ const PREDEFINED_KEYS = new Set([
   'CLAUDE_CODE_USE_BEDROCK', 'CLAUDE_CODE_USE_VERTEX', 'CLAUDE_CODE_USE_FOUNDRY',
   'CLAUDE_CODE_SKIP_BEDROCK_AUTH', 'CLAUDE_CODE_SKIP_VERTEX_AUTH', 'CLAUDE_CODE_SKIP_FOUNDRY_AUTH',
   'ANTHROPIC_MODEL', 'ANTHROPIC_DEFAULT_SONNET_MODEL', 'ANTHROPIC_DEFAULT_OPUS_MODEL',
-  'ANTHROPIC_DEFAULT_HAIKU_MODEL', 'CLAUDE_CODE_SUBAGENT_MODEL', 'CLAUDE_CODE_EFFORT_LEVEL',
+  'ANTHROPIC_DEFAULT_HAIKU_MODEL', 'ANTHROPIC_REASONING_MODEL', 'CLAUDE_CODE_SUBAGENT_MODEL', 'CLAUDE_CODE_EFFORT_LEVEL',
   'MAX_THINKING_TOKENS', 'CLAUDE_CODE_MAX_OUTPUT_TOKENS',
   'HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY',
   'DISABLE_TELEMETRY', 'DISABLE_ERROR_REPORTING', 'DISABLE_COST_WARNINGS', 'CLAUDE_CODE_HIDE_ACCOUNT_INFO',
@@ -20,9 +20,24 @@ const PREDEFINED_KEYS = new Set([
   'CLAUDE_CONFIG_DIR', 'CLAUDE_CODE_SHELL',
 ]);
 
+// ─── Model configuration keys that default to "auto" ─────────────────
+const MODEL_CONFIG_KEYS = new Set([
+  'ANTHROPIC_MODEL',
+  'ANTHROPIC_DEFAULT_SONNET_MODEL',
+  'ANTHROPIC_DEFAULT_OPUS_MODEL',
+  'ANTHROPIC_DEFAULT_HAIKU_MODEL',
+  'ANTHROPIC_REASONING_MODEL',
+  'CLAUDE_CODE_SUBAGENT_MODEL',
+]);
+
 // ─── Helper: get env var value from settings ────────────────────────
 function getEnvVal(envVars: ProviderEnvVar[], key: string): string {
-  return envVars.find((v) => v.key === key)?.value || '';
+  const value = envVars.find((v) => v.key === key)?.value || '';
+  // Return "auto" as default for model configuration keys when no value is set
+  if (!value && MODEL_CONFIG_KEYS.has(key)) {
+    return 'auto';
+  }
+  return value;
 }
 
 function isEnvEnabled(envVars: ProviderEnvVar[], key: string): boolean {
@@ -372,6 +387,14 @@ export function ClaudeCodeSection() {
             value={getEnvVal(envVars, 'ANTHROPIC_DEFAULT_HAIKU_MODEL')}
             onChange={(v) => setEnv('ANTHROPIC_DEFAULT_HAIKU_MODEL', v)}
             placeholder="claude-haiku-3-5-20241022"
+          />
+          <SettingsInput
+            label="Reasoning Model"
+            description="Model for extended thinking / reasoning (ANTHROPIC_REASONING_MODEL)."
+            type="text"
+            value={getEnvVal(envVars, 'ANTHROPIC_REASONING_MODEL')}
+            onChange={(v) => setEnv('ANTHROPIC_REASONING_MODEL', v)}
+            placeholder="auto"
           />
           <SettingsInput
             label="Subagent Model"
