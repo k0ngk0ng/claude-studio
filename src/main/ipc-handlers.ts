@@ -574,12 +574,10 @@ export function registerIpcHandlers(): void {
       }
     }
 
-    // CDN not available or failed, check if GitHub Token is configured
-    if (!GITHUB_TOKEN) {
-      throw new Error('CDN unavailable. Please set CLAUDE_STUDIO_CDN_URL environment variable or configure GitHub Token (GITHUB_TOKEN) to check for updates.');
-    }
+    // CDN not available, fallback to GitHub API (may hit rate limit without token)
+    console.log('app', 'CDN unavailable, falling back to GitHub API');
 
-    // Fallback to GitHub API with token
+    // Fallback to GitHub API (with or without token)
     try {
       const release: any = await fetchJson(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`, true);
       const tagName = release.tag_name || '';
