@@ -200,5 +200,32 @@
     "parseFailed": "Échec de l'analyse du fichier JSON : {{error}}",
     "invalidJson": "JSON invalide : {{error}}",
     "addMcpServer": "Ajouter un serveur MCP"
+  },
+  "remoteControl": {
+    "title": "Contrôle à distance",
+    "description": "Connectez votre appareil mobile pour contrôler ce bureau à distance.",
+    "allowRemoteControl": "Autoriser le contrôle à distance",
+    "allowRemoteControlDesc": "Autoriser les appareils mobiles appariés à contrôler ce bureau à distance.",
+    "relayConnection": "Connexion relai",
+    "relayConnectionDesc": "Connectez-vous au serveur relai via WebSocket pour activer l'appairage mobile.",
+    "connected": "Connecté",
+    "disconnected": "Déconnecté",
+    "connect": "Connecter",
+    "connecting": "Connexion...",
+    "disconnect": "Déconnecter",
+    "signInFirst": "Connectez-vous d'abord à votre compte.",
+    "relayConnected": "Relai WebSocket connecté.",
+    "connectionFailed": "Échec de la connexion. Vérifiez l'URL du serveur et l'état de connexion.",
+    "connectionError": "Erreur de connexion.",
+    "disconnectedMsg": "Déconnecté.",
+    "mobilePairing": "Appairage mobile",
+    "mobilePairingDesc": "Scannez le code QR avec l'application mobile Claude Studio pour appairer. Vous n'avez besoin de scanner qu'une seule fois — l'appairage persiste entre les sessions.",
+    "lockPassword": "Mot de passe de verrouillage",
+    "lockPasswordDesc": "Mot de passe à 6 chiffres pour déverrouiller le bureau lorsqu'il est contrôlé à distance.",
+    "mustBe6Digits": "Doit comporter 6 chiffres",
+    "autoLockDelay": "Délai de verrouillage automatique",
+    "autoLockDelayDesc": "Délai avant de verrouiller le bureau après qu'un appareil mobile prend le contrôle. 0 = immédiat.",
+    "immediate": "Immédiat",
+    "seconds": "{{count}} secondes"
   }
 }

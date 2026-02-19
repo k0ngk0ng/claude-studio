@@ -200,5 +200,32 @@
     "parseFailed": "解析 JSON 檔案失敗：{{error}}",
     "invalidJson": "無效的 JSON：{{error}}",
     "addMcpServer": "新增 MCP 伺服器"
+  },
+  "remoteControl": {
+    "title": "遠端控制",
+    "description": "連線您的行動裝置以遠端控制此桌面裝置。",
+    "allowRemoteControl": "允許遠端控制",
+    "allowRemoteControlDesc": "允許配對的行動裝置遠端控制此桌面裝置。",
+    "relayConnection": "中繼連線",
+    "relayConnectionDesc": "透過 WebSocket 連線至中繼伺服器以啟用行動裝置配對。",
+    "connected": "已連線",
+    "disconnected": "未連線",
+    "connect": "連線",
+    "connecting": "連線中...",
+    "disconnect": "中斷連線",
+    "signInFirst": "請先登入您的帳戶。",
+    "relayConnected": "WebSocket 中繼已連線。",
+    "connectionFailed": "連線失敗。請檢查伺服器 URL 和登入狀態。",
+    "connectionError": "連線錯誤。",
+    "disconnectedMsg": "已中斷連線。",
+    "mobilePairing": "行動裝置配對",
+    "mobilePairingDesc": "使用 Claude Studio 行動應用程式掃描 QR 碼進行配對。只需掃描一次 — 配對在連線之間保持有效。",
+    "lockPassword": "鎖定密碼",
+    "lockPasswordDesc": "6位數密碼，用於遠端控制時解鎖桌面。",
+    "mustBe6Digits": "必須是6位數",
+    "autoLockDelay": "自動鎖定延遲",
+    "autoLockDelayDesc": "行動裝置接管後鎖定桌面之前的延遲時間。0 = 立即。",
+    "immediate": "立即",
+    "seconds": "{{count}} 秒"
   }
 }

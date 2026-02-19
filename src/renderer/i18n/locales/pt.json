@@ -200,5 +200,32 @@
     "parseFailed": "Falha ao analisar arquivo JSON: {{error}}",
     "invalidJson": "JSON inválido: {{error}}",
     "addMcpServer": "Adicionar servidor MCP"
+  },
+  "remoteControl": {
+    "title": "Controle remoto",
+    "description": "Conecte seu dispositivo móvel para controlar esta área de trabalho remotamente.",
+    "allowRemoteControl": "Permitir controle remoto",
+    "allowRemoteControlDesc": "Permitir que dispositivos móveis pareados controlem esta área de trabalho remotamente.",
+    "relayConnection": "Conexão de retransmissão",
+    "relayConnectionDesc": "Conecte-se ao servidor de retransmissão via WebSocket para habilitar o pareamento móvel.",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "connect": "Conectar",
+    "connecting": "Conectando...",
+    "disconnect": "Desconectar",
+    "signInFirst": "Entre na sua conta primeiro.",
+    "relayConnected": "Retransmissão WebSocket conectada.",
+    "connectionFailed": "Falha ao conectar. Verifique a URL do servidor e o status de login.",
+    "connectionError": "Erro de conexão.",
+    "disconnectedMsg": "Desconectado.",
+    "mobilePairing": "Pareamento móvel",
+    "mobilePairingDesc": "Escaneie o código QR com o aplicativo móvel Claude Studio para parear. Você só precisa escanear uma vez — o pareamento persiste entre as sessões.",
+    "lockPassword": "Senha de bloqueio",
+    "lockPasswordDesc": "Senha de 6 dígitos para desbloquear a área de trabalho quando controlada remotamente.",
+    "mustBe6Digits": "Deve ter 6 dígitos",
+    "autoLockDelay": "Atraso de bloqueio automático",
+    "autoLockDelayDesc": "Atraso antes de bloquear a área de trabalho após um dispositivo móvel assumir o controle. 0 = imediato.",
+    "immediate": "Imediato",
+    "seconds": "{{count}} segundos"
   }
 }

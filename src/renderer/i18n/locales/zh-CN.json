@@ -208,5 +208,32 @@
     "parseFailed": "解析 JSON 文件失败：{{error}}",
     "invalidJson": "无效的 JSON：{{error}}",
     "addMcpServer": "添加 MCP 服务器"
+  },
+  "remoteControl": {
+    "title": "远程控制",
+    "description": "连接您的移动设备以远程控制此桌面设备。",
+    "allowRemoteControl": "允许远程控制",
+    "allowRemoteControlDesc": "允许配对的移动设备远程控制此桌面设备。",
+    "relayConnection": "中继连接",
+    "relayConnectionDesc": "通过 WebSocket 连接到中继服务器以启用移动设备配对。",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "connect": "连接",
+    "connecting": "连接中...",
+    "disconnect": "断开连接",
+    "signInFirst": "请先登录您的账户。",
+    "relayConnected": "WebSocket 中继已连接。",
+    "connectionFailed": "连接失败。请检查服务器 URL 和登录状态。",
+    "connectionError": "连接错误。",
+    "disconnectedMsg": "已断开连接。",
+    "mobilePairing": "移动设备配对",
+    "mobilePairingDesc": "使用 Claude Studio 移动应用扫描二维码进行配对。只需扫描一次 — 配对在会话之间保持有效。",
+    "lockPassword": "锁定密码",
+    "lockPasswordDesc": "6位数字密码，用于远程控制时解锁桌面。",
+    "mustBe6Digits": "必须是6位数字",
+    "autoLockDelay": "自动锁定延迟",
+    "autoLockDelayDesc": "移动设备接管后锁定桌面之前的延迟时间。0 = 立即。",
+    "immediate": "立即",
+    "seconds": "{{count}} 秒"
   }
 }

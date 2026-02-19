@@ -200,5 +200,32 @@
     "parseFailed": "Error al analizar archivo JSON: {{error}}",
     "invalidJson": "JSON inválido: {{error}}",
     "addMcpServer": "Añadir servidor MCP"
+  },
+  "remoteControl": {
+    "title": "Control remoto",
+    "description": "Conecta tu dispositivo móvil para controlar este escritorio de forma remota.",
+    "allowRemoteControl": "Permitir control remoto",
+    "allowRemoteControlDesc": "Permitir que dispositivos móviles pareados.controlen este escritorio de forma remota.",
+    "relayConnection": "Conexión de retransmisión",
+    "relayConnectionDesc": "Conecta al servidor de retransmisión vía WebSocket para habilitar el emparejamiento móvil.",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "connect": "Conectar",
+    "connecting": "Conectando...",
+    "disconnect": "Desconectar",
+    "signInFirst": "Inicia sesión en tu cuenta primero.",
+    "relayConnected": "Retransmisión WebSocket conectada.",
+    "connectionFailed": "Error al conectar. Verifica la URL del servidor y el estado de inicio de sesión.",
+    "connectionError": "Error de conexión.",
+    "disconnectedMsg": "Desconectado.",
+    "mobilePairing": "Emparejamiento móvil",
+    "mobilePairingDesc": "Escanea el código QR con la app móvil de Claude Studio para emparejar. Solo necesitas escanear una vez — el emparejamiento persiste entre sesiones.",
+    "lockPassword": "Contraseña de bloqueo",
+    "lockPasswordDesc": "Contraseña de 6 dígitos para desbloquear el escritorio cuando se controla de forma remota.",
+    "mustBe6Digits": "Debe ser de 6 dígitos",
+    "autoLockDelay": "Retraso de bloqueo automático",
+    "autoLockDelayDesc": "Retraso antes de bloquear el escritorio después de que un dispositivo móvil tome el control. 0 = inmediato.",
+    "immediate": "Inmediato",
+    "seconds": "{{count}} segundos"
   }
 }

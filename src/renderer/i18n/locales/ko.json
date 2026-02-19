@@ -200,5 +200,32 @@
     "parseFailed": "JSON 파일 분석 실패: {{error}}",
     "invalidJson": "잘못된 JSON: {{error}}",
     "addMcpServer": "MCP 서버 추가"
+  },
+  "remoteControl": {
+    "title": "원격 제어",
+    "description": "모바일 장치를 연결하여 이 데스크톱을 원격으로 제어하세요.",
+    "allowRemoteControl": "원격 제어 허용",
+    "allowRemoteControlDesc": "페어링된 모바일 장치가 이 데스크톱을 원격으로 제어할 수 있도록 허용합니다.",
+    "relayConnection": "릴레이 연결",
+    "relayConnectionDesc": "모바일 페어링을 활성화하려면 WebSocket을 통해 릴레이 서버에 연결하세요.",
+    "connected": "연결됨",
+    "disconnected": "연결 안 됨",
+    "connect": "연결",
+    "connecting": "연결 중...",
+    "disconnect": "연결 해제",
+    "signInFirst": "먼저 계정에 로그인하세요.",
+    "relayConnected": "WebSocket 릴레이에 연결되었습니다.",
+    "connectionFailed": "연결에 실패했습니다. 서버 URL과 로그인 상태를 확인하세요.",
+    "connectionError": "연결 오류.",
+    "disconnectedMsg": "연결 해제됨.",
+    "mobilePairing": "모바일 페어링",
+    "mobilePairingDesc": "Claude Studio 모바일 앱으로 QR 코드를 스캔하여 페어링하세요. 한 번만 스캔하면 됩니다 — 페어링은 세션 간 유지됩니다.",
+    "lockPassword": "잠금 비밀번호",
+    "lockPasswordDesc": "원격으로 제어할 때 데스크톱의 잠금을 해제하는 6자리 비밀번호.",
+    "mustBe6Digits": "6자리여야 합니다",
+    "autoLockDelay": "자동 잠금 지연",
+    "autoLockDelayDesc": "모바일 장치가 제어권을 가져온 후 데스크톱을 잠그는 지연 시간. 0 = 즉시.",
+    "immediate": "즉시",
+    "seconds": "{{count}}초"
   }
 }

@@ -200,5 +200,32 @@
     "parseFailed": "JSON ファイルの解析に失敗しました：{{error}}",
     "invalidJson": "無効な JSON：{{error}}",
     "addMcpServer": "MCP サーバーを追加"
+  },
+  "remoteControl": {
+    "title": "リモートコントロール",
+    "description": "モバイルデバイスを接続してこのデスクトップをリモートで制御します。",
+    "allowRemoteControl": "リモートコントロールを許可",
+    "allowRemoteControlDesc": "ペアリングしたモバイルデバイスでこのデスクトップをリモートで制御することを許可します。",
+    "relayConnection": "リレー接続",
+    "relayConnectionDesc": "WebSocket でリレーサーバーに接続してモバイルペアリングを有効にします。",
+    "connected": "接続済み",
+    "disconnected": "未接続",
+    "connect": "接続",
+    "connecting": "接続中...",
+    "disconnect": "切断",
+    "signInFirst": "先にアカウントにサインインしてください。",
+    "relayConnected": "WebSocket リレーに接続しました。",
+    "connectionFailed": "接続に失敗しました。サーバーURLとログイン状態を確認してください。",
+    "connectionError": "接続エラー。",
+    "disconnectedMsg": "切断しました。",
+    "mobilePairing": "モバイルペアリング",
+    "mobilePairingDesc": "Claude Studio モバイルアプリで QR コードをスキャンしてペアリングします。スキャン一回だけで OK — ペアリングはセッション間で保持されます。",
+    "lockPassword": "ロックパスワード",
+    "lockPasswordDesc": "リモート制御時にデスクトップのロックを解除する6桁のパスワード。",
+    "mustBe6Digits": "6桁である必要があります",
+    "autoLockDelay": "自動ロック遅延",
+    "autoLockDelayDesc": "モバイルデバイスが制御權を取得した後、デスクトップをロックするまでの遅延。0 = 即時。",
+    "immediate": "即時",
+    "seconds": "{{count}} 秒"
   }
 }

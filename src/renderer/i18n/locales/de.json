@@ -200,5 +200,32 @@
     "parseFailed": "JSON-Datei konnte nicht analysiert werden: {{error}}",
     "invalidJson": "Ungültiges JSON: {{error}}",
     "addMcpServer": "MCP-Server hinzufügen"
+  },
+  "remoteControl": {
+    "title": "Fernsteuerung",
+    "description": "Verbinden Sie Ihr Mobilgerät, um diesen Desktop fernzusteuern.",
+    "allowRemoteControl": "Fernsteuerung erlauben",
+    "allowRemoteControlDesc": "Erlauben Sie gekoppelten Mobilgeräten, diesen Desktop fernzusteuern.",
+    "relayConnection": "Relais-Verbindung",
+    "relayConnectionDesc": "Verbinden Sie sich über WebSocket mit dem Relais-Server, um Mobile Pairing zu aktivieren.",
+    "connected": "Verbunden",
+    "disconnected": "Getrennt",
+    "connect": "Verbinden",
+    "connecting": "Verbindung wird hergestellt...",
+    "disconnect": "Trennen",
+    "signInFirst": "Melden Sie sich zuerst bei Ihrem Konto an.",
+    "relayConnected": "WebSocket-Relais verbunden.",
+    "connectionFailed": "Verbindung fehlgeschlagen. Überprüfen Sie die Server-URL und den Anmeldestatus.",
+    "connectionError": "Verbindungsfehler.",
+    "disconnectedMsg": "Getrennt.",
+    "mobilePairing": "Mobile Kopplung",
+    "mobilePairingDesc": "Scannen Sie den QR-Code mit der Claude Studio Mobile-App zum Koppeln. Sie müssen nur einmal scannen — die Kopplung bleibt über Sitzungen hinweg erhalten.",
+    "lockPassword": "Sperrpasswort",
+    "lockPasswordDesc": "6-stelliges Passwort zum Entsperren des Desktops bei Fernsteuerung.",
+    "mustBe6Digits": "Muss 6 Ziffern haben",
+    "autoLockDelay": "Automatische Sperrverzögerung",
+    "autoLockDelayDesc": "Verzögerung vor dem Sperren des Desktops, nachdem ein Mobilgerät die Steuerung übernimmt. 0 = sofort.",
+    "immediate": "Sofort",
+    "seconds": "{{count}} Sekunden"
   }
 }

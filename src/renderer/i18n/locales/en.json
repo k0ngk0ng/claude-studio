@@ -209,5 +209,32 @@
     "parseFailed": "Failed to parse JSON file: {{error}}",
     "invalidJson": "Invalid JSON: {{error}}",
     "addMcpServer": "Add MCP Server"
+  },
+  "remoteControl": {
+    "title": "Remote Control",
+    "description": "Connect your mobile device to control this desktop remotely.",
+    "allowRemoteControl": "Allow remote control",
+    "allowRemoteControlDesc": "Allow paired mobile devices to control this desktop remotely.",
+    "relayConnection": "Relay Connection",
+    "relayConnectionDesc": "Connect to the relay server via WebSocket to enable mobile pairing.",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "disconnect": "Disconnect",
+    "signInFirst": "Sign in to your account first.",
+    "relayConnected": "WebSocket relay connected.",
+    "connectionFailed": "Failed to connect. Check server URL and login status.",
+    "connectionError": "Connection error.",
+    "disconnectedMsg": "Disconnected.",
+    "mobilePairing": "Mobile Pairing",
+    "mobilePairingDesc": "Scan the QR code with the Claude Studio mobile app to pair. You only need to scan once — the pairing persists across sessions.",
+    "lockPassword": "Lock Password",
+    "lockPasswordDesc": "6-digit password to unlock desktop when remotely controlled.",
+    "mustBe6Digits": "Must be 6 digits",
+    "autoLockDelay": "Auto-lock delay",
+    "autoLockDelayDesc": "Delay before locking desktop after a mobile device takes control. 0 = immediate.",
+    "immediate": "Immediate",
+    "seconds": "{{count}} seconds"
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useRemoteStore } from '../../stores/remoteStore';
 import { useAuthStore } from '../../stores/authStore';
@@ -6,6 +7,7 @@ import { SettingsToggle } from './controls/SettingsToggle';
 import { QRCodeDisplay } from '../Remote/QRCodeDisplay';
 
 export function RemoteControlSection() {
+  const { t } = useTranslation();
   const { settings, updateSecurity } = useSettingsStore();
   const { security } = settings;
   const { relayConnected, connect, disconnect } = useRemoteStore();
@@ -24,7 +26,7 @@ export function RemoteControlSection() {
 
   const handleRelayConnect = async () => {
     if (!token) {
-      setRelayStatus({ ok: false, message: 'Sign in to your account first.' });
+      setRelayStatus({ ok: false, message: t('remoteControl.signInFirst') });
       return;
     }
     setIsConnecting(true);
@@ -32,12 +34,12 @@ export function RemoteControlSection() {
     try {
       const success = await connect();
       if (success) {
-        setRelayStatus({ ok: true, message: 'WebSocket relay connected.' });
+        setRelayStatus({ ok: true, message: t('remoteControl.relayConnected') });
       } else {
-        setRelayStatus({ ok: false, message: 'Failed to connect. Check server URL and login status.' });
+        setRelayStatus({ ok: false, message: t('remoteControl.connectionFailed') });
       }
     } catch (err: any) {
-      setRelayStatus({ ok: false, message: err.message || 'Connection error.' });
+      setRelayStatus({ ok: false, message: err.message || t('remoteControl.connectionError') });
     } finally {
       setIsConnecting(false);
     }
@@ -45,21 +47,21 @@ export function RemoteControlSection() {
 
   const handleRelayDisconnect = async () => {
     await disconnect();
-    setRelayStatus({ ok: true, message: 'Disconnected.' });
+    setRelayStatus({ ok: true, message: t('remoteControl.disconnectedMsg') });
   };
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-1">Remote Control</h2>
+      <h2 className="text-lg font-semibold text-text-primary mb-1">{t('remoteControl.title')}</h2>
       <p className="text-sm text-text-muted mb-6">
-        Connect your mobile device to control this desktop remotely.
+        {t('remoteControl.description')}
       </p>
 
       <div className="space-y-6">
         {/* Remote control toggle — master switch */}
         <SettingsToggle
-          label="Allow remote control"
-          description="Allow paired mobile devices to control this desktop remotely."
+          label={t('remoteControl.allowRemoteControl')}
+          description={t('remoteControl.allowRemoteControlDesc')}
           checked={security.allowRemoteControl}
           onChange={(v) => {
             updateSecurity({ allowRemoteControl: v });
@@ -73,9 +75,9 @@ export function RemoteControlSection() {
 
             {/* Relay connection */}
             <div>
-              <h3 className="text-sm font-medium text-text-primary mb-1">Relay Connection</h3>
+              <h3 className="text-sm font-medium text-text-primary mb-1">{t('remoteControl.relayConnection')}</h3>
               <p className="text-xs text-text-muted mb-3">
-                Connect to the relay server via WebSocket to enable mobile pairing.
+                {t('remoteControl.relayConnectionDesc')}
               </p>
 
               <div className="flex items-center gap-3">
@@ -86,7 +88,7 @@ export function RemoteControlSection() {
                     }`}
                   />
                   <span className="text-sm text-text-secondary">
-                    {relayConnected ? 'Connected' : 'Disconnected'}
+                    {relayConnected ? t('remoteControl.connected') : t('remoteControl.disconnected')}
                   </span>
                 </div>
 
@@ -98,7 +100,7 @@ export function RemoteControlSection() {
                                hover:text-text-primary hover:bg-surface-hover
                                transition-colors"
                   >
-                    Disconnect
+                    {t('remoteControl.disconnect')}
                   </button>
                 ) : (
                   <button
@@ -108,7 +110,7 @@ export function RemoteControlSection() {
                                hover:bg-accent/90 transition-colors
                                disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {isConnecting ? 'Connecting…' : 'Connect'}
+                    {isConnecting ? t('remoteControl.connecting') : t('remoteControl.connect')}
                   </button>
                 )}
               </div>
@@ -125,10 +127,9 @@ export function RemoteControlSection() {
               <>
                 <div className="border-t border-border" />
                 <div>
-                  <h3 className="text-sm font-medium text-text-primary mb-1">Mobile Pairing</h3>
+                  <h3 className="text-sm font-medium text-text-primary mb-1">{t('remoteControl.mobilePairing')}</h3>
                   <p className="text-xs text-text-muted mb-3">
-                    Scan the QR code with the Claude Studio mobile app to pair.
-                    You only need to scan once — the pairing persists across sessions.
+                    {t('remoteControl.mobilePairingDesc')}
                   </p>
                   <QRCodeDisplay />
                 </div>
@@ -139,9 +140,9 @@ export function RemoteControlSection() {
 
             {/* Lock password */}
             <div>
-              <label className="text-sm font-medium text-text-primary block mb-1">Lock Password</label>
+              <label className="text-sm font-medium text-text-primary block mb-1">{t('remoteControl.lockPassword')}</label>
               <p className="text-xs text-text-muted mb-2">
-                6-digit password to unlock desktop when remotely controlled.
+                {t('remoteControl.lockPasswordDesc')}
               </p>
               <div className="flex gap-2 items-center">
                 <div className="relative">
@@ -179,7 +180,7 @@ export function RemoteControlSection() {
                   </button>
                 </div>
                 {security.lockPassword.length < 6 && (
-                  <span className="text-xs text-warning">Must be 6 digits</span>
+                  <span className="text-xs text-warning">{t('remoteControl.mustBe6Digits')}</span>
                 )}
               </div>
             </div>
@@ -187,10 +188,10 @@ export function RemoteControlSection() {
             {/* Auto-lock timeout */}
             <div>
               <label className="text-sm font-medium text-text-primary block mb-1">
-                Auto-lock delay
+                {t('remoteControl.autoLockDelay')}
               </label>
               <p className="text-xs text-text-muted mb-2">
-                Delay before locking desktop after a mobile device takes control. 0 = immediate.
+                {t('remoteControl.autoLockDelayDesc')}
               </p>
               <select
                 value={security.autoLockTimeout}
@@ -203,10 +204,10 @@ export function RemoteControlSection() {
                            text-sm text-text-primary outline-none
                            focus:border-accent/50 transition-colors"
               >
-                <option value={0}>Immediate</option>
-                <option value={3000}>3 seconds</option>
-                <option value={5000}>5 seconds</option>
-                <option value={10000}>10 seconds</option>
+                <option value={0}>{t('remoteControl.immediate')}</option>
+                <option value={3000}>{t('remoteControl.seconds', { count: 3 })}</option>
+                <option value={5000}>{t('remoteControl.seconds', { count: 5 })}</option>
+                <option value={10000}>{t('remoteControl.seconds', { count: 10 })}</option>
               </select>
             </div>
           </>
