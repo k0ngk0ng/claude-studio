@@ -30,7 +30,9 @@
     "settings": "설정",
     "noThreads": "스레드가 없습니다",
     "searchThreads": "스레드 검색...",
-    "addFolder": "폴더 추가"
+    "addFolder": "폴더 추가",
+    "archiveConfirm": "이 스레드를 보관하시겠습니까? 설정에서 나중에 복원할 수 있습니다.",
+    "archiveThread": "스레드 보관"
   },
   "welcome": {
     "title": "Claude Studio에 오신 것을 환영합니다",
@@ -119,7 +121,18 @@
     "commit": "커밋",
     "discard": "취소",
     "stageAll": "모두 스테이지",
-    "unstageAll": "스테이지 해제"
+    "unstageAll": "스테이지 해제",
+    "history": "기록",
+    "unstaged": "스테이지 안 됨",
+    "staged": "스테이지 됨",
+    "stage": "스테이지",
+    "unstage": "스테이지 해제",
+    "stageFile": "파일 스테이지",
+    "unstageFile": "파일 스테이지 해제",
+    "revealInFiles": "파일에서 보기",
+    "commitMessagePlaceholder": "커밋 메시지…",
+    "committing": "커밋 중…",
+    "commitWithCount": "커밋 ({{count}}개 파일)"
   },
   "terminal": {
     "title": "터미널",

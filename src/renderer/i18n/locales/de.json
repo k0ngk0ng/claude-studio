@@ -30,7 +30,9 @@
     "settings": "Einstellungen",
     "noThreads": "Noch keine Threads",
     "searchThreads": "Threads suchen...",
-    "addFolder": "Ordner hinzufügen"
+    "addFolder": "Ordner hinzufügen",
+    "archiveConfirm": "Diesen Thread archivieren? Sie können ihn später in den Einstellungen wiederherstellen.",
+    "archiveThread": "Thread archivieren"
   },
   "welcome": {
     "title": "Willkommen bei Claude Studio",
@@ -119,7 +121,18 @@
     "commit": "Commit",
     "discard": "Verwerfen",
     "stageAll": "Alle bereitstellen",
-    "unstageAll": "Bereitstellung aufheben"
+    "unstageAll": "Bereitstellung aufheben",
+    "history": "Verlauf",
+    "unstaged": "Nicht bereitgestellt",
+    "staged": "Bereitgestellt",
+    "stage": "Bereitstellen",
+    "unstage": "Zurücknehmen",
+    "stageFile": "Datei bereitstellen",
+    "unstageFile": "Bereitstellung aufheben",
+    "revealInFiles": "In Dateien anzeigen",
+    "commitMessagePlaceholder": "Commit-Nachricht…",
+    "committing": "Commit läuft…",
+    "commitWithCount": "Commit ({{count}} Datei)"
   },
   "terminal": {
     "title": "Terminal",

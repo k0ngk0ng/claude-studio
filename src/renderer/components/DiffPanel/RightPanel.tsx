@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../stores/appStore';
 import { useResizable } from '../../hooks/useResizable';
 import { DiffPanel } from './DiffPanel';
@@ -8,6 +9,7 @@ import { HistoryPanel } from './HistoryPanel';
 type RightTab = 'changes' | 'files' | 'history';
 
 export function RightPanel({ visible }: { visible?: boolean }) {
+  const { t } = useTranslation();
   const { togglePanel, panelSizes, setPanelSize, gitStatus, revealFile } = useAppStore();
   const [activeTab, setActiveTab] = useState<RightTab>('files');
 
@@ -64,7 +66,7 @@ export function RightPanel({ visible }: { visible?: boolean }) {
               <path d="M2 4.5A1.5 1.5 0 013.5 3H6l1.5 1.5h5A1.5 1.5 0 0114 6v5.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z"
                 stroke="currentColor" strokeWidth="1.2" />
             </svg>
-            Files
+            {t('diff.files')}
           </button>
 
           {/* Changes tab */}
@@ -82,7 +84,7 @@ export function RightPanel({ visible }: { visible?: boolean }) {
               <circle cx="4.5" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.2" />
               <path d="M4.5 5.5v5M11.5 5.5C11.5 8.5 4.5 7 4.5 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
             </svg>
-            Changes
+            {t('diff.changes')}
             {totalChanges > 0 && (
               <span className="ml-0.5 px-1.5 py-0.5 rounded-full bg-accent/20 text-accent text-[10px] font-medium">
                 {totalChanges}
@@ -103,7 +105,7 @@ export function RightPanel({ visible }: { visible?: boolean }) {
               <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.2" />
               <path d="M8 5v3.5l2.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            History
+            {t('diff.history')}
           </button>
         </div>
 

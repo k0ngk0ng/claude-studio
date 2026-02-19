@@ -30,7 +30,9 @@
     "settings": "設定",
     "noThreads": "スレッドがありません",
     "searchThreads": "スレッドを検索...",
-    "addFolder": "フォルダを追加"
+    "addFolder": "フォルダを追加",
+    "archiveConfirm": "このスレッドをアーカイブしますか？設定から復元できます。",
+    "archiveThread": "スレッドをアーカイブ"
   },
   "welcome": {
     "title": "Claude Studio へようこそ",
@@ -119,7 +121,18 @@
     "commit": "コミット",
     "discard": "破棄",
     "stageAll": "すべてステージ",
-    "unstageAll": "ステージ解除"
+    "unstageAll": "ステージ解除",
+    "history": "履歴",
+    "unstaged": "未ステージ",
+    "staged": "ステージ済み",
+    "stage": "ステージ",
+    "unstage": "ステージ解除",
+    "stageFile": "ステージに追加",
+    "unstageFile": "ステージから削除",
+    "revealInFiles": "ファイルで表示",
+    "commitMessagePlaceholder": "コミットメッセージ…",
+    "committing": "コミット中…",
+    "commitWithCount": "コミット（{{count}} ファイル）"
   },
   "terminal": {
     "title": "ターミナル",

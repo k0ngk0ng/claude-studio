@@ -30,7 +30,9 @@
     "settings": "Configuración",
     "noThreads": "Sin hilos todavía",
     "searchThreads": "Buscar hilos...",
-    "addFolder": "Añadir carpeta"
+    "addFolder": "Añadir carpeta",
+    "archiveConfirm": "¿Archivar este hilo? Puedes restaurarlo más tarde desde Configuración.",
+    "archiveThread": "Archivar hilo"
   },
   "welcome": {
     "title": "Bienvenido a Claude Studio",
@@ -119,7 +121,18 @@
     "commit": "Confirmar",
     "discard": "Descartar",
     "stageAll": "Preparar todo",
-    "unstageAll": "Deshacer preparación"
+    "unstageAll": "Deshacer preparación",
+    "history": "Historial",
+    "unstaged": "Sin preparar",
+    "staged": "Preparado",
+    "stage": "Preparar",
+    "unstage": "Deshacer",
+    "stageFile": "Preparar archivo",
+    "unstageFile": "Deshacer preparación",
+    "revealInFiles": "Revelar en archivos",
+    "commitMessagePlaceholder": "Mensaje de commit…",
+    "committing": "Confirmando…",
+    "commitWithCount": "Confirmar ({{count}} archivo)"
   },
   "terminal": {
     "title": "Terminal",

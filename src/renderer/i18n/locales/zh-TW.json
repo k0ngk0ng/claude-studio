@@ -30,7 +30,9 @@
     "settings": "設定",
     "noThreads": "尚無對話",
     "searchThreads": "搜尋對話...",
-    "addFolder": "新增資料夾"
+    "addFolder": "新增資料夾",
+    "archiveConfirm": "封存此對話？您可以在設定中恢復。",
+    "archiveThread": "封存對話"
   },
   "welcome": {
     "title": "歡迎使用 Claude Studio",
@@ -119,7 +121,18 @@
     "commit": "提交",
     "discard": "放棄",
     "stageAll": "暫存全部",
-    "unstageAll": "取消暫存"
+    "unstageAll": "取消暫存",
+    "history": "歷史",
+    "unstaged": "未暫存",
+    "staged": "已暫存",
+    "stage": "暫存",
+    "unstage": "取消暫存",
+    "stageFile": "暫存檔案",
+    "unstageFile": "取消暫存檔案",
+    "revealInFiles": "在檔案中顯示",
+    "commitMessagePlaceholder": "提交資訊…",
+    "committing": "提交中…",
+    "commitWithCount": "提交（{{count}} 個檔案）"
   },
   "terminal": {
     "title": "終端機",

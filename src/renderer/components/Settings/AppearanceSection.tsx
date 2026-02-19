@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SettingsSelect } from './controls/SettingsSelect';
 import { SettingsInput } from './controls/SettingsInput';
@@ -18,21 +19,22 @@ const CURSOR_OPTIONS: { value: StreamingCursorStyle; label: string }[] = [
 ];
 
 export function AppearanceSection() {
+  const { t } = useTranslation();
   const { settings, updateAppearance } = useSettingsStore();
   const { appearance } = settings;
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-text-primary mb-1">Appearance</h2>
+      <h2 className="text-lg font-semibold text-text-primary mb-1">{t('appearance.title')}</h2>
       <p className="text-sm text-text-muted mb-6">
-        Customize the look and feel of the application.
+        {t('appearance.customizeDesc')}
       </p>
 
       <div className="space-y-6">
         {/* Theme */}
         <SettingsSelect
-          label="Theme"
-          description="Choose the color theme for the application."
+          label={t('appearance.theme')}
+          description={t('appearance.themeDesc')}
           value={appearance.theme}
           onChange={(v) => updateAppearance({ theme: v as 'dark' | 'light' | 'system' })}
           options={[

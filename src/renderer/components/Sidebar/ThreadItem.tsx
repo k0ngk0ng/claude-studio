@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSessions } from '../../hooks/useSessions';
 import type { SessionInfo } from '../../types';
 
@@ -16,6 +17,7 @@ function truncate(str: string, maxLen: number): string {
 }
 
 export function ThreadItem({ session, isActive, isRunning, timeLabel }: ThreadItemProps) {
+  const { t } = useTranslation();
   const { selectSession } = useSessions();
   const [isArchiving, setIsArchiving] = useState(false);
 
@@ -28,7 +30,7 @@ export function ThreadItem({ session, isActive, isRunning, timeLabel }: ThreadIt
     if (isArchiving) return;
 
     // Confirm before archiving
-    const confirmed = window.confirm('Archive this thread? You can restore it later from Settings.');
+    const confirmed = window.confirm(t('sidebar.archiveConfirm'));
     if (!confirmed) return;
 
     setIsArchiving(true);
@@ -84,7 +86,7 @@ export function ThreadItem({ session, isActive, isRunning, timeLabel }: ThreadIt
           className="absolute right-0 p-0.5 rounded text-text-muted hover:text-text-primary
                      hover:bg-surface-hover transition-colors opacity-0 group-hover:opacity-100
                      disabled:opacity-50"
-          title="Archive thread"
+          title={t('sidebar.archiveThread')}
         >
           {isArchiving ? (
             <svg className="animate-spin" width="12" height="12" viewBox="0 0 16 16" fill="none">

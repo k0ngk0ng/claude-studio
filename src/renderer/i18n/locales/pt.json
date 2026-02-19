@@ -30,7 +30,9 @@
     "settings": "Configurações",
     "noThreads": "Nenhuma conversa ainda",
     "searchThreads": "Pesquisar conversas...",
-    "addFolder": "Adicionar pasta"
+    "addFolder": "Adicionar pasta",
+    "archiveConfirm": "Arquivar esta conversa? Você pode restaurá-la mais tarde em Configurações.",
+    "archiveThread": "Arquivar conversa"
   },
   "welcome": {
     "title": "Bem-vindo ao Claude Studio",
@@ -119,7 +121,18 @@
     "commit": "Confirmar",
     "discard": "Descartar",
     "stageAll": "Preparar tudo",
-    "unstageAll": "Desfazer preparação"
+    "unstageAll": "Desfazer preparação",
+    "history": "Histórico",
+    "unstaged": "Não preparado",
+    "staged": "Preparado",
+    "stage": "Preparar",
+    "unstage": "Desfazer",
+    "stageFile": "Preparar arquivo",
+    "unstageFile": "Desfazer preparação",
+    "revealInFiles": "Revelar em arquivos",
+    "commitMessagePlaceholder": "Mensagem de commit…",
+    "committing": "Confirmando…",
+    "commitWithCount": "Confirmar ({{count}} arquivo)"
   },
   "terminal": {
     "title": "Terminal",

@@ -30,7 +30,9 @@
     "settings": "Настройки",
     "noThreads": "Пока нет тем",
     "searchThreads": "Поиск тем...",
-    "addFolder": "Добавить папку"
+    "addFolder": "Добавить папку",
+    "archiveConfirm": "Архивировать эту тему? Вы можете восстановить её позже в Настройках.",
+    "archiveThread": "Архивировать тему"
   },
   "welcome": {
     "title": "Добро пожаловать в Claude Studio",
@@ -119,7 +121,18 @@
     "commit": "Коммит",
     "discard": "Отменить",
     "stageAll": "Подготовить всё",
-    "unstageAll": "Отменить подготовку"
+    "unstageAll": "Отменить подготовку",
+    "history": "История",
+    "unstaged": "Неподготовлено",
+    "staged": "Подготовлено",
+    "stage": "Подготовить",
+    "unstage": "Отменить",
+    "stageFile": "Подготовить файл",
+    "unstageFile": "Отменить подготовку",
+    "revealInFiles": "Показать в файлах",
+    "commitMessagePlaceholder": "Сообщение коммита…",
+    "committing": "Коммит…",
+    "commitWithCount": "Коммит ({{count}} файл)"
   },
   "terminal": {
     "title": "Терминал",

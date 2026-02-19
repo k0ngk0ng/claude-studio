@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useGit } from '../../hooks/useGit';
 import { useAppStore } from '../../stores/appStore';
 import { DiffViewerModal } from './DiffViewerModal';
@@ -90,7 +91,7 @@ function ChangeContextMenu({ x, y, file, activeTab, onViewDiff, onRevealInFiles,
             <circle cx="8" cy="8.5" r="2" stroke="currentColor" strokeWidth="1" />
           </svg>
         </span>
-        <span>Reveal in Files</span>
+        <span>{t('diff.revealInFiles')}</span>
       </button>
 
       <div className="border-t border-border my-1" />
@@ -111,7 +112,7 @@ function ChangeContextMenu({ x, y, file, activeTab, onViewDiff, onRevealInFiles,
             )}
           </svg>
         </span>
-        <span>{activeTab === 'unstaged' ? 'Stage File' : 'Unstage File'}</span>
+        <span>{activeTab === 'unstaged' ? t('diff.stageFile') : t('diff.unstageFile')}</span>
       </button>
     </div>
   );
@@ -120,6 +121,7 @@ function ChangeContextMenu({ x, y, file, activeTab, onViewDiff, onRevealInFiles,
 // ─── DiffPanel ───────────────────────────────────────────────────────
 
 export function DiffPanel() {
+  const { t } = useTranslation();
   const { gitStatus, stageFile, unstageFile, commit, getDiff, refreshStatus } = useGit();
   const { setRevealFile } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('unstaged');
@@ -192,7 +194,7 @@ export function DiffPanel() {
               : 'text-text-muted hover:text-text-secondary'
           }`}
         >
-          Unstaged {unstagedCount > 0 && (
+          {t('diff.unstaged')} {unstagedCount > 0 && (
             <span className="ml-1 px-1.5 py-0.5 rounded-full bg-surface text-[10px]">
               {unstagedCount}
             </span>
@@ -206,7 +208,7 @@ export function DiffPanel() {
               : 'text-text-muted hover:text-text-secondary'
           }`}
         >
-          Staged {stagedCount > 0 && (
+          {t('diff.staged')} {stagedCount > 0 && (
             <span className="ml-1 px-1.5 py-0.5 rounded-full bg-surface text-[10px]">
               {stagedCount}
             </span>
@@ -253,7 +255,7 @@ export function DiffPanel() {
                                text-[10px] font-medium transition-opacity
                                bg-surface-hover hover:bg-surface-active text-text-secondary"
                   >
-                    {activeTab === 'unstaged' ? 'Stage' : 'Unstage'}
+                    {activeTab === 'unstaged' ? t('diff.stage') : t('diff.unstage')}
                   </button>
                 </button>
               </div>
@@ -268,7 +270,7 @@ export function DiffPanel() {
           <textarea
             value={commitMessage}
             onChange={(e) => setCommitMessage(e.target.value)}
-            placeholder="Commit message…"
+            placeholder={t('diff.commitMessagePlaceholder')}
             rows={2}
             className="w-full bg-surface border border-border rounded-lg px-3 py-2
                        text-xs text-text-primary placeholder-text-muted
@@ -281,7 +283,7 @@ export function DiffPanel() {
                        hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed
                        transition-colors"
           >
-            {isCommitting ? 'Committing…' : `Commit (${stagedCount} file${stagedCount !== 1 ? 's' : ''})`}
+            {isCommitting ? t('diff.committing') : t('diff.commitWithCount', { count: stagedCount })}
           </button>
         </div>
       )}

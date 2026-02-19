@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../stores/appStore';
 import { DiffViewerModal } from './DiffViewerModal';
 import type { GitCommit } from '../../types';
@@ -96,7 +97,7 @@ function FileContextMenu({ x, y, onViewDiff, onRevealInFiles, onCopyPath, onClos
             <circle cx="8" cy="8.5" r="2" stroke="currentColor" strokeWidth="1" />
           </svg>
         </span>
-        <span>Reveal in Files</span>
+        <span>{t('diff.revealInFiles')}</span>
       </button>
 
       <div className="border-t border-border my-1" />
@@ -123,6 +124,7 @@ function FileContextMenu({ x, y, onViewDiff, onRevealInFiles, onCopyPath, onClos
 // ─── HistoryPanel ─────────────────────────────────────────────────────
 
 export function HistoryPanel() {
+  const { t } = useTranslation();
   const { currentProject, setRevealFile, gitStatus } = useAppStore();
   const cwd = currentProject.path;
 
