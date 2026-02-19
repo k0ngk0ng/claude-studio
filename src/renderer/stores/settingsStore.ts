@@ -233,6 +233,9 @@ interface SettingsStore {
   // Reset
   resetSettings: () => void;
   resetSection: (section: keyof AppSettings) => void;
+
+  // Reload from file
+  reloadSettings: () => Promise<void>;
 }
 
 export const useSettingsStore = create<SettingsStore>((set, get) => ({
@@ -450,6 +453,11 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       saveSettings(newSettings);
       return { settings: newSettings };
     });
+  },
+
+  reloadSettings: async () => {
+    const settings = await loadSettingsFromFile();
+    set({ settings });
   },
 }));
 
