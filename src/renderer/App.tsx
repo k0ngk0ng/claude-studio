@@ -438,11 +438,6 @@ export default function App() {
     return () => window.removeEventListener('claude:user-answer', handler);
   }, [handleSendMessage]);
 
-  // Show settings page when open
-  if (settingsOpen) {
-    return <Settings />;
-  }
-
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-bg">
       {/* Login modal */}
@@ -450,6 +445,11 @@ export default function App() {
 
       {/* Remote control lock overlay */}
       <LockOverlay />
+
+      {/* Settings overlay */}
+      {settingsOpen && (
+        <Settings />
+      )}
 
       {/* Sidebar */}
       {panels.sidebar && (
