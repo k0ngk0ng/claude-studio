@@ -551,7 +551,7 @@ export function registerIpcHandlers(): void {
           cdnUrls = cdnData.files || {};
         } catch {
           // CDN not available, will use GitHub URLs only
-          debugLog('app', 'CDN URLs not found, using GitHub URLs only');
+          console.log('app', 'CDN URLs not found, using GitHub URLs only');
         }
       }
 
@@ -571,7 +571,7 @@ export function registerIpcHandlers(): void {
         })),
       };
     } catch (err: any) {
-      debugLog('app', `Failed to check for updates: ${err?.message}`, err, 'error');
+      console.log('app', `Failed to check for updates: ${err?.message}`, err, 'error');
       throw new Error(`Failed to check for updates: ${err?.message}`);
     }
   });
@@ -631,7 +631,7 @@ export function registerIpcHandlers(): void {
       const downloadUrl = cdnUrl || githubUrl;
       const useCdn = !!cdnUrl;
 
-      debugLog('app', `Downloading update: ${assetName} from ${useCdn ? 'CDN' : 'GitHub'}`);
+      console.log('app', `Downloading update: ${assetName} from ${useCdn ? 'CDN' : 'GitHub'}`);
 
       // Send initial progress
       const wc = getWebContents();
@@ -709,13 +709,13 @@ export function registerIpcHandlers(): void {
         wc.send('app:update-status', { state: 'downloaded', release: { version: currentReleaseInfo.version, tagName: currentReleaseInfo.tagName } });
       }
 
-      debugLog('app', `Update downloaded to: ${downloadPath}`);
+      console.log('app', `Update downloaded to: ${downloadPath}`);
 
       // Store the download path for install
       (global as any).pendingUpdatePath = downloadPath;
 
     } catch (err: any) {
-      debugLog('app', `Failed to download update: ${err?.message}`, err, 'error');
+      console.log('app', `Failed to download update: ${err?.message}`, err, 'error');
       throw new Error(`Failed to download update: ${err?.message}`);
     }
   });
