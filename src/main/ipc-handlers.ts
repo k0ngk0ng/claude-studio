@@ -1,4 +1,5 @@
 import { ipcMain, dialog, BrowserWindow, shell, app, powerSaveBlocker } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import { claudeProcessManager } from './claude-process';
 import { sessionManager } from './session-manager';
 import { gitManager } from './git-manager';
@@ -16,6 +17,46 @@ import { execFile, execSync } from 'child_process';
 // CDN base URL for update downloads (set via environment or fallback)
 // Configure this to your Aliyun OSS CDN domain
 const CDN_BASE_URL = process.env.CLAUDE_STUDIO_CDN_URL || '';
+
+// Configure electron-updater
+autoUpdater.autoDownload = false; // We trigger download manually
+autoUpdater.autoInstallOnAppQuit = true; // Install on restart
+
+// Forward autoUpdater events to renderer
+autoUpdater.on('checking-for-update', () => {
+  const wc = getWebContents();
+  if (wc) wc.send('app:update-status', { state: 'checking' });
+});
+
+autoUpdater.on('update-available', (info) => {
+  const wc = getWebContents();
+  if (wc) wc.send('app:update-status', { state: 'available', release: info });
+});
+
+autoUpdater.on('update-not-available', () => {
+  const wc = getWebContents();
+  if (wc) wc.send('app:update-status', { state: 'up-to-date' });
+});
+
+autoUpdater.on('download-progress', (progress) => {
+  const wc = getWebContents();
+  if (wc) wc.send('app:update-status', {
+    state: 'downloading',
+    progress: progress.percent,
+    downloaded: progress.transferred,
+    totalSize: progress.total,
+  });
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  const wc = getWebContents();
+  if (wc) wc.send('app:update-status', { state: 'downloaded', release: info });
+});
+
+autoUpdater.on('error', (err) => {
+  const wc = getWebContents();
+  if (wc) wc.send('app:update-status', { state: 'error', message: err.message });
+});
 
 function getWebContents(): Electron.WebContents | null {
   const windows = BrowserWindow.getAllWindows();
@@ -435,171 +476,48 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  // Use electron-updater for auto-update functionality
+  // Events are already forwarded to renderer via autoUpdater.on() listeners above
+
   handle('app:checkForUpdates', async () => {
     try {
-      const https = require('https');
-      const data: string = await new Promise((resolve, reject) => {
-        https.get('https://api.github.com/repos/k0ngk0ng/claude-studio/releases/latest', {
-          headers: { 'User-Agent': 'claude-studio', 'Accept': 'application/vnd.github.v3+json' },
-        }, (res: any) => {
-          let body = '';
-          res.on('data', (chunk: string) => { body += chunk; });
-          res.on('end', () => resolve(body));
-          res.on('error', reject);
-        }).on('error', reject);
-      });
-      const release = JSON.parse(data);
-      const tagName = release.tag_name || '';
-
-      // Try to fetch CDN URLs from OSS
-      let cdnUrls: Record<string, string> = {};
-      if (CDN_BASE_URL) {
-        try {
-          const cdnData: string = await new Promise((resolve, reject) => {
-            const cdnJsonUrl = `${CDN_BASE_URL}/claude-studio/releases/${tagName}/cdn-urls.json`;
-            const mod = cdnJsonUrl.startsWith('https') ? https : require('http');
-            mod.get(cdnJsonUrl, { timeout: 5000 }, (res: any) => {
-              if (res.statusCode !== 200) { reject(new Error(`HTTP ${res.statusCode}`)); return; }
-              let body = '';
-              res.on('data', (chunk: string) => { body += chunk; });
-              res.on('end', () => resolve(body));
-              res.on('error', reject);
-            }).on('error', reject);
-          });
-          const parsed = JSON.parse(cdnData);
-          cdnUrls = parsed.files || {};
-        } catch {
-          // CDN not available, will use GitHub URLs only
-        }
+      const result = await autoUpdater.checkForUpdates();
+      if (result && result.updateInfo) {
+        return {
+          version: result.updateInfo.version,
+          tagName: `v${result.updateInfo.version}`,
+          name: result.updateInfo.releaseName || '',
+          body: result.updateInfo.releaseNotes as string || '',
+          htmlUrl: result.updateInfo.releaseDate || '',
+          // Return empty assets - autoUpdater handles download internally
+          assets: [],
+        };
       }
-
-      return {
-        version: tagName.replace(/^v/, ''),
-        tagName,
-        name: release.name,
-        body: release.body,
-        htmlUrl: release.html_url,
-        assets: (release.assets || []).map((a: any) => ({
-          name: a.name,
-          size: a.size,
-          downloadUrl: a.browser_download_url,
-          cdnUrl: cdnUrls[a.name] || null,
-        })),
-      };
+      return { version: '', tagName: '', name: '', body: '', htmlUrl: '', assets: [] };
     } catch (err: any) {
+      // If no update available, autoUpdater emits 'update-not-available' event
+      // Only throw for actual errors
+      if (err.message?.includes('no update available')) {
+        return { version: '', tagName: '', name: '', body: '', htmlUrl: '', assets: [] };
+      }
       throw new Error(`Failed to check for updates: ${err?.message}`);
     }
   });
 
-  handle('app:downloadUpdate', async (_event, downloadUrl: string, fileName: string) => {
-    const https = require('https');
-    const downloadDir = path.join(os.homedir(), 'Downloads');
-    const filePath = path.join(downloadDir, fileName);
-
-    return new Promise<string>((resolve, reject) => {
-      let currentReq: any = null;
-      let fileStream: fs.WriteStream | null = null;
-      let aborted = false;
-
-      // Abort download if app is quitting
-      const onBeforeQuit = () => {
-        aborted = true;
-        if (currentReq) {
-          try { currentReq.destroy(); } catch {}
-        }
-        if (fileStream) {
-          try { fileStream.end(); } catch {}
-        }
-      };
-      app.once('before-quit', onBeforeQuit);
-
-      const cleanup = () => {
-        app.removeListener('before-quit', onBeforeQuit);
-      };
-
-      const follow = (url: string) => {
-        currentReq = https.get(url, {
-          headers: { 'User-Agent': 'claude-studio' },
-        }, (res: any) => {
-          // Follow redirects
-          if (res.statusCode === 301 || res.statusCode === 302) {
-            follow(res.headers.location);
-            return;
-          }
-          if (res.statusCode !== 200) {
-            cleanup();
-            reject(new Error(`Download failed: HTTP ${res.statusCode}`));
-            return;
-          }
-
-          const totalSize = parseInt(res.headers['content-length'] || '0', 10);
-          let downloaded = 0;
-          fileStream = fs.createWriteStream(filePath);
-
-          res.on('data', (chunk: Buffer) => {
-            if (aborted) return;
-            downloaded += chunk.length;
-            fileStream?.write(chunk);
-            try {
-              const wc = getWebContents();
-              if (wc && totalSize > 0) {
-                const progress = Math.min(Math.round((downloaded / totalSize) * 100), 99);
-                wc.send('app:download-progress', { downloaded, totalSize, progress });
-              }
-            } catch {}
-          });
-
-          res.on('end', () => {
-            if (aborted) {
-              cleanup();
-              return;
-            }
-            fileStream?.end(() => {
-              try {
-                const wc = getWebContents();
-                if (wc && totalSize > 0) {
-                  wc.send('app:download-progress', { downloaded: totalSize, totalSize, progress: 100 });
-                }
-              } catch {}
-              cleanup();
-              resolve(filePath);
-            });
-          });
-
-          res.on('error', (err: Error) => {
-            fileStream?.end();
-            try { fs.unlinkSync(filePath); } catch {}
-            cleanup();
-            reject(err);
-          });
-        }).on('error', (err: Error) => {
-          cleanup();
-          if (!aborted) reject(err);
-        });
-      };
-      follow(downloadUrl);
-    });
+  handle('app:downloadUpdate', async () => {
+    // electron-updater handles download internally after checkForUpdates
+    // Just trigger the download - events will notify renderer of progress
+    try {
+      await autoUpdater.downloadUpdate();
+    } catch (err: any) {
+      throw new Error(`Failed to download update: ${err?.message}`);
+    }
   });
 
-  handle('app:installUpdate', async (_event, filePath: string) => {
-    try {
-      const platform = getPlatform();
-      if (platform === 'mac') {
-        // Open the .dmg or .zip file
-        await shell.openPath(filePath);
-      } else if (platform === 'windows') {
-        // Run the installer
-        await shell.openPath(filePath);
-      } else {
-        // Linux: open the file
-        await shell.openPath(filePath);
-      }
-      // Quit the app so user can install
-      setTimeout(() => app.quit(), 1000);
-      return true;
-    } catch {
-      return false;
-    }
+  handle('app:installUpdate', async () => {
+    // Quit and install - electron-updater will replace the app and restart
+    autoUpdater.quitAndInstall(false, true);
+    return true;
   });
 
   handle('app:getModel', () => {

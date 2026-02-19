@@ -63,7 +63,7 @@ export function GeneralSection() {
           checked={general.preventSleep}
           onChange={(v) => {
             updateGeneral({ preventSleep: v });
-            window.api.preventSleep(v);
+            window.api.app.preventSleep(v);
           }}
         />
 

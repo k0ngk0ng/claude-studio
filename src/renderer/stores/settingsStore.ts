@@ -466,7 +466,7 @@ loadSettingsFromFile().then((settings) => {
 
   // Apply prevent sleep setting (if enabled in settings)
   if (settings.general.preventSleep) {
-    window.api.preventSleep(true);
+    window.api.app.preventSleep(true);
   }
 
   // Sync debug mode to debugLogStore (no circular dependency)

@@ -184,16 +184,47 @@ export function AboutSection() {
     window.api.app.getPlatform().then(setPlatform).catch(() => {});
   }, []);
 
-  // Download progress listener — uses global store to survive navigation
+  // Update status listener — receives events from electron-updater via main process
   useEffect(() => {
-    const handleProgress = (data: { downloaded: number; totalSize: number; progress: number }) => {
-      updateProgress(data);
+    const handleUpdateStatus = (data: {
+      state: string;
+      release?: any;
+      progress?: number;
+      downloaded?: number;
+      totalSize?: number;
+      message?: string;
+    }) => {
+      switch (data.state) {
+        case 'checking':
+          setUpdateStatus({ state: 'checking' });
+          break;
+        case 'available':
+          setUpdateStatus({ state: 'available', release: data.release });
+          break;
+        case 'up-to-date':
+          setUpdateStatus({ state: 'up-to-date' });
+          break;
+        case 'downloading':
+          setUpdateStatus({
+            state: 'downloading',
+            progress: data.progress || 0,
+            downloaded: data.downloaded || 0,
+            totalSize: data.totalSize || 0,
+          });
+          break;
+        case 'downloaded':
+          setUpdateStatus({ state: 'downloaded' });
+          break;
+        case 'error':
+          setUpdateStatus({ state: 'error', message: data.message || 'Update failed' });
+          break;
+      }
     };
-    window.api.app.onDownloadProgress(handleProgress);
+    window.api.app.onUpdateStatus(handleUpdateStatus);
     return () => {
-      window.api.app.removeDownloadProgressListener(handleProgress);
+      window.api.app.removeUpdateStatusListener(handleUpdateStatus);
     };
-  }, [updateProgress]);
+  }, []);
 
   const handleCheckForUpdates = useCallback(async () => {
     setUpdateStatus({ state: 'checking' });
@@ -228,46 +259,20 @@ export function AboutSection() {
 
   const handleDownload = useCallback(async () => {
     if (updateStatus.state !== 'available') return;
-    const { release } = updateStatus;
-    const asset = getPlatformAsset(release.assets, platform);
-    if (!asset) {
-      debugLog('app', `No download asset for ${platform}`, release.assets, 'error');
-      setUpdateStatus({ state: 'error', message: `No download available for ${platform}. Visit the release page to download manually.` });
-      return;
-    }
-
-    setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size, source: asset.cdnUrl ? 'CDN' : 'GitHub' });
-
-    // Try CDN first, fallback to GitHub
-    if (asset.cdnUrl) {
-      debugLog('app', `Downloading from CDN: ${asset.cdnUrl}`);
-      try {
-        const filePath = await window.api.app.downloadUpdate(asset.cdnUrl, asset.name);
-        debugLog('app', `CDN download complete: ${filePath}`);
-        setUpdateStatus({ state: 'downloaded', filePath });
-        return;
-      } catch (err: any) {
-        debugLog('app', `CDN download failed, falling back to GitHub: ${err?.message}`, err, 'warn');
-        // Reset progress for GitHub retry
-        setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: asset.size, source: 'GitHub' });
-      }
-    }
-
-    // Fallback: download from GitHub
-    debugLog('app', `Downloading from GitHub: ${asset.name} (${formatBytes(asset.size)})`);
+    // Trigger autoUpdater download - progress will come via event listener
+    setUpdateStatus({ state: 'downloading', progress: 0, downloaded: 0, totalSize: 0 });
     try {
-      const filePath = await window.api.app.downloadUpdate(asset.downloadUrl, asset.name);
-      debugLog('app', `GitHub download complete: ${filePath}`);
-      setUpdateStatus({ state: 'downloaded', filePath });
+      await window.api.app.downloadUpdate();
     } catch (err: any) {
       debugLog('app', `Download failed: ${err?.message}`, err, 'error');
       setUpdateStatus({ state: 'error', message: err?.message || 'Download failed' });
     }
-  }, [updateStatus, platform]);
+  }, [updateStatus]);
 
   const handleInstall = useCallback(async () => {
     if (updateStatus.state !== 'downloaded') return;
-    await window.api.app.installUpdate(updateStatus.filePath);
+    // Quit and install - electron-updater will replace the app and restart
+    await window.api.app.installUpdate();
   }, [updateStatus]);
 
   const handleInstallClaudeCode = useCallback(async () => {
@@ -465,7 +470,7 @@ export function AboutSection() {
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-text-muted">
-                  Downloading{updateStatus.source ? ` from ${updateStatus.source}` : ''}…
+                  Downloading…
                 </span>
                 <span className="text-text-muted font-mono text-xs">
                   {formatBytes(updateStatus.downloaded)} / {formatBytes(updateStatus.totalSize)}
@@ -485,7 +490,7 @@ export function AboutSection() {
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-success">
                 <CheckIcon />
-                Download complete
+                Update ready — click to install and restart
               </div>
               <button
                 onClick={handleInstall}
@@ -494,9 +499,6 @@ export function AboutSection() {
               >
                 Install & Restart
               </button>
-              <div className="text-xs text-text-muted">
-                Saved to: {updateStatus.filePath}
-              </div>
             </div>
           )}
 

@@ -185,10 +185,17 @@ export interface AppAPI {
     htmlUrl: string;
     assets: { name: string; size: number; downloadUrl: string; cdnUrl?: string | null }[];
   }>;
-  downloadUpdate: (downloadUrl: string, fileName: string) => Promise<string>;
-  installUpdate: (filePath: string) => Promise<boolean>;
-  onDownloadProgress: (callback: (data: { downloaded: number; totalSize: number; progress: number }) => void) => void;
-  removeDownloadProgressListener: (callback: (data: { downloaded: number; totalSize: number; progress: number }) => void) => void;
+  downloadUpdate: () => Promise<void>;
+  installUpdate: () => Promise<boolean>;
+  onUpdateStatus: (callback: (data: {
+    state: string;
+    release?: any;
+    progress?: number;
+    downloaded?: number;
+    totalSize?: number;
+    message?: string;
+  }) => void) => void;
+  removeUpdateStatusListener: (callback: (data: any) => void) => void;
 }
 
 const claudeMessageListeners = new Map<Function, (...args: any[]) => void>();
@@ -197,6 +204,7 @@ const terminalDataListeners = new Map<Function, (...args: any[]) => void>();
 const terminalExitListeners = new Map<Function, (...args: any[]) => void>();
 const installProgressListeners = new Map<Function, (...args: any[]) => void>();
 const downloadProgressListeners = new Map<Function, (...args: any[]) => void>();
+const updateStatusListeners = new Map<Function, (...args: any[]) => void>();
 const sessionsChangedListeners = new Map<Function, (...args: any[]) => void>();
 const remoteStateListeners = new Map<Function, (...args: any[]) => void>();
 const remoteControlRequestListeners = new Map<Function, (...args: any[]) => void>();
@@ -384,20 +392,27 @@ contextBridge.exposeInMainWorld('api', {
     openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
     preventSleep: (prevent: boolean) => ipcRenderer.invoke('app:preventSleep', prevent),
     checkForUpdates: () => ipcRenderer.invoke('app:checkForUpdates'),
-    downloadUpdate: (downloadUrl: string, fileName: string) => ipcRenderer.invoke('app:downloadUpdate', downloadUrl, fileName),
-    installUpdate: (filePath: string) => ipcRenderer.invoke('app:installUpdate', filePath),
-    onDownloadProgress: (callback: (data: { downloaded: number; totalSize: number; progress: number }) => void) => {
-      const wrappedCallback = (_event: Electron.IpcRendererEvent, data: { downloaded: number; totalSize: number; progress: number }) => {
+    downloadUpdate: () => ipcRenderer.invoke('app:downloadUpdate'),
+    installUpdate: () => ipcRenderer.invoke('app:installUpdate'),
+    onUpdateStatus: (callback: (data: {
+      state: string;
+      release?: any;
+      progress?: number;
+      downloaded?: number;
+      totalSize?: number;
+      message?: string;
+    }) => void) => {
+      const wrappedCallback = (_event: Electron.IpcRendererEvent, data: any) => {
         callback(data);
       };
-      downloadProgressListeners.set(callback, wrappedCallback);
-      ipcRenderer.on('app:download-progress', wrappedCallback);
+      updateStatusListeners.set(callback, wrappedCallback);
+      ipcRenderer.on('app:update-status', wrappedCallback);
     },
-    removeDownloadProgressListener: (callback: (data: { downloaded: number; totalSize: number; progress: number }) => void) => {
-      const wrappedCallback = downloadProgressListeners.get(callback);
+    removeUpdateStatusListener: (callback: (data: any) => void) => {
+      const wrappedCallback = updateStatusListeners.get(callback);
       if (wrappedCallback) {
-        ipcRenderer.removeListener('app:download-progress', wrappedCallback);
-        downloadProgressListeners.delete(callback);
+        ipcRenderer.removeListener('app:update-status', wrappedCallback);
+        updateStatusListeners.delete(callback);
       }
     },
   } satisfies AppAPI,

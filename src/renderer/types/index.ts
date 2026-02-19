@@ -102,10 +102,17 @@ export interface AppAPI {
     htmlUrl: string;
     assets: { name: string; size: number; downloadUrl: string; cdnUrl?: string | null }[];
   }>;
-  downloadUpdate: (downloadUrl: string, fileName: string) => Promise<string>;
-  installUpdate: (filePath: string) => Promise<boolean>;
-  onDownloadProgress: (callback: (data: { downloaded: number; totalSize: number; progress: number }) => void) => void;
-  removeDownloadProgressListener: (callback: (data: { downloaded: number; totalSize: number; progress: number }) => void) => void;
+  downloadUpdate: () => Promise<void>;
+  installUpdate: () => Promise<boolean>;
+  onUpdateStatus: (callback: (data: {
+    state: string;
+    release?: any;
+    progress?: number;
+    downloaded?: number;
+    totalSize?: number;
+    message?: string;
+  }) => void) => void;
+  removeUpdateStatusListener: (callback: (data: any) => void) => void;
 }
 
 export interface ClaudeConfigAPI {
