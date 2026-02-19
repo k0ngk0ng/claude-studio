@@ -40,6 +40,18 @@ export function ChatView() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showSearch, setShowSearch] = useState(false);
 
+  // Track if user is at bottom of chat (to enable/disable auto-scroll)
+  const isAtBottom = useRef(true);
+
+  // Detect if user has scrolled away from bottom
+  const checkIfAtBottom = useCallback(() => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    // Consider "at bottom" if within 50px of bottom
+    const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+    isAtBottom.current = atBottom;
+  }, []);
+
   const { messages, isStreaming, id: sessionId } = currentSession;
   const hasMessages = messages.length > 0;
   const pendingScrollRestore = useRef<number | null>(null);
@@ -51,6 +63,20 @@ export function ChatView() {
     chatScrollElement = scrollRef.current;
     return () => { chatScrollElement = null; };
   });
+
+  // Add scroll listener to detect when user scrolls away from bottom
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) return;
+
+    scrollElement.addEventListener('scroll', checkIfAtBottom, { passive: true });
+    // Check initial position
+    checkIfAtBottom();
+
+    return () => {
+      scrollElement.removeEventListener('scroll', checkIfAtBottom);
+    };
+  }, [checkIfAtBottom]);
 
   // Only allow fork when we have a saved session (not streaming, has session id)
   const canFork = !!currentSession.id && !isStreaming;
@@ -108,10 +134,11 @@ export function ChatView() {
     });
   }, [messages, isLoadingSession]);
 
-  // Auto-scroll to bottom only when streaming (new content arriving), not during tab restore
+  // Auto-scroll to bottom only when streaming AND user is at bottom, not during tab restore
   useEffect(() => {
     if (isRestoringScroll.current) return;
-    if (isStreaming && bottomRef.current) {
+    // Only auto-scroll if user is currently at bottom
+    if (isStreaming && isAtBottom.current && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [isStreaming, messages.length, streamingContent, toolActivities.length, pendingRequests.length]);
