@@ -543,8 +543,47 @@ export function registerIpcHandlers(): void {
   let currentReleaseInfo: { version: string; tagName: string } | null = null;
 
   handle('app:checkForUpdates', async () => {
+    // Try to fetch from CDN first (no GitHub API rate limit issues)
+    if (CDN_BASE_URL) {
+      try {
+        const cdnData = await fetchJson<{
+          version: string;
+          cdnBase: string;
+          files: Record<string, string>;
+        }>(`${CDN_BASE_URL}/releases/latest/cdn-urls.json`);
+
+        if (cdnData.version) {
+          const tagName = `v${cdnData.version}`;
+          currentReleaseInfo = { version: cdnData.version, tagName };
+
+          console.log('app', `Found update from CDN: ${cdnData.version}`);
+
+          return {
+            version: cdnData.version,
+            tagName,
+            name: `ClaudeStudio ${cdnData.version}`,
+            body: '',
+            htmlUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/${tagName}`,
+            assets: Object.entries(cdnData.files || {}).map(([name, cdnUrl]) => ({
+              name,
+              size: 0,
+              downloadUrl: `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tagName}/${name}`,
+              cdnUrl,
+            })),
+          };
+        }
+      } catch (err: any) {
+        console.log('app', `CDN check failed: ${err?.message}`);
+      }
+    }
+
+    // CDN not available or failed, check if GitHub Token is configured
+    if (!GITHUB_TOKEN) {
+      throw new Error('CDN unavailable. Please set CLAUDE_STUDIO_CDN_URL environment variable or configure GitHub Token (GITHUB_TOKEN) to check for updates.');
+    }
+
+    // Fallback to GitHub API with token
     try {
-      // Fetch latest release from GitHub API
       const release: any = await fetchJson(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`, true);
       const tagName = release.tag_name || '';
       const version = tagName.replace(/^v/, '');
@@ -587,56 +626,93 @@ export function registerIpcHandlers(): void {
       throw new Error('No update available. Please check for updates first.');
     }
 
-    // Fetch release info again to get the assets
-    try {
-      const release: any = await fetchJson(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`, true);
-      const tagName = release.tag_name || '';
+    // Try to get download info from CDN first
+    let cdnUrls: Record<string, string> = {};
+    let tagName = currentReleaseInfo.tagName;
 
-      // Get CDN URLs if available
-      let cdnUrls: Record<string, string> = {};
-      if (CDN_BASE_URL) {
-        try {
-          const cdnData = await fetchJson<Record<string, string>>(`${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`);
-          cdnUrls = cdnData.files || {};
-        } catch {
-          // CDN not available
+    if (CDN_BASE_URL) {
+      try {
+        const cdnData = await fetchJson<{
+          version: string;
+          cdnBase: string;
+          files: Record<string, string>;
+        }>(`${CDN_BASE_URL}/releases/latest/cdn-urls.json`);
+        cdnUrls = cdnData.files || {};
+        tagName = `v${cdnData.version}`;
+      } catch {
+        // CDN not available, will try GitHub API
+        console.log('app', 'CDN download info not available, falling back to GitHub API');
+      }
+    }
+
+    // Find the correct asset for this platform from CDN
+    let assetName: string | null = null;
+    const platformPatterns: Record<string, string[]> = {
+      mac: ['.dmg', 'darwin', 'mac'],
+      windows: ['setup', '.exe', '.msi'],
+      linux: ['.deb', '.AppImage', '.rpm'],
+    };
+    const patterns = platformPatterns[platform] || [];
+
+    // Try to find asset from CDN files first
+    if (Object.keys(cdnUrls).length > 0) {
+      for (const pattern of patterns) {
+        assetName = Object.keys(cdnUrls).find(name => name.includes(pattern)) || null;
+        if (assetName) break;
+      }
+    }
+
+    // Fallback to GitHub API if not found in CDN
+    if (!assetName) {
+      try {
+        const release: any = await fetchJson(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`, true);
+        tagName = release.tag_name || '';
+
+        // Also fetch CDN URLs for this tag
+        if (CDN_BASE_URL) {
+          try {
+            const cdnData = await fetchJson<Record<string, string>>(`${CDN_BASE_URL}/releases/${tagName}/cdn-urls.json`);
+            cdnUrls = { ...cdnUrls, ...(cdnData.files || {}) };
+          } catch {
+            // CDN not available
+          }
         }
+
+        for (const pattern of patterns) {
+          if (platform === 'mac') {
+            assetName = release.assets?.find((a: any) => a.name.endsWith(pattern))?.name
+              || release.assets?.find((a: any) => a.name.includes(pattern))?.name
+              || null;
+          } else if (platform === 'windows') {
+            if (pattern === 'setup') {
+              assetName = release.assets?.find((a: any) => a.name.toLowerCase().includes('setup') && a.name.endsWith('.exe'))?.name || null;
+            } else {
+              assetName = release.assets?.find((a: any) => a.name.endsWith(pattern))?.name || null;
+            }
+          } else {
+            assetName = release.assets?.find((a: any) => a.name.endsWith(pattern))?.name || null;
+          }
+          if (assetName) break;
+        }
+      } catch (err: any) {
+        console.log('app', `Failed to fetch release info: ${err?.message}`, err, 'error');
+        throw new Error(`Failed to download update: ${err?.message}`);
       }
+    }
 
-      // Find the correct asset for this platform
-      let assetName: string | null = null;
-      if (platform === 'mac') {
-        assetName = release.assets?.find((a: any) => a.name.endsWith('.dmg'))?.name
-          || release.assets?.find((a: any) => a.name.includes('darwin') || a.name.includes('mac'))?.name
-          || null;
-      } else if (platform === 'windows') {
-        assetName = release.assets?.find((a: any) => a.name.toLowerCase().includes('setup') && a.name.endsWith('.exe'))?.name
-          || release.assets?.find((a: any) => a.name.endsWith('.exe'))?.name
-          || release.assets?.find((a: any) => a.name.endsWith('.msi'))?.name
-          || null;
-      } else {
-        assetName = release.assets?.find((a: any) => a.name.endsWith('.deb'))?.name
-          || release.assets?.find((a: any) => a.name.endsWith('.AppImage'))?.name
-          || release.assets?.find((a: any) => a.name.endsWith('.rpm'))?.name
-          || null;
-      }
+    if (!assetName) {
+      throw new Error(`No suitable asset found for platform: ${platform}`);
+    }
 
-      if (!assetName) {
-        throw new Error(`No suitable asset found for platform: ${platform}`);
-      }
+    // Get URLs - try CDN first, then GitHub
+    const cdnUrl = cdnUrls[assetName];
+    const githubUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/download/${tagName}/${assetName}`;
 
-      // Get URLs - try CDN first, then GitHub
-      const cdnUrl = cdnUrls[assetName];
-      const githubUrl = release.assets?.find((a: any) => a.name === assetName)?.browser_download_url;
+    // Try CDN first, then fall back to GitHub
+    const downloadUrl = cdnUrl || githubUrl;
+    const useCdn = !!cdnUrl;
 
-      if (!githubUrl) {
-        throw new Error(`Asset not found: ${assetName}`);
-      }
-
-      // Try CDN first, then fall back to GitHub
-      const downloadUrl = cdnUrl || githubUrl;
-      const useCdn = !!cdnUrl;
-
+    try {
       console.log('app', `Downloading update: ${assetName} from ${useCdn ? 'CDN' : 'GitHub'}`);
 
       // Send initial progress
