@@ -129,19 +129,28 @@ jobs:
           CLAUDE_STUDIO_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
 
       - name: Install NSIS
-        shell: cmd
+        shell: pwsh
         run: |
-          if exist "C:\Program Files (x86)\NSIS\makensis.exe" (
-            echo NSIS already installed
-          ) else (
-            echo Downloading NSIS...
-            curl -L -o nsis.zip "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip"
-            echo Extracting NSIS...
-            powershell -Command "Expand-Archive -Path nsis.zip -DestinationPath 'C:\Program Files (x86)' -Force"
-            ren "C:\Program Files (x86)\nsis-3.10" NSIS
-            del nsis.zip
-            echo NSIS installed successfully
-          )
+          $nsisPath = "C:\Program Files (x86)\NSIS\makensis.exe"
+          if (Test-Path $nsisPath) {
+            Write-Host "NSIS already installed"
+            Get-Item $nsisPath
+          } else {
+            Write-Host "Installing NSIS via winget..."
+            # Try winget first
+            winget install NSIS.NSIS --silent --accept-package-agreements --accept-source-agreements
+            if (-not (Test-Path $nsisPath)) {
+              Write-Host "Winget failed, trying chocolatey..."
+              choco install nsis -y
+            }
+            if (Test-Path $nsisPath) {
+              Write-Host "NSIS installed successfully"
+              Get-Item $nsisPath
+            } else {
+              Write-Host "ERROR: NSIS installation failed"
+              exit 1
+            }
+          }
 
       - name: Build NSIS installer
         shell: pwsh
