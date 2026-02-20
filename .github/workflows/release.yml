@@ -467,6 +467,34 @@ jobs:
           ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/ --short
 
       - name: Refresh CDN cache
+        env:
+          ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}
+          ALIYUN_ACCESS_KEY_SECRET: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}
+          TAG: ${{ steps.version.outputs.TAG }}
         run: |
-          pip3 install aliyun-python-sdk-core-v3 aliyun-python-sdk-cdn -q
-          python3 -c "from aliyunsdkcore.client import AliyunClient; from aliyunsdkcdn.request.request20180510.BatchRefreshDObjectCachesRequest import BatchRefreshDObjectCachesRequest; client = AliyunClient('https://cdn.aliyuncs.com', '${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}', '${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}'); req = BatchRefreshDObjectCachesRequest(); req.set_ObjectPath('https://cdn.ichenj.com/claude-studio/releases/${{ steps.version.outputs.TAG }}/release-info.json'); req.set_ObjectType('file'); client.do_action_with_exception(req); print('Refreshed versioned'); req2 = BatchRefreshDObjectCachesRequest(); req2.set_ObjectPath('https://cdn.ichenj.com/claude-studio/releases/latest/release-info.json'); req2.set_ObjectType('file'); client.do_action_with_exception(req2); print('Refreshed latest')"
+          python3 -m pip install -q aliyun-python-sdk-core aliyun-python-sdk-cdn
+
+          python3 - <<'PY'
+          import os
+          from aliyunsdkcore.client import AcsClient
+          from aliyunsdkcdn.request.v20180510.RefreshObjectCachesRequest import RefreshObjectCachesRequest
+
+          ak = os.environ["ALIYUN_ACCESS_KEY_ID"]
+          sk = os.environ["ALIYUN_ACCESS_KEY_SECRET"]
+          tag = os.environ["TAG"]
+
+          client = AcsClient(ak, sk, "cn-hangzhou")
+
+          urls = [
+              f"https://cdn.ichenj.com/claude-studio/releases/{tag}/release-info.json",
+              "https://cdn.ichenj.com/claude-studio/releases/latest/release-info.json",
+          ]
+
+          req = RefreshObjectCachesRequest()
+          req.set_accept_format("json")
+          req.set_ObjectType("File")
+          req.set_ObjectPath("\n".join(urls))  # 多个 URL 用换行拼接
+
+          resp = client.do_action_with_exception(req)
+          print(resp.decode("utf-8", errors="ignore"))
+          PY
