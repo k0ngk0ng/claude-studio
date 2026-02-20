@@ -468,30 +468,32 @@ jobs:
 
       - name: Refresh CDN cache
         run: |
-          # Install aliyun CLI using official installer
-          if ! command -v aliyun &> /dev/null; then
-            echo "Installing aliyun CLI..."
-            curl -sSL https://aliyuncli.alicdn.com/aliyun-cli-linux-latest.tgz | tar xz -C /tmp
-            mv /tmp/aliyun-cli-linux-*/aliyun /usr/local/bin/aliyun || sudo mv /tmp/aliyun-cli-linux-*/aliyun /usr/local/bin/aliyun
-          fi
-
-          # Configure aliyun CLI
-          aliyun configure set \
-            --access-key-id ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }} \
-            --access-key-secret ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }} \
-            --region cn-shanghai \
-            --mode AK
+          # Install aliyun Python SDK
+          pip3 install aliyun-python-sdk-core-v3 aliyun-python-sdk-cdn -q
 
           # Refresh both the versioned release-info.json and the latest one
           TAG="${{ steps.version.outputs.TAG }}"
-          echo "Refreshing CDN cache for v${TAG#v}..."
-          aliyun cdn BatchRefreshDObjectCaches \
-            --ObjectPath "https://cdn.ichenj.com/claude-studio/releases/${TAG}/release-info.json" \
-            --ObjectType file
+          python3 << 'EOF'
+            from aliyunsdkcore.client import AliyunClient
+            from aliyunsdkcdn.request.request20180510.BatchRefreshDObjectCachesRequest import BatchRefreshDObjectCachesRequest
 
-          echo "Refreshing CDN cache for latest..."
-          aliyun cdn BatchRefreshDObjectCaches \
-            --ObjectPath "https://cdn.ichenj.com/claude-studio/releases/latest/release-info.json" \
-            --ObjectType file
+            client = AliyunClient(
+                'https://cdn.aliyuncs.com',
+                '${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}',
+                '${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}'
+            )
 
-          echo "CDN cache refresh initiated"
+            # Refresh versioned release-info.json
+            request = BatchRefreshDObjectCachesRequest()
+            request.set_ObjectPath('https://cdn.ichenj.com/claude-studio/releases/${{ steps.version.outputs.TAG }}/release-info.json')
+            request.set_ObjectType('file')
+            client.do_action_with_exception(request)
+            print('Refreshed versioned release-info.json')
+
+            # Refresh latest release-info.json
+            request2 = BatchRefreshDObjectCachesRequest()
+            request2.set_ObjectPath('https://cdn.ichenj.com/claude-studio/releases/latest/release-info.json')
+            request2.set_ObjectType('file')
+            client.do_action_with_exception(request2)
+            print('Refreshed latest release-info.json')
+          EOF
