@@ -165,8 +165,13 @@ jobs:
           $appDirFull = Join-Path $PWD.Path $appDir.Name
           Write-Host "Found app directory: $appDirFull"
 
+          # Copy to a relative path for NSIS (NSIS has issues with absolute paths)
+          Copy-Item -Path $appDirFull -Destination installer\app -Recurse -Force
+          Write-Host "Copied app to installer\app"
+
           # Build NSIS installer
-          & "C:\Program Files (x86)\NSIS\makensis.exe" /V4 "/DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }}" "/DAPP_DIR=$appDirFull" installer\installer.nsi
+          Set-Location installer
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /V4 "/DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }}" "installer.nsi"
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
