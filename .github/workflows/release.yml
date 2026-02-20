@@ -129,25 +129,19 @@ jobs:
           CLAUDE_STUDIO_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
 
       - name: Install NSIS
-        shell: pwsh
+        shell: cmd
         run: |
-          $nsisPath = "C:\Program Files (x86)\NSIS"
-          if (Test-Path $nsisPath) {
-            Write-Host "NSIS already installed"
-          } else {
-            Write-Host "Downloading NSIS..."
-            $nsisUrl = "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip"
-            $zipPath = Join-Path $env:TEMP "nsis.zip"
-            Invoke-WebRequest -Uri $nsisUrl -OutFile $zipPath
-            Write-Host "Extracting NSIS..."
-            Expand-Archive -Path $zipPath -DestinationPath "C:\Program Files (x86)" -Force
-            $extractedPath = (Get-ChildItem "C:\Program Files (x86)" -Directory | Where-Object { $_.Name -like "nsis*" } | Select-Object -First 1).FullName
-            if ($extractedPath) {
-              Rename-Item -Path $extractedPath -NewName "NSIS" -Force
-            }
-            Remove-Item $zipPath -Force
-            Write-Host "NSIS installed successfully"
-          }
+          if exist "C:\Program Files (x86)\NSIS\makensis.exe" (
+            echo NSIS already installed
+          ) else (
+            echo Downloading NSIS...
+            curl -L -o nsis.zip "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip"
+            echo Extracting NSIS...
+            powershell -Command "Expand-Archive -Path nsis.zip -DestinationPath 'C:\Program Files (x86)' -Force"
+            ren "C:\Program Files (x86)\nsis-3.10" NSIS
+            del nsis.zip
+            echo NSIS installed successfully
+          )
 
       - name: Find packaged app directory
         id: appdir
