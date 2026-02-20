@@ -137,11 +137,14 @@ jobs:
           } else {
             Write-Host "Downloading NSIS..."
             $nsisUrl = "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip"
-            $zipPath = "$env:TEMP\nsis.zip"
+            $zipPath = Join-Path $env:TEMP "nsis.zip"
             Invoke-WebRequest -Uri $nsisUrl -OutFile $zipPath
             Write-Host "Extracting NSIS..."
             Expand-Archive -Path $zipPath -DestinationPath "C:\Program Files (x86)" -Force
-            Rename-Item -Path "C:\Program Files (x86)\nsis-3.10" -NewName "NSIS" -Force
+            $extractedPath = (Get-ChildItem "C:\Program Files (x86)" -Directory | Where-Object { $_.Name -like "nsis*" } | Select-Object -First 1).FullName
+            if ($extractedPath) {
+              Rename-Item -Path $extractedPath -NewName "NSIS" -Force
+            }
             Remove-Item $zipPath -Force
             Write-Host "NSIS installed successfully"
           }
