@@ -405,11 +405,11 @@ jobs:
             oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/ \
             --force
 
-      - name: Generate cdn-urls.json
+      - name: Generate release-info.json
         run: |
           CDN_BASE="${{ vars.ALIYUN_OSS_CDN_URL }}/claude-studio/releases/${{ steps.version.outputs.TAG }}"
           TAG="${{ steps.version.outputs.TAG }}"
-          echo '{}' > cdn-urls.json
+          echo '{}' > release-info.json
           # Build JSON with all file URLs
           node -e "
             const fs = require('fs');
@@ -420,17 +420,17 @@ jobs:
             for (const f of files) {
               urls.files[f] = base + '/' + f;
             }
-            fs.writeFileSync('cdn-urls.json', JSON.stringify(urls, null, 2));
+            fs.writeFileSync('release-info.json', JSON.stringify(urls, null, 2));
             console.log(JSON.stringify(urls, null, 2));
           "
 
-      - name: Upload cdn-urls.json to OSS
+      - name: Upload release-info.json to OSS
         run: |
-          ossutil cp cdn-urls.json \
-            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/${{ steps.version.outputs.TAG }}/cdn-urls.json \
+          ossutil cp release-info.json \
+            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/${{ steps.version.outputs.TAG }}/release-info.json \
             --force
-          ossutil cp cdn-urls.json \
-            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/cdn-urls.json \
+          ossutil cp release-info.json \
+            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/release-info.json \
             --force
 
       - name: Verify OSS upload
@@ -456,16 +456,16 @@ jobs:
             --region cn-shanghai \
             --mode AK
 
-          # Refresh both the versioned cdn-urls.json and the latest one
+          # Refresh both the versioned release-info.json and the latest one
           TAG="${{ steps.version.outputs.TAG }}"
           echo "Refreshing CDN cache for v${TAG#v}..."
           aliyun cdn BatchRefreshDObjectCaches \
-            --ObjectPath "https://cdn.ichenj.com/claude-studio/releases/${TAG}/cdn-urls.json" \
+            --ObjectPath "https://cdn.ichenj.com/claude-studio/releases/${TAG}/release-info.json" \
             --ObjectType file
 
           echo "Refreshing CDN cache for latest..."
           aliyun cdn BatchRefreshDObjectCaches \
-            --ObjectPath "https://cdn.ichenj.com/claude-studio/releases/latest/cdn-urls.json" \
+            --ObjectPath "https://cdn.ichenj.com/claude-studio/releases/latest/release-info.json" \
             --ObjectType file
 
           echo "CDN cache refresh initiated"
