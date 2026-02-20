@@ -469,27 +469,4 @@ jobs:
       - name: Refresh CDN cache
         run: |
           pip3 install aliyun-python-sdk-core-v3 aliyun-python-sdk-cdn -q
-          python3 -c "
-from aliyunsdkcore.client import AliyunClient
-from aliyunsdkcdn.request.request20180510.BatchRefreshDObjectCachesRequest import BatchRefreshDObjectCachesRequest
-
-client = AliyunClient(
-    'https://cdn.aliyuncs.com',
-    '${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}',
-    '${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}'
-)
-
-# Refresh versioned release-info.json
-request = BatchRefreshDObjectCachesRequest()
-request.set_ObjectPath('https://cdn.ichenj.com/claude-studio/releases/${{ steps.version.outputs.TAG }}/release-info.json')
-request.set_ObjectType('file')
-client.do_action_with_exception(request)
-print('Refreshed versioned release-info.json')
-
-# Refresh latest release-info.json
-request2 = BatchRefreshDObjectCachesRequest()
-request2.set_ObjectPath('https://cdn.ichenj.com/claude-studio/releases/latest/release-info.json')
-request2.set_ObjectType('file')
-client.do_action_with_exception(request2)
-print('Refreshed latest release-info.json')
-"
+          python3 -c "from aliyunsdkcore.client import AliyunClient; from aliyunsdkcdn.request.request20180510.BatchRefreshDObjectCachesRequest import BatchRefreshDObjectCachesRequest; client = AliyunClient('https://cdn.aliyuncs.com', '${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}', '${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }}'); req = BatchRefreshDObjectCachesRequest(); req.set_ObjectPath('https://cdn.ichenj.com/claude-studio/releases/${{ steps.version.outputs.TAG }}/release-info.json'); req.set_ObjectType('file'); client.do_action_with_exception(req); print('Refreshed versioned'); req2 = BatchRefreshDObjectCachesRequest(); req2.set_ObjectPath('https://cdn.ichenj.com/claude-studio/releases/latest/release-info.json'); req2.set_ObjectType('file'); client.do_action_with_exception(req2); print('Refreshed latest')"
