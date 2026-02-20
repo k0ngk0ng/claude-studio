@@ -128,12 +128,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CLAUDE_STUDIO_CDN_URL: ${{ vars.ALIYUN_OSS_CDN_URL }}
 
-      - name: Debug output
-        shell: pwsh
-        run: |
-          Write-Host "Contents of out directory:"
-          Get-ChildItem -Path out -Recurse | Select-Object FullName
-
       - name: Install NSIS
         shell: pwsh
         run: |
@@ -161,22 +155,37 @@ jobs:
       - name: Build NSIS installer
         shell: pwsh
         run: |
-          # Find the packaged app directory
-          $appDir = Get-ChildItem -Path out -Directory | Where-Object { $_.Name -match "win32" } | Select-Object -First 1
+          # Get the github workspace path
+          $workspace = $env:GITHUB_WORKSPACE
+          if (-not $workspace) {
+            $workspace = $PWD.Path
+          }
+          Write-Host "Workspace: $workspace"
+
+          # Find the packaged app directory using absolute path
+          $appDir = Get-ChildItem -Path "$workspace\out" -Directory | Where-Object { $_.Name -match "win32" } | Select-Object -First 1
           if (-not $appDir) {
             Write-Host "ERROR: Could not find packaged app directory"
-            Get-ChildItem out
+            Get-ChildItem "$workspace\out"
             exit 1
           }
-          $appDirFull = Join-Path $PWD.Path $appDir.Name
+          $appDirFull = Join-Path "$workspace\out" $appDir.Name
           Write-Host "Found app directory: $appDirFull"
 
-          # Copy to a relative path for NSIS (NSIS has issues with absolute paths)
-          Copy-Item -Path $appDirFull -Destination installer\app -Recurse -Force
+          # Copy to installer directory
+          $installerDir = Join-Path $workspace "installer"
+          $appDest = Join-Path $installerDir "app"
+
+          # Remove existing app directory if exists
+          if (Test-Path $appDest) {
+            Remove-Item $appDest -Recurse -Force
+          }
+
+          Copy-Item -Path $appDirFull -Destination $appDest -Recurse -Force
           Write-Host "Copied app to installer\app"
 
           # Build NSIS installer
-          Set-Location installer
+          Set-Location $installerDir
           & "C:\Program Files (x86)\NSIS\makensis.exe" /V4 "/DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }}" "installer.nsi"
 
       - name: Upload Windows artifacts
