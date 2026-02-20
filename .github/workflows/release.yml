@@ -440,3 +440,32 @@ jobs:
           echo ""
           echo "=== claude-studio/releases/latest/ ==="
           ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/ --short
+
+      - name: Refresh CDN cache
+        run: |
+          # Install aliyun CLI if not available
+          if ! command -v aliyun &> /dev/null; then
+            echo "Installing aliyun CLI..."
+            pip install aliyun-python-sdk-core-v3 aliyun-python-sdk-cdn -q
+          fi
+
+          # Configure aliyun CLI
+          aliyun configure set \
+            --access-key-id ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }} \
+            --access-key-secret ${{ secrets.ALIYUN_OSS_ACCESS_KEY_SECRET }} \
+            --region cn-shanghai \
+            --mode AK
+
+          # Refresh both the versioned cdn-urls.json and the latest one
+          TAG="${{ steps.version.outputs.TAG }}"
+          echo "Refreshing CDN cache for v${TAG#v}..."
+          aliyun cdn BatchRefreshDObjectCaches \
+            --ObjectPath "https://cdn.ichenj.com/claude-studio/releases/${TAG}/cdn-urls.json" \
+            --ObjectType file
+
+          echo "Refreshing CDN cache for latest..."
+          aliyun cdn BatchRefreshDObjectCaches \
+            --ObjectPath "https://cdn.ichenj.com/claude-studio/releases/latest/cdn-urls.json" \
+            --ObjectType file
+
+          echo "CDN cache refresh initiated"
