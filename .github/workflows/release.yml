@@ -143,28 +143,21 @@ jobs:
             echo NSIS installed successfully
           )
 
-      - name: Find packaged app directory
-        id: appdir
-        shell: bash
-        run: |
-          APP_DIR=$(find out -maxdepth 1 -type d -name "*-win32-*" | head -1)
-          if [ -z "$APP_DIR" ]; then
-            echo "ERROR: Could not find packaged app directory in out/"
-            ls -la out/
-            exit 1
-          fi
-          # Convert to Windows path format
-          APP_DIR_WIN=$(cygpath -w "$PWD/$APP_DIR")
-          echo "APP_DIR=$APP_DIR" >> "$GITHUB_OUTPUT"
-          echo "APP_DIR_WIN=$APP_DIR_WIN" >> "$GITHUB_OUTPUT"
-          echo "Found app directory: $APP_DIR"
-
       - name: Build NSIS installer
-        shell: cmd
+        shell: pwsh
         run: |
-          echo APP_DIR=%APP_DIR_WIN%
-          dir "%APP_DIR_WIN%"
-          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }} /DAPP_DIR="%APP_DIR_WIN%" installer\installer.nsi
+          # Find the packaged app directory
+          $appDir = Get-ChildItem -Path out -Directory | Where-Object { $_.Name -match "win32" } | Select-Object -First 1
+          if (-not $appDir) {
+            Write-Host "ERROR: Could not find packaged app directory"
+            Get-ChildItem out
+            exit 1
+          }
+          $appDirFull = Join-Path $PWD.Path $appDir.Name
+          Write-Host "Found app directory: $appDirFull"
+
+          # Build NSIS installer
+          & "C:\Program Files (x86)\NSIS\makensis.exe" /V4 "/DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }}" "/DAPP_DIR=$appDirFull" installer\installer.nsi
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
