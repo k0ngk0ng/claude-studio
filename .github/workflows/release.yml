@@ -153,13 +153,18 @@ jobs:
             ls -la out/
             exit 1
           fi
+          # Convert to Windows path format
+          APP_DIR_WIN=$(cygpath -w "$PWD/$APP_DIR")
           echo "APP_DIR=$APP_DIR" >> "$GITHUB_OUTPUT"
+          echo "APP_DIR_WIN=$APP_DIR_WIN" >> "$GITHUB_OUTPUT"
           echo "Found app directory: $APP_DIR"
 
       - name: Build NSIS installer
         shell: cmd
         run: |
-          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }} "/DAPP_DIR=%CD%\${{ steps.appdir.outputs.APP_DIR }}" installer\installer.nsi
+          echo APP_DIR=%APP_DIR_WIN%
+          dir "%APP_DIR_WIN%"
+          "C:\Program Files (x86)\NSIS\makensis.exe" /V4 /DPRODUCT_VERSION=${{ steps.version.outputs.VERSION }} /DAPP_DIR="%APP_DIR_WIN%" installer\installer.nsi
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
