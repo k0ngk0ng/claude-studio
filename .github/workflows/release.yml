@@ -468,10 +468,11 @@ jobs:
 
       - name: Refresh CDN cache
         run: |
-          # Install aliyun CLI if not available
+          # Install aliyun CLI using official installer
           if ! command -v aliyun &> /dev/null; then
             echo "Installing aliyun CLI..."
-            pip3 install aliyun-cli -q
+            curl -sSL https://aliyuncli.alicdn.com/aliyun-cli-linux-latest.tgz | tar xz -C /tmp
+            mv /tmp/aliyun-cli-linux-*/aliyun /usr/local/bin/aliyun || sudo mv /tmp/aliyun-cli-linux-*/aliyun /usr/local/bin/aliyun
           fi
 
           # Configure aliyun CLI
