@@ -798,7 +798,17 @@ export function registerIpcHandlers(): void {
   });
 
   handle('app:installUpdate', async () => {
-    // Quit and install - electron-updater will replace the app and restart
+    const pendingPath = (global as any).pendingUpdatePath;
+    if (pendingPath && fs.existsSync(pendingPath)) {
+      console.log('app', `Installing update from: ${pendingPath}`);
+      const { shell } = require('electron');
+      // Open the installer - this will trigger the install process
+      shell.openPath(pendingPath);
+      // Quit the app so the installer can proceed
+      app.quit();
+      return true;
+    }
+    // Fallback to autoUpdater (for auto-downloaded updates)
     autoUpdater.quitAndInstall(false, true);
     return true;
   });
