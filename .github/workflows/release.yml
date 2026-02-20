@@ -131,18 +131,19 @@ jobs:
       - name: Install NSIS
         shell: pwsh
         run: |
-          $maxRetries = 3
-          for ($i = 1; $i -le $maxRetries; $i++) {
-            Write-Host "Attempt $i of $maxRetries..."
-            choco install nsis -y
-            if ($LASTEXITCODE -eq 0) { break }
-            if ($i -lt $maxRetries) {
-              Write-Host "Failed, retrying in 30 seconds..."
-              Start-Sleep -Seconds 30
-            } else {
-              Write-Host "All attempts failed"
-              exit 1
-            }
+          $nsisPath = "C:\Program Files (x86)\NSIS"
+          if (Test-Path $nsisPath) {
+            Write-Host "NSIS already installed"
+          } else {
+            Write-Host "Downloading NSIS..."
+            $nsisUrl = "https://downloads.sourceforge.net/project/nsis/NSIS%203/3.10/nsis-3.10.zip"
+            $zipPath = "$env:TEMP\nsis.zip"
+            Invoke-WebRequest -Uri $nsisUrl -OutFile $zipPath
+            Write-Host "Extracting NSIS..."
+            Expand-Archive -Path $zipPath -DestinationPath "C:\Program Files (x86)" -Force
+            Rename-Item -Path "C:\Program Files (x86)\nsis-3.10" -NewName "NSIS" -Force
+            Remove-Item $zipPath -Force
+            Write-Host "NSIS installed successfully"
           }
 
       - name: Find packaged app directory
