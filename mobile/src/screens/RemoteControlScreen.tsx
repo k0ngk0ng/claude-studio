@@ -20,7 +20,7 @@ import { useRemoteStore } from '../stores/remoteStore';
 import { colors, spacing, fontSize, borderRadius } from '../utils/theme';
 import type { Message } from '../types';
 
-type Tab = 'chat' | 'sessions';
+type Tab = 'chat' | 'threads';
 
 interface Props {
   onBack: () => void;
@@ -41,7 +41,7 @@ export function RemoteControlScreen({ onBack }: Props) {
     releaseDesktop,
   } = useRemoteStore();
 
-  const [activeTab, setActiveTab] = useState<Tab>('sessions');
+  const [activeTab, setActiveTab] = useState<Tab>('threads');
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
@@ -93,24 +93,28 @@ export function RemoteControlScreen({ onBack }: Props) {
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
-        {(['sessions', 'chat'] as Tab[]).map((tab) => (
+        {(['threads', 'chat'] as Tab[]).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => {
               setActiveTab(tab);
-              if (tab === 'sessions') loadSessions();
+              if (tab === 'threads') loadSessions();
             }}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'sessions' ? 'Sessions' : tab === 'chat' ? 'Chat' : 'Git'}
+              {tab === 'threads' ? 'Threads' : tab === 'chat' ? 'Chat' : 'Git'}
             </Text>
           </TouchableOpacity>
         ))}
       </View>
 
       {/* Content — keep ChatTab mounted to preserve scroll position */}
-      <View style={{ flex: 1, display: activeTab === 'chat' ? 'flex' : 'none' }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1, display: activeTab === 'chat' ? 'flex' : 'none' }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
         <ChatTab
           messages={messages}
           input={input}
@@ -123,8 +127,8 @@ export function RemoteControlScreen({ onBack }: Props) {
           onNewChat={startNewChat}
           hasCurrentSession={!!currentSessionId}
         />
-      </View>
-      {activeTab === 'sessions' && (
+      </KeyboardAvoidingView>
+      {activeTab === 'threads' && (
         <SessionsTab
           sessions={sessions}
           onSelect={async (id) => {
@@ -178,11 +182,7 @@ function ChatTab({
     : null;
 
   return (
-    <KeyboardAvoidingView
-      style={styles.chatContainer}
-      behavior="padding"
-    >
-      <View style={{ flex: 1 }}>
+    <View style={styles.chatContainer}>
       {/* Project path bar */}
       {shortPath && (
         <View style={styles.projectBar}>
@@ -238,7 +238,6 @@ function ChatTab({
         </TouchableOpacity>
       </View>
     </View>
-    </KeyboardAvoidingView>
   );
 }
 
@@ -276,7 +275,7 @@ function SessionsTab({
       contentContainerStyle={styles.sessionList}
       ListEmptyComponent={
         <View style={styles.emptyChat}>
-          <Text style={styles.emptyChatText}>No sessions found</Text>
+          <Text style={styles.emptyChatText}>No threads found</Text>
         </View>
       }
       renderItem={({ item }) => (
