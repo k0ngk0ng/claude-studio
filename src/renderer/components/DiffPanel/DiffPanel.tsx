@@ -18,10 +18,11 @@ interface ChangeContextMenuProps {
   onViewDiff: () => void;
   onRevealInFiles: () => void;
   onStageUnstage: () => void;
+  onDiscard: () => void;
   onClose: () => void;
 }
 
-function ChangeContextMenu({ x, y, file, activeTab, t, onViewDiff, onRevealInFiles, onStageUnstage, onClose }: ChangeContextMenuProps) {
+function ChangeContextMenu({ x, y, file, activeTab, t, onViewDiff, onRevealInFiles, onStageUnstage, onDiscard, onClose }: ChangeContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -115,6 +116,26 @@ function ChangeContextMenu({ x, y, file, activeTab, t, onViewDiff, onRevealInFil
         </span>
         <span>{activeTab === 'unstaged' ? t('diff.stageFile') : t('diff.unstageFile')}</span>
       </button>
+
+      {/* Discard (only for unstaged) */}
+      {activeTab === 'unstaged' && (
+        <>
+          <div className="border-t border-border my-1" />
+          <button
+            onClick={() => { onDiscard(); onClose(); }}
+            className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs
+                       text-error hover:text-error-hover hover:bg-surface-hover
+                       transition-colors"
+          >
+            <span className="text-error">
+              <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                <path d="M2 4h12M5.5 4V2.5a1 1 0 011-1h3a1 1 0 011 1V4M12 4v9.5a1.5 1.5 0 01-1.5 1.5h-5A1.5 1.5 0 014 13.5V4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span>{t('diff.discard')}</span>
+          </button>
+        </>
+      )}
     </div>
   );
 }
@@ -123,7 +144,7 @@ function ChangeContextMenu({ x, y, file, activeTab, t, onViewDiff, onRevealInFil
 
 export function DiffPanel() {
   const { t } = useTranslation();
-  const { gitStatus, stageFile, unstageFile, commit, getDiff, refreshStatus } = useGit();
+  const { gitStatus, stageFile, unstageFile, discardFile, discardAll, commit, getDiff, refreshStatus } = useGit();
   const { setRevealFile } = useAppStore();
   const [activeTab, setActiveTab] = useState<TabType>('unstaged');
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -247,23 +268,52 @@ export function DiffPanel() {
                   }`}>
                     {file.path}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleStageUnstage(file);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded
-                               text-[10px] font-medium transition-opacity
-                               bg-surface-hover hover:bg-surface-active text-text-secondary"
-                  >
-                    {activeTab === 'unstaged' ? t('diff.stage') : t('diff.unstage')}
-                  </button>
+                  <div className="flex items-center gap-1">
+                    {activeTab === 'unstaged' && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          discardFile(file.path);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded
+                                   text-[10px] font-medium transition-opacity
+                                   bg-surface-hover hover:bg-error/20 text-error"
+                        title={t('diff.discard')}
+                      >
+                        {t('diff.discard')}
+                      </button>
+                    )}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStageUnstage(file);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 px-1.5 py-0.5 rounded
+                                 text-[10px] font-medium transition-opacity
+                                 bg-surface-hover hover:bg-surface-active text-text-secondary"
+                    >
+                      {activeTab === 'unstaged' ? t('diff.stage') : t('diff.unstage')}
+                    </button>
+                  </div>
                 </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Discard All (only for unstaged) */}
+      {activeTab === 'unstaged' && unstagedCount > 0 && (
+        <div className="border-t border-border p-2 shrink-0">
+          <button
+            onClick={() => discardAll()}
+            className="w-full py-1.5 rounded-lg bg-error/10 text-error text-xs font-medium
+                       hover:bg-error/20 transition-colors"
+          >
+            {t('diff.discardAll')}
+          </button>
+        </div>
+      )}
 
       {/* Commit section */}
       {stagedCount > 0 && (
@@ -300,6 +350,7 @@ export function DiffPanel() {
           onViewDiff={() => handleViewDiff(contextMenu.file)}
           onRevealInFiles={() => handleRevealInFiles(contextMenu.file)}
           onStageUnstage={() => handleStageUnstage(contextMenu.file)}
+          onDiscard={() => discardFile(contextMenu.file.path)}
           onClose={() => setContextMenu(null)}
         />
       )}

@@ -237,6 +237,14 @@ export function registerIpcHandlers(): void {
     return gitManager.unstageFile(cwd, file);
   });
 
+  handle('git:discard', (_event, cwd: string, file: string) => {
+    return gitManager.discardFile(cwd, file);
+  });
+
+  handle('git:discardAll', (_event, cwd: string) => {
+    return gitManager.discardAll(cwd);
+  });
+
   handle('git:commit', (_event, cwd: string, message: string) => {
     return gitManager.commit(cwd, message);
   });

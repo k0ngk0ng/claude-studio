@@ -130,6 +130,7 @@
     "noChanges": "未检测到更改",
     "commit": "提交",
     "discard": "放弃",
+    "discardAll": "放弃全部",
     "stageAll": "暂存全部",
     "unstageAll": "取消暂存",
     "unstaged": "未暂存",

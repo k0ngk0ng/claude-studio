@@ -44,6 +44,32 @@ export function useGit() {
     [currentProject.path, refreshStatus]
   );
 
+  const discardFile = useCallback(
+    async (file: string) => {
+      if (!currentProject.path) return;
+      try {
+        await window.api.git.discard(currentProject.path, file);
+        await refreshStatus();
+      } catch (err) {
+        console.error('Failed to discard file:', err);
+      }
+    },
+    [currentProject.path, refreshStatus]
+  );
+
+  const discardAll = useCallback(
+    async () => {
+      if (!currentProject.path) return;
+      try {
+        await window.api.git.discardAll(currentProject.path);
+        await refreshStatus();
+      } catch (err) {
+        console.error('Failed to discard all:', err);
+      }
+    },
+    [currentProject.path, refreshStatus]
+  );
+
   const commit = useCallback(
     async (message: string) => {
       if (!currentProject.path) return;
@@ -92,6 +118,8 @@ export function useGit() {
     refreshStatus,
     stageFile,
     unstageFile,
+    discardFile,
+    discardAll,
     commit,
     getDiff,
   };

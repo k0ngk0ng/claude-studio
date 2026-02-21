@@ -166,6 +166,27 @@ class GitManager {
     await this.exec(['reset', 'HEAD', '--', file], cwd);
   }
 
+  async discardFile(cwd: string, file: string): Promise<void> {
+    // For tracked files: git checkout -- <file>
+    // For untracked files: rm <file>
+    const status = await this.getStatus(cwd);
+    const isTracked = status.staged.some(f => f.path === file) || status.unstaged.some(f => f.path === file && f.status !== '?');
+
+    if (isTracked) {
+      await this.exec(['checkout', '--', file], cwd);
+    } else {
+      // For untracked files, use git clean or rm
+      await this.exec(['rm', '-f', '--', file], cwd);
+    }
+  }
+
+  async discardAll(cwd: string): Promise<void> {
+    // Discard all unstaged changes: git checkout -- .
+    // Also remove untracked files: git clean -fd
+    await this.exec(['checkout', '--', '.'], cwd);
+    await this.exec(['clean', '-fd'], cwd);
+  }
+
   async commit(cwd: string, message: string): Promise<string> {
     const result = await this.exec(['commit', '-m', message], cwd);
     return result.stdout;

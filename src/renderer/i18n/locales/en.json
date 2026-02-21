@@ -130,6 +130,7 @@
     "noChanges": "No changes detected",
     "commit": "Commit",
     "discard": "Discard",
+    "discardAll": "Discard All",
     "stageAll": "Stage All",
     "unstageAll": "Unstage All",
     "unstaged": "Unstaged",
