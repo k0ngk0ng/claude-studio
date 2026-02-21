@@ -428,11 +428,12 @@ jobs:
         run: |
           # Create a directory with non-versioned filenames for latest/
           mkdir -p upload-latest/
+          VERSION="${{ steps.version.outputs.VERSION }}"
           # Copy only installer files (without version numbers in name)
           for f in upload/*; do
             filename=$(basename "$f")
-            # Remove version pattern like "0.1.25-" from filename
-            newname=$(echo "$filename" | sed 's/-[0-9]*\.[0-9]*\.[0-9]*//')
+            # Remove version pattern: -0.1.25- or _0.1.25_ from filename
+            newname=$(echo "$filename" | sed "s/-${VERSION}-/-/;s/_${VERSION}_/_/")
             cp "$f" "upload-latest/$newname"
           done
           echo "Latest files (without version):"
@@ -445,8 +446,8 @@ jobs:
       - name: Generate release-info.json
         run: |
           CDN_BASE="${{ vars.ALIYUN_OSS_CDN_URL }}/claude-studio/releases/${{ steps.version.outputs.TAG }}"
-          CDN_BASE_LATEST="${{ vars.ALIYUN_OSS_CDN_URL }}/claude-studio/releases/latest"
           TAG="${{ steps.version.outputs.TAG }}"
+          VERSION="${{ steps.version.outputs.VERSION }}"
           echo '{}' > release-info.json
 
           # Build JSON with versioned file URLs
@@ -464,18 +465,20 @@ jobs:
             console.log(JSON.stringify(urls, null, 2));
           "
 
-          # Generate release-info.json for latest/ (non-versioned filenames)
+          # Generate release-info.json for latest/ (non-versioned filenames, but cdnBase points to versioned path)
           node -e "
             const fs = require('fs');
             const files = fs.readdirSync('upload/');
-            const baseLatest = '${CDN_BASE_LATEST}';
+            const baseVersioned = '${CDN_BASE}';
+            const baseLatest = '${CDN_BASE}'.replace('/' + '${TAG}', '/latest');
             const tag = '${TAG}';
             const version = tag.replace('v','');
-            const urls = { version: version, cdnBase: baseLatest, files: {} };
+            // For latest, cdnBase points to versioned path so downloads work
+            const urls = { version: version, cdnBase: baseVersioned, files: {} };
             for (const f of files) {
               // Remove version from filename: ClaudeStudio-0.1.25-Setup.exe -> ClaudeStudio-Setup.exe
-              const newname = f.replace('-' + version, '');
-              urls.files[newname] = baseLatest + '/' + newname;
+              const newname = f.replace('-' + version, '').replace('_' + version + '_', '_');
+              urls.files[newname] = baseVersioned + '/' + f;  // Point to actual versioned file
             }
             fs.writeFileSync('release-info-latest.json', JSON.stringify(urls, null, 2));
             console.log('Latest release-info.json:');
