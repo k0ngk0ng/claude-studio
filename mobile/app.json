@@ -8,11 +8,15 @@
     "scheme": "claude-studio",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "cli": {
+      "appVersionSource": "remote"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pagor.claude.studio.dev",
       "infoPlist": {
-        "NSCameraUsageDescription": "Camera is used to scan QR codes for pairing with desktop."
+        "NSCameraUsageDescription": "Camera is used to scan QR codes for pairing with desktop.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -22,7 +26,9 @@
       },
       "package": "com.claudestudio.mobile",
       "permissions": [
-        "CAMERA"
+        "CAMERA",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "plugins": [
@@ -34,6 +40,12 @@
         }
       ],
       "expo-asset"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "d0fd6f97-d138-48ea-9d6e-a71fef8a7c53"
+      }
+    },
+    "owner": "chenj0"
   }
 }
