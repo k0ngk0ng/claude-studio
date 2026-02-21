@@ -31,6 +31,7 @@ interface RemoteStore {
   sendMessage: (content: string) => Promise<void>;
   loadSessions: () => Promise<void>;
   selectSession: (sessionId: string) => Promise<void>;
+  startNewChat: () => Promise<void>;
   executeCommand: (channel: string, args?: unknown[]) => Promise<any>;
 
   // Internal
@@ -189,17 +190,40 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
         return pid;
       };
 
+      // Helper: send message with retry
+      const sendWithRetry = async (pid: string): Promise<boolean> => {
+        try {
+          const sent = await get().executeCommand('claude:send', [pid, content]);
+          return !!sent;
+        } catch {
+          return false;
+        }
+      };
+
       // Spawn a Claude process if we don't have one yet
       if (!processId) {
         processId = await spawnProcess();
       }
 
-      // Send message — if it returns false, the process has ended (result received),
+      // Send message — if it returns false or throws, the process has ended (result received),
       // so we need to spawn a new one and retry.
-      const sent = await get().executeCommand('claude:send', [processId, content]);
+      let sent = await sendWithRetry(processId);
       if (!sent) {
         processId = await spawnProcess();
-        await get().executeCommand('claude:send', [processId, content]);
+        sent = await sendWithRetry(processId);
+        if (!sent) {
+          // Both attempts failed, show error
+          set(s => ({
+            isStreaming: false,
+            messages: [...s.messages, {
+              id: `err-${Date.now()}`,
+              role: 'system',
+              content: 'Failed to send message. Please try again.',
+              timestamp: new Date().toISOString(),
+            }],
+          }));
+          return;
+        }
       }
     } catch (err: any) {
       set(s => ({
@@ -247,6 +271,16 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
 
     set({ currentSessionId: sessionId, messages: [], activeProcessId: null });
 
+    // First, verify the connection is working with a simple command
+    // This will fail fast if E2EE keys are out of sync
+    try {
+      await get().executeCommand('app:getPlatform');
+    } catch {
+      // Connection failed - likely E2EE keys out of sync
+      set({ currentSessionId: null, messages: [], activeProcessId: null });
+      throw new Error('CONNECTION_FAILED');
+    }
+
     try {
       // Find the projectPath for this session from the sessions list
       const session = get().sessions.find(s => s.id === sessionId);
@@ -289,6 +323,24 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
     } catch {
       // Ignore
     }
+  },
+
+  startNewChat: async () => {
+    const { controllingDesktopId } = get();
+    if (!controllingDesktopId) return;
+
+    // Kill previous Claude process if any
+    const { activeProcessId } = get();
+    if (activeProcessId) {
+      get().executeCommand('claude:kill', [activeProcessId]).catch(() => {});
+    }
+
+    // Clear session to start a new chat in the current project
+    set({
+      currentSessionId: null,
+      messages: [],
+      activeProcessId: null,
+    });
   },
 
   executeCommand: async (channel: string, args: unknown[] = []) => {

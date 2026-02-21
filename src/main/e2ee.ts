@@ -119,18 +119,28 @@ export function generatePairingCode(): string {
 
 /**
  * Generate a unique device ID for this desktop instance.
- * Uses a persisted UUID + username for stability across restarts.
- * Different users on the same machine get different IDs.
+ *
+ * Supports multiple modes:
+ * 1. CLAUDE_STUDIO_INSTANCE_ID env var - use custom instance ID (useful for dev)
+ * 2. Persisted UUID + username - stable across restarts for same user
+ *
+ * This allows running multiple desktop instances simultaneously for development.
  */
 export function generateDesktopId(): string {
   const os = require('os');
   const path = require('path');
   const fs = require('fs');
 
+  // Mode 1: Custom instance ID from environment variable (for dev/development)
+  const instanceId = process.env.CLAUDE_STUDIO_INSTANCE_ID;
+  if (instanceId) {
+    return crypto.createHash('sha256').update(instanceId).digest('hex').substring(0, 16);
+  }
+
   const configDir = path.join(os.homedir(), '.claude-studio');
   const idFile = path.join(configDir, 'device-id');
 
-  // Load or generate a stable machine UUID
+  // Mode 2: Load or generate a stable machine UUID
   let machineUuid: string;
   try {
     machineUuid = fs.readFileSync(idFile, 'utf-8').trim();

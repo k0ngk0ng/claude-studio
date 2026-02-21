@@ -20,19 +20,6 @@ export function ModelSection() {
       </p>
 
       <div className="space-y-6">
-        {/* Default model */}
-        <SettingsSelect
-          label="Default model"
-          description="The model to use for new conversations."
-          value={provider.defaultModel}
-          onChange={(v) => updateProvider({ defaultModel: v })}
-          options={[
-            { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-            { value: 'claude-opus-4-20250514', label: 'Claude Opus 4' },
-            { value: 'claude-haiku-3-5-20241022', label: 'Claude 3.5 Haiku' },
-          ]}
-        />
-
         {/* Max tokens */}
         <SettingsInput
           label="Max output tokens"

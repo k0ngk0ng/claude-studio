@@ -386,7 +386,6 @@ export interface GeneralSettings {
 }
 
 export interface ModelSettings {
-  defaultModel: string;
   maxTokens: number;
   temperature: number;
   systemPrompt: string;
@@ -399,8 +398,6 @@ export interface ProviderEnvVar {
 }
 
 export interface ProviderSettings {
-  // Keep the old model fields for backward compat
-  defaultModel: string;
   maxTokens: number;
   temperature: number;
   systemPrompt: string;

@@ -12,9 +12,10 @@ export function LockOverlay() {
   const [shakeKey, setShakeKey] = useState(0);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Focus first input on mount
+  // Focus first input on mount and when locked
   useEffect(() => {
     if (controlMode === 'remote' || controlMode === 'unlocking') {
+      setDigits(['', '', '', '', '', '']);
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
     }
   }, [controlMode]);

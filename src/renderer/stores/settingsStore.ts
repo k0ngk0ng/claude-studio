@@ -32,7 +32,6 @@ const defaultSettings: AppSettings = {
     showArchivedThreads: false,
   },
   provider: {
-    defaultModel: 'claude-sonnet-4-20250514',
     maxTokens: 16384,
     temperature: 0,
     systemPrompt: '',

@@ -130,7 +130,9 @@ export function registerRemoteIpcHandlers(): void {
       if (!token) return false;
 
       const serverUrl = getServerUrl();
-      const deviceName = os.hostname() || 'Desktop';
+      // Use custom instance ID as deviceName if set (for development with multiple instances)
+      const instanceId = process.env.CLAUDE_STUDIO_INSTANCE_ID;
+      const deviceName = instanceId || os.hostname() || 'Desktop';
 
       const success = await relayClient.connect({
         serverUrl,
