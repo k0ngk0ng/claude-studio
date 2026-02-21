@@ -504,6 +504,26 @@ jobs:
           echo "=== claude-studio/releases/latest/ ==="
           ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/ --short
 
+      - name: Clean up old versions (keep last 10)
+        run: |
+          # List all version directories
+          ALL_VERSIONS=$(ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/ | grep 'oss://' | grep -E '/v[0-9]+\.[0-9]+' | sed 's|.*/||' | sed 's|/$||' | sort -V)
+
+          # Get the list of versions to keep (last 10)
+          KEEP_VERSIONS=$(echo "$ALL_VERSIONS" | tail -n 10)
+          echo "Versions to keep (last 10):"
+          echo "$KEEP_VERSIONS"
+
+          # Delete old versions
+          for dir in $ALL_VERSIONS; do
+            if echo "$KEEP_VERSIONS" | grep -q "^$dir$"; then
+              echo "Keeping: $dir"
+            else
+              echo "Deleting: $dir"
+              ossutil rm "oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/$dir/" -r --force
+            fi
+          done
+
       - name: Refresh CDN cache
         env:
           ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_OSS_ACCESS_KEY_ID }}
