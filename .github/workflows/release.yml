@@ -294,63 +294,63 @@ jobs:
           path: claude-studio-server.tar.gz
           retention-days: 5
 
-  release-mobile:
-    name: Release (Mobile — iOS & Android)
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  # release-mobile:
+  #   name: Release (Mobile — iOS & Android)
+  #   runs-on: ubuntu-latest
+  #   environment: production
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 20
 
-      - name: Install dependencies
-        working-directory: mobile
-        run: npm ci
+  #     - name: Install dependencies
+  #       working-directory: mobile
+  #       run: npm ci
 
-      - name: Sync version from git tag
-        working-directory: mobile
-        run: |
-          TAG="${GITHUB_REF#refs/tags/}"
-          VERSION="${TAG#v}"
-          echo "Setting mobile version to $VERSION"
-          node -e "
-            const fs = require('fs');
-            const app = JSON.parse(fs.readFileSync('app.json', 'utf-8'));
-            app.expo.version = '$VERSION';
-            if (!app.expo.cli) app.expo.cli = {};
-            app.expo.cli.appVersionSource = 'remote';
-            // Set project ID if not already set
-            if (!app.expo.extra?.eas?.projectId) {
-              if (!app.expo.extra) app.expo.extra = {};
-              if (!app.expo.extra.eas) app.expo.extra.eas = {};
-              app.expo.extra.eas.projectId = 'claude-studio-mobile';
-            }
-            fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
-          "
+  #     - name: Sync version from git tag
+  #       working-directory: mobile
+  #       run: |
+  #         TAG="${GITHUB_REF#refs/tags/}"
+  #         VERSION="${TAG#v}"
+  #         echo "Setting mobile version to $VERSION"
+  #         node -e "
+  #           const fs = require('fs');
+  #           const app = JSON.parse(fs.readFileSync('app.json', 'utf-8'));
+  #           app.expo.version = '$VERSION';
+  #           if (!app.expo.cli) app.expo.cli = {};
+  #           app.expo.cli.appVersionSource = 'remote';
+  #           // Set project ID if not already set
+  #           if (!app.expo.extra?.eas?.projectId) {
+  #             if (!app.expo.extra) app.expo.extra = {};
+  #             if (!app.expo.extra.eas) app.expo.extra.eas = {};
+  #             app.expo.extra.eas.projectId = 'claude-studio-mobile';
+  #           }
+  #           fs.writeFileSync('app.json', JSON.stringify(app, null, 2) + '\n');
+  #         "
 
-      - name: Setup Expo & EAS CLI
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+  #     - name: Setup Expo & EAS CLI
+  #       uses: expo/expo-github-action@v8
+  #       with:
+  #         eas-version: latest
+  #         token: ${{ secrets.EXPO_TOKEN }}
 
-      # - name: Build iOS
-      #   working-directory: mobile
-      #   run: eas build --platform ios --profile production --non-interactive --no-wait
-      #   env:
-      #     EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  #     # - name: Build iOS
+  #     #   working-directory: mobile
+  #     #   run: eas build --platform ios --profile production --non-interactive --no-wait
+  #     #   env:
+  #     #     EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Build Android
-        working-directory: mobile
-        run: eas build --platform android --profile production --non-interactive --no-wait
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+  #     - name: Build Android
+  #       working-directory: mobile
+  #       run: eas build --platform android --profile production --non-interactive --no-wait
+  #       env:
+  #         EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
   publish-release:
     name: Publish GitHub Release & Upload to OSS
