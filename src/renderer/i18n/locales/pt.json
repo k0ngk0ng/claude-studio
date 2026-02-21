@@ -121,6 +121,7 @@
     "noChanges": "Nenhuma alteração detectada",
     "commit": "Confirmar",
     "discard": "Descartar",
+    "discardAll": "Descartar tudo",
     "stageAll": "Preparar tudo",
     "unstageAll": "Desfazer preparação",
     "history": "Histórico",

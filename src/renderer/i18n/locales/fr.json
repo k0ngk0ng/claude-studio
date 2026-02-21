@@ -121,6 +121,7 @@
     "noChanges": "Aucune modification détectée",
     "commit": "Valider",
     "discard": "Abandonner",
+    "discardAll": "Tout abandonner",
     "stageAll": "Tout indexer",
     "unstageAll": "Désindexer tout",
     "history": "Historique",

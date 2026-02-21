@@ -121,6 +121,7 @@
     "noChanges": "변경 사항이 감지되지 않았습니다",
     "commit": "커밋",
     "discard": "취소",
+    "discardAll": "모두 취소",
     "stageAll": "모두 스테이지",
     "unstageAll": "스테이지 해제",
     "history": "기록",

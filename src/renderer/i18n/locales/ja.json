@@ -121,6 +121,7 @@
     "noChanges": "変更が検出されませんでした",
     "commit": "コミット",
     "discard": "破棄",
+    "discardAll": "すべて破棄",
     "stageAll": "すべてステージ",
     "unstageAll": "ステージ解除",
     "history": "履歴",

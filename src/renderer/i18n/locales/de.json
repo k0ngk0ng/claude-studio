@@ -121,6 +121,7 @@
     "noChanges": "Keine Änderungen erkannt",
     "commit": "Commit",
     "discard": "Verwerfen",
+    "discardAll": "Alle verwerfen",
     "stageAll": "Alle bereitstellen",
     "unstageAll": "Bereitstellung aufheben",
     "history": "Verlauf",
