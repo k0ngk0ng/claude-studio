@@ -429,11 +429,13 @@ jobs:
           # Create a directory with non-versioned filenames for latest/
           mkdir -p upload-latest/
           VERSION="${{ steps.version.outputs.VERSION }}"
+          # Escape dots in version for sed (dots are regex metacharacters)
+          VERSION_ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
           # Copy only installer files (without version numbers in name)
           for f in upload/*; do
             filename=$(basename "$f")
             # Remove version pattern: -0.1.25- or _0.1.25_ from filename
-            newname=$(echo "$filename" | sed "s/-${VERSION}-/-/;s/_${VERSION}_/_/")
+            newname=$(echo "$filename" | sed "s/-${VERSION_ESCAPED}-/-/;s/_${VERSION_ESCAPED}_/_/")
             cp "$f" "upload-latest/$newname"
           done
           echo "Latest files (without version):"
