@@ -426,16 +426,30 @@ jobs:
 
       - name: Upload to OSS — claude-studio/releases/latest/
         run: |
-          ossutil cp -r upload/ \
+          # Create a directory with non-versioned filenames for latest/
+          mkdir -p upload-latest/
+          # Copy only installer files (without version numbers in name)
+          for f in upload/*; do
+            filename=$(basename "$f")
+            # Remove version pattern like "0.1.25-" from filename
+            newname=$(echo "$filename" | sed 's/-[0-9]*\.[0-9]*\.[0-9]*//')
+            cp "$f" "upload-latest/$newname"
+          done
+          echo "Latest files (without version):"
+          ls -lh upload-latest/
+          # Upload to latest/
+          ossutil cp -r upload-latest/ \
             oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/ \
             --force
 
       - name: Generate release-info.json
         run: |
           CDN_BASE="${{ vars.ALIYUN_OSS_CDN_URL }}/claude-studio/releases/${{ steps.version.outputs.TAG }}"
+          CDN_BASE_LATEST="${{ vars.ALIYUN_OSS_CDN_URL }}/claude-studio/releases/latest"
           TAG="${{ steps.version.outputs.TAG }}"
           echo '{}' > release-info.json
-          # Build JSON with all file URLs
+
+          # Build JSON with versioned file URLs
           node -e "
             const fs = require('fs');
             const files = fs.readdirSync('upload/');
@@ -446,15 +460,36 @@ jobs:
               urls.files[f] = base + '/' + f;
             }
             fs.writeFileSync('release-info.json', JSON.stringify(urls, null, 2));
+            console.log('Versioned release-info.json:');
+            console.log(JSON.stringify(urls, null, 2));
+          "
+
+          # Generate release-info.json for latest/ (non-versioned filenames)
+          node -e "
+            const fs = require('fs');
+            const files = fs.readdirSync('upload/');
+            const baseLatest = '${CDN_BASE_LATEST}';
+            const tag = '${TAG}';
+            const version = tag.replace('v','');
+            const urls = { version: version, cdnBase: baseLatest, files: {} };
+            for (const f of files) {
+              // Remove version from filename: ClaudeStudio-0.1.25-Setup.exe -> ClaudeStudio-Setup.exe
+              const newname = f.replace('-' + version, '');
+              urls.files[newname] = baseLatest + '/' + newname;
+            }
+            fs.writeFileSync('release-info-latest.json', JSON.stringify(urls, null, 2));
+            console.log('Latest release-info.json:');
             console.log(JSON.stringify(urls, null, 2));
           "
 
       - name: Upload release-info.json to OSS
         run: |
+          # Upload versioned release-info.json to versioned directory
           ossutil cp release-info.json \
             oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/${{ steps.version.outputs.TAG }}/release-info.json \
             --force
-          ossutil cp release-info.json \
+          # Upload non-versioned release-info.json to latest/
+          ossutil cp release-info-latest.json \
             oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/release-info.json \
             --force
 
