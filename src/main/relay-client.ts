@@ -514,6 +514,13 @@ export class RelayClient extends EventEmitter {
         break;
       }
 
+      case 'control-release': {
+        // Mobile device releasing control
+        const deviceId = msg.from as string;
+        this.emit('control-release', deviceId);
+        break;
+      }
+
       case 'error': {
         console.error('[relay] Server error:', msg.message);
         this.emit('relay-error', msg.message);

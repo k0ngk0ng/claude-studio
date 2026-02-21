@@ -34,6 +34,8 @@ export class RemoteControl extends EventEmitter {
   private allowRemoteControl = true;
   private autoLockTimeout = 0;
   private lockTimer: ReturnType<typeof setTimeout> | null = null;
+  private inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+  private static readonly INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
   constructor() {
     super();
@@ -111,6 +113,7 @@ export class RemoteControl extends EventEmitter {
       controllingDeviceName: deviceName,
     };
 
+    this.resetInactivityTimer();
     this.emitStateChange();
     console.log(`[remote-control] Entered remote mode — controlled by ${deviceName} (${deviceId})`);
   }
@@ -137,6 +140,7 @@ export class RemoteControl extends EventEmitter {
         relayClient.sendControlRevoked(deviceId);
       }
 
+      this.clearInactivityTimer();
       this.state = {
         mode: 'local',
         controllingDeviceId: null,
@@ -160,6 +164,7 @@ export class RemoteControl extends EventEmitter {
     if (this.state.mode === 'local') return;
 
     this.clearLockTimer();
+    this.clearInactivityTimer();
     this.state = {
       mode: 'local',
       controllingDeviceId: null,
@@ -175,6 +180,19 @@ export class RemoteControl extends EventEmitter {
   private setupRelayListeners(): void {
     relayClient.on('control-request', (deviceId: string, deviceName: string) => {
       this.handleControlRequest(deviceId, deviceName);
+    });
+
+    relayClient.on('control-release', (deviceId: string) => {
+      if (this.state.controllingDeviceId === deviceId) {
+        this.forceRelease();
+      }
+    });
+
+    relayClient.on('message', (from: string) => {
+      // Any encrypted message from the controlling device resets the inactivity timer
+      if (this.state.mode !== 'local' && this.state.controllingDeviceId === from) {
+        this.resetInactivityTimer();
+      }
     });
 
     relayClient.on('device-offline', (deviceId: string) => {
@@ -205,6 +223,23 @@ export class RemoteControl extends EventEmitter {
     if (this.lockTimer) {
       clearTimeout(this.lockTimer);
       this.lockTimer = null;
+    }
+  }
+
+  private resetInactivityTimer(): void {
+    this.clearInactivityTimer();
+    this.inactivityTimer = setTimeout(() => {
+      if (this.state.mode !== 'local') {
+        console.log('[remote-control] Inactivity timeout — auto-releasing control');
+        this.forceRelease();
+      }
+    }, RemoteControl.INACTIVITY_TIMEOUT);
+  }
+
+  private clearInactivityTimer(): void {
+    if (this.inactivityTimer) {
+      clearTimeout(this.inactivityTimer);
+      this.inactivityTimer = null;
     }
   }
 

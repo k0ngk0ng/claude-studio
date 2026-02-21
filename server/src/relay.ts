@@ -11,6 +11,7 @@
  *     - relay               → forward encrypted message to target device
  *     - revoke-pairing      → remove a paired device
  *     - control-ack         → desktop accepts/rejects control request
+ *     - control-release     → mobile releases control of desktop
  *     - control-revoked     → desktop revokes mobile control
  *
  *   Server → Client:
@@ -21,6 +22,7 @@
  *     - device-online       → paired device came online
  *     - device-offline      → paired device went offline
  *     - control-request     → mobile requesting control (forwarded to desktop)
+ *     - control-release     → mobile releasing control (forwarded to desktop)
  *     - control-ack         → desktop response to control request
  *     - control-revoked     → desktop revoked control
  *     - device-list         → list of online desktops for mobile
@@ -221,6 +223,10 @@ function handleMessage(device: ConnectedDevice, msg: any): void {
 
     case 'control-ack':
       handleControlAck(device, msg);
+      break;
+
+    case 'control-release':
+      handleControlRelease(device, msg);
       break;
 
     case 'control-revoked':
@@ -431,6 +437,19 @@ function handleControlAck(device: ConnectedDevice, msg: any): void {
       type: 'control-ack',
       from: device.deviceId,
       accepted,
+    });
+  }
+}
+
+function handleControlRelease(device: ConnectedDevice, msg: any): void {
+  const { targetDesktopId } = msg;
+  if (!targetDesktopId) return;
+
+  const desktop = devices.get(targetDesktopId);
+  if (desktop) {
+    sendTo(desktop.ws, {
+      type: 'control-release',
+      from: device.deviceId,
     });
   }
 }

@@ -126,7 +126,8 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
       await get().loadSessions();
     } catch (err: any) {
       if (err?.message?.includes('timeout') || err?.message?.includes('re-pairing')) {
-        // E2EE keys are out of sync — release and prompt re-pair
+        // E2EE keys are out of sync — release control and prompt re-pair
+        relayClient.releaseControl(desktopId);
         set({
           controllingDesktopId: null,
           controllingDesktopName: null,
@@ -144,10 +145,14 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
   },
 
   releaseDesktop: () => {
+    const { controllingDesktopId, activeProcessId } = get();
     // Kill active Claude process if any
-    const { activeProcessId } = get();
     if (activeProcessId) {
       get().executeCommand('claude:kill', [activeProcessId]).catch(() => {});
+    }
+    // Notify desktop to release control
+    if (controllingDesktopId) {
+      relayClient.releaseControl(controllingDesktopId);
     }
     set({
       controllingDesktopId: null,

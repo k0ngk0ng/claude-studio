@@ -444,6 +444,14 @@ class MobileRelayClient {
     });
   }
 
+  releaseControl(desktopId: string): void {
+    this.send({
+      type: 'control-release',
+      targetDesktopId: desktopId,
+    });
+    this.controllingDesktopId = null;
+  }
+
   // ─── Remote Commands ───────────────────────────────────────────
 
   executeCommand(desktopId: string, channel: string, args: unknown[] = []): Promise<any> {
