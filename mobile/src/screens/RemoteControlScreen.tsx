@@ -15,10 +15,15 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
+  PanResponder,
+  Dimensions,
+  Keyboard,
 } from 'react-native';
 import { useRemoteStore } from '../stores/remoteStore';
 import { colors, spacing, fontSize, borderRadius } from '../utils/theme';
 import type { Message } from '../types';
+
+const SWIPE_THRESHOLD = 50;
 
 type Tab = 'chat' | 'threads';
 
@@ -45,6 +50,36 @@ export function RemoteControlScreen({ onBack }: Props) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+
+  // Swipe gesture for tab navigation and back
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Only capture if horizontal swipe is significant
+        return Math.abs(gestureState.dx) > 20 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const { dx } = gestureState;
+        if (dx < -SWIPE_THRESHOLD) {
+          // Swipe left
+          if (activeTab === 'threads') {
+            // Threads tab: swipe left to go back
+            handleBack();
+          } else if (activeTab === 'chat') {
+            // Chat tab: swipe left to go to Threads
+            setActiveTab('threads');
+          }
+        } else if (dx > SWIPE_THRESHOLD) {
+          // Swipe right
+          if (activeTab === 'threads') {
+            // Threads tab: swipe right to go to Chat
+            setActiveTab('chat');
+          }
+          // Chat tab: swipe right does nothing (could go back but that's weird UX)
+        }
+      },
+    })
+  ).current;
 
   // Get current session's project path
   const currentSession = sessions.find(s => s.id === currentSessionId);
@@ -73,7 +108,7 @@ export function RemoteControlScreen({ onBack }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} {...panResponder.panHandlers}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
@@ -171,7 +206,7 @@ function ChatTab({
   onSend: () => void;
   sending: boolean;
   isStreaming: boolean;
-  flatListRef: React.RefObject<FlatList>;
+  flatListRef: React.RefObject<FlatList | null>;
   projectPath: string | null;
   onNewChat: () => void;
   hasCurrentSession: boolean;
@@ -202,6 +237,8 @@ function ChatTab({
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.messageList}
         renderItem={({ item }) => <MessageBubble message={item} />}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         ListEmptyComponent={
           <View style={styles.emptyChat}>
             <Text style={styles.emptyChatText}>Send a message to start</Text>

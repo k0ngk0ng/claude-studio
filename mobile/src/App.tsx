@@ -7,6 +7,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useRemoteStore, initRelayListeners } from './stores/remoteStore';
 import { relayClient } from './services/relay';
 import { QRScannerScreen } from './screens/QRScannerScreen';
@@ -51,16 +52,16 @@ export default function App() {
     }
   }, [controllingDesktopId]);
 
+  let content: React.ReactNode;
+
   if (screen === 'loading') {
-    return (
+    content = (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={colors.accent} />
       </View>
     );
-  }
-
-  if (screen === 'scanner') {
-    return (
+  } else if (screen === 'scanner') {
+    content = (
       <QRScannerScreen
         onPaired={() => setScreen('desktops')}
         onCancel={() => {
@@ -72,25 +73,29 @@ export default function App() {
         showCancel={relayClient.hasConfig()}
       />
     );
-  }
-
-  if (screen === 'remote') {
-    return (
+  } else if (screen === 'remote') {
+    content = (
       <RemoteControlScreen
         onBack={() => setScreen('desktops')}
       />
     );
+  } else {
+    // Default: desktop list
+    content = (
+      <DesktopListScreen
+        onScanQR={() => setScreen('scanner')}
+        onSelectDesktop={async (id) => {
+          const store = useRemoteStore.getState();
+          await store.selectDesktop(id);
+        }}
+      />
+    );
   }
 
-  // Default: desktop list
   return (
-    <DesktopListScreen
-      onScanQR={() => setScreen('scanner')}
-      onSelectDesktop={async (id) => {
-        const store = useRemoteStore.getState();
-        await store.selectDesktop(id);
-      }}
-    />
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      {content}
+    </GestureHandlerRootView>
   );
 }
 

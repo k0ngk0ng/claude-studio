@@ -12,6 +12,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { Swipeable } from 'react-native-gesture-handler';
 import { useRemoteStore } from '../stores/remoteStore';
 import { relayClient } from '../services/relay';
 import { colors, spacing, fontSize, borderRadius } from '../utils/theme';
@@ -114,30 +115,41 @@ export function DesktopListScreen({ onScanQR, onSelectDesktop }: Props) {
           </View>
         }
         renderItem={({ item }) => (
-          <TouchableOpacity
-            style={[styles.desktopCard, !item.online && styles.desktopCardOffline]}
-            onPress={() => handleSelectDesktop(item.desktopId)}
-            onLongPress={() => handleLongPress(item.desktopId, item.deviceName)}
-            activeOpacity={0.7}
+          <Swipeable
+            renderRightActions={() => (
+              <TouchableOpacity
+                style={styles.removeAction}
+                onPress={() => handleLongPress(item.desktopId, item.deviceName)}
+              >
+                <Text style={styles.removeActionText}>Remove</Text>
+              </TouchableOpacity>
+            )}
+            rightThreshold={40}
           >
-            <View style={styles.desktopInfo}>
-              <Text style={styles.desktopIcon}>🖥️</Text>
-              <View style={styles.desktopText}>
-                <Text style={[styles.desktopName, !item.online && styles.textOffline]}>
-                  {item.deviceName}
-                </Text>
-                <View style={styles.desktopStatus}>
-                  <View style={[styles.smallDot, item.online ? styles.dotOnline : styles.dotOffline]} />
-                  <Text style={styles.desktopStatusText}>
-                    {item.online ? 'Online' : 'Offline'}
+            <TouchableOpacity
+              style={[styles.desktopCard, !item.online && styles.desktopCardOffline]}
+              onPress={() => handleSelectDesktop(item.desktopId)}
+              activeOpacity={0.7}
+            >
+              <View style={styles.desktopInfo}>
+                <Text style={styles.desktopIcon}>🖥️</Text>
+                <View style={styles.desktopText}>
+                  <Text style={[styles.desktopName, !item.online && styles.textOffline]}>
+                    {item.deviceName}
                   </Text>
+                  <View style={styles.desktopStatus}>
+                    <View style={[styles.smallDot, item.online ? styles.dotOnline : styles.dotOffline]} />
+                    <Text style={styles.desktopStatusText}>
+                      {item.online ? 'Online' : 'Offline'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-            {item.online && (
-              <Text style={styles.connectArrow}>→</Text>
-            )}
-          </TouchableOpacity>
+              {item.online && (
+                <Text style={styles.connectArrow}>→</Text>
+              )}
+            </TouchableOpacity>
+          </Swipeable>
         )}
       />
 
@@ -262,6 +274,19 @@ const styles = StyleSheet.create({
   connectArrow: {
     fontSize: fontSize.xl,
     color: colors.accent,
+    fontWeight: '600',
+  },
+  removeAction: {
+    backgroundColor: colors.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 80,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+  },
+  removeActionText: {
+    color: colors.white,
+    fontSize: fontSize.sm,
     fontWeight: '600',
   },
   empty: {
