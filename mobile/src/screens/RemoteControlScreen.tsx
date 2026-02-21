@@ -3,7 +3,7 @@
  * Shows chat messages, allows sending, session switching, and basic git ops.
  */
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -15,15 +15,26 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  PanResponder,
   Dimensions,
   Keyboard,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  runOnJS,
+} from 'react-native-reanimated';
 import { useRemoteStore } from '../stores/remoteStore';
 import { colors, spacing, fontSize, borderRadius } from '../utils/theme';
 import type { Message } from '../types';
 
-const SWIPE_THRESHOLD = 50;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.25; // 25% of screen width to trigger switch
+const SPRING_CONFIG = { damping: 20, stiffness: 200, mass: 0.5 };
+
+// Tab order: threads (index 0) | chat (index 1)
+const TAB_INDICES = { threads: 0, chat: 1 } as const;
 
 type Tab = 'chat' | 'threads';
 
@@ -50,36 +61,57 @@ export function RemoteControlScreen({ onBack }: Props) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
-  // Swipe gesture for tab navigation and back
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        // Only capture if horizontal swipe is significant
-        return Math.abs(gestureState.dx) > 20 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 2;
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const { dx } = gestureState;
-        if (dx < -SWIPE_THRESHOLD) {
-          // Swipe left
-          if (activeTab === 'threads') {
-            // Threads tab: swipe left to go back
-            handleBack();
-          } else if (activeTab === 'chat') {
-            // Chat tab: swipe left to go to Threads
-            setActiveTab('threads');
-          }
-        } else if (dx > SWIPE_THRESHOLD) {
-          // Swipe right
-          if (activeTab === 'threads') {
-            // Threads tab: swipe right to go to Chat
-            setActiveTab('chat');
-          }
-          // Chat tab: swipe right does nothing (could go back but that's weird UX)
-        }
-      },
+  // Animated translateX for the two-tab pane container
+  // 0 = showing threads (index 0), -SCREEN_WIDTH = showing chat (index 1)
+  const translateX = useSharedValue(0);
+  const activeTabIndex = useSharedValue<number>(TAB_INDICES.threads);
+
+  const switchToTab = useCallback((tab: Tab) => {
+    const idx = TAB_INDICES[tab];
+    activeTabIndex.value = idx;
+    translateX.value = withSpring(-idx * SCREEN_WIDTH, SPRING_CONFIG);
+    setActiveTab(tab);
+    if (tab === 'threads') loadSessions();
+  }, [loadSessions]);
+
+  // Swipe gesture for tab navigation
+  const panGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-10, 10])
+    .onUpdate((e) => {
+      // Clamp so you can't swipe past the edges
+      const base = -activeTabIndex.value * SCREEN_WIDTH;
+      const raw = base + e.translationX;
+      // Clamp between -SCREEN_WIDTH (chat) and 0 (threads)
+      translateX.value = Math.max(-SCREEN_WIDTH, Math.min(0, raw));
     })
-  ).current;
+    .onEnd((e) => {
+      const currentIdx = activeTabIndex.value;
+      const dx = e.translationX;
+      const vx = e.velocityX;
+
+      // Determine target based on distance + velocity
+      let targetIdx = currentIdx;
+      if (dx < -SWIPE_THRESHOLD || (dx < -30 && vx < -500)) {
+        // Swiped left → go to higher index (chat)
+        targetIdx = Math.min(1, currentIdx + 1);
+      } else if (dx > SWIPE_THRESHOLD || (dx > 30 && vx > 500)) {
+        // Swiped right → go to lower index (threads)
+        targetIdx = Math.max(0, currentIdx - 1);
+      }
+
+      activeTabIndex.value = targetIdx;
+      translateX.value = withSpring(-targetIdx * SCREEN_WIDTH, SPRING_CONFIG);
+      const tabName = targetIdx === 0 ? 'threads' : 'chat';
+      runOnJS(setActiveTab)(tabName as Tab);
+      if (targetIdx === 0) runOnJS(loadSessions)();
+    });
+
+  const paneStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
 
   // Get current session's project path
   const currentSession = sessions.find(s => s.id === currentSessionId);
@@ -107,10 +139,16 @@ export function RemoteControlScreen({ onBack }: Props) {
     onBack();
   };
 
+  const handleTabPress = useCallback((tab: Tab) => {
+    switchToTab(tab);
+  }, [switchToTab]);
+
   return (
-    <View style={styles.container} {...panResponder.panHandlers}>
-      {/* Header */}
-      <View style={styles.header}>
+    <View style={styles.container}>
+      {/* Header + Tab bar — measure total height for keyboard offset */}
+      <View onLayout={(e) => setHeaderHeight(e.nativeEvent.layout.height)}>
+        {/* Header */}
+        <View style={styles.header}>
         <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <Text style={styles.backText}>←</Text>
         </TouchableOpacity>
@@ -132,56 +170,63 @@ export function RemoteControlScreen({ onBack }: Props) {
           <TouchableOpacity
             key={tab}
             style={[styles.tab, activeTab === tab && styles.tabActive]}
-            onPress={() => {
-              setActiveTab(tab);
-              if (tab === 'threads') loadSessions();
-            }}
+            onPress={() => handleTabPress(tab)}
           >
             <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab === 'threads' ? 'Threads' : tab === 'chat' ? 'Chat' : 'Git'}
+              {tab === 'threads' ? 'Threads' : 'Chat'}
             </Text>
           </TouchableOpacity>
         ))}
+        </View>
       </View>
 
-      {/* Content — keep ChatTab mounted to preserve scroll position */}
-      <KeyboardAvoidingView
-        style={{ flex: 1, display: activeTab === 'chat' ? 'flex' : 'none' }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-      >
-        <ChatTab
-          messages={messages}
-          input={input}
-          setInput={setInput}
-          onSend={handleSend}
-          sending={sending}
-          isStreaming={isStreaming}
-          flatListRef={flatListRef}
-          projectPath={projectPath}
-          onNewChat={startNewChat}
-          hasCurrentSession={!!currentSessionId}
-        />
-      </KeyboardAvoidingView>
-      {activeTab === 'threads' && (
-        <SessionsTab
-          sessions={sessions}
-          onSelect={async (id) => {
-            try {
-              await selectSession(id);
-              setActiveTab('chat');
-            } catch (err: any) {
-              if (err?.message === 'CONNECTION_FAILED') {
-                Alert.alert(
-                  'Connection Failed',
-                  'Unable to connect to desktop. The encryption keys may be out of sync. Please go back and try reconnecting.',
-                  [{ text: 'OK' }],
-                );
-              }
-            }
-          }}
-        />
-      )}
+      {/* Swipeable content pane — both tabs side by side */}
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.paneContainer, paneStyle]}>
+          {/* Threads pane (index 0) */}
+          <View style={styles.pane}>
+            <SessionsTab
+              sessions={sessions}
+              onSelect={async (id) => {
+                try {
+                  await selectSession(id);
+                  switchToTab('chat');
+                } catch (err: any) {
+                  if (err?.message === 'CONNECTION_FAILED') {
+                    Alert.alert(
+                      'Connection Failed',
+                      'Unable to connect to desktop. The encryption keys may be out of sync. Please go back and try reconnecting.',
+                      [{ text: 'OK' }],
+                    );
+                  }
+                }
+              }}
+            />
+          </View>
+
+          {/* Chat pane (index 1) */}
+          <View style={styles.pane}>
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              keyboardVerticalOffset={headerHeight}
+            >
+              <ChatTab
+                messages={messages}
+                input={input}
+                setInput={setInput}
+                onSend={handleSend}
+                sending={sending}
+                isStreaming={isStreaming}
+                flatListRef={flatListRef}
+                projectPath={projectPath}
+                onNewChat={startNewChat}
+                hasCurrentSession={!!currentSessionId}
+              />
+            </KeyboardAvoidingView>
+          </View>
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }
@@ -339,6 +384,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.bg,
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -406,6 +452,14 @@ const styles = StyleSheet.create({
   },
   tabTextActive: {
     color: colors.accent,
+  },
+  paneContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    width: SCREEN_WIDTH * 2,
+  },
+  pane: {
+    width: SCREEN_WIDTH,
   },
   chatContainer: {
     flex: 1,
