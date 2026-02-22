@@ -48,6 +48,8 @@ export interface GitAPI {
   diff: (cwd: string, file?: string, staged?: boolean) => Promise<string>;
   stage: (cwd: string, file: string) => Promise<void>;
   unstage: (cwd: string, file: string) => Promise<void>;
+  discard: (cwd: string, file: string) => Promise<void>;
+  discardAll: (cwd: string) => Promise<void>;
   commit: (cwd: string, message: string) => Promise<string>;
   branch: (cwd: string) => Promise<string>;
   listBranches: (cwd: string) => Promise<{ name: string; current: boolean }[]>;

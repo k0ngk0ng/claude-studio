@@ -37,5 +37,8 @@
     "@babel/core": "^7.25.0",
     "@types/react": "~19.1.0",
     "typescript": "~5.9.0"
+  },
+  "overrides": {
+    "react-dom": "19.1.0"
   }
 }
