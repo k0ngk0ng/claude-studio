@@ -259,11 +259,13 @@ jobs:
         run: npm ci
 
       - name: Sync version from git tag
+        id: version
         working-directory: server
         run: |
           TAG="${GITHUB_REF#refs/tags/}"
           VERSION="${TAG#v}"
           echo "Setting server version to $VERSION"
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
           node -e "const p=require('./package.json'); p.version='$VERSION'; require('fs').writeFileSync('package.json', JSON.stringify(p, null, 2)+'\n')"
 
       - name: Build server
@@ -285,13 +287,13 @@ jobs:
           cd server-release
           npm install --omit=dev
           cd ..
-          tar -czf claude-studio-server.tar.gz -C server-release .
+          tar -czf claude-studio-server-${{ steps.version.outputs.TAG }}.tar.gz -C server-release .
 
       - name: Upload server artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-server
-          path: claude-studio-server.tar.gz
+          path: claude-studio-server-${{ steps.version.outputs.TAG }}.tar.gz
           retention-days: 5
 
   # release-mobile:
@@ -428,14 +430,18 @@ jobs:
         run: |
           # Create a directory with non-versioned filenames for latest/
           mkdir -p upload-latest/
-          VERSION="${{ steps.version.outputs.VERSION }}"
+          TAG="${{ steps.version.outputs.TAG }}"
+          VERSION="${TAG#v}"
           # Escape dots in version for sed (dots are regex metacharacters)
           VERSION_ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
-          # Copy only installer files (without version numbers in name)
+          TAG_ESCAPED=$(echo "$TAG" | sed 's/\./\\./g')
+          # Copy files, stripping version from filenames
           for f in upload/*; do
             filename=$(basename "$f")
-            # Remove version pattern: -0.1.25- or _0.1.25_ from filename
-            newname=$(echo "$filename" | sed "s/-${VERSION_ESCAPED}-/-/;s/_${VERSION_ESCAPED}_/_/")
+            # Remove version patterns:
+            #   -0.1.25- or _0.1.25_ (mid-filename version)
+            #   -v0.1.25.tar.gz -> .tar.gz (server tarball trailing version)
+            newname=$(echo "$filename" | sed "s/-${VERSION_ESCAPED}-/-/;s/_${VERSION_ESCAPED}_/_/;s/-${TAG_ESCAPED}\\.tar\\.gz/.tar.gz/")
             cp "$f" "upload-latest/$newname"
           done
           echo "Latest files (without version):"
@@ -478,8 +484,11 @@ jobs:
             // For latest, cdnBase points to versioned path so downloads work
             const urls = { version: version, cdnBase: baseVersioned, files: {} };
             for (const f of files) {
-              // Remove version from filename: ClaudeStudio-0.1.25-Setup.exe -> ClaudeStudio-Setup.exe
-              const newname = f.replace('-' + version, '').replace('_' + version + '_', '_');
+              // Remove version from filename:
+              //   ClaudeStudio-0.1.25-Setup.exe -> ClaudeStudio-Setup.exe
+              //   claude-studio-server-v0.1.25.tar.gz -> claude-studio-server.tar.gz
+              const tag = '${TAG}';
+              const newname = f.replace('-' + version, '').replace('_' + version + '_', '_').replace('-' + tag + '.tar.gz', '.tar.gz');
               urls.files[newname] = baseVersioned + '/' + f;  // Point to actual versioned file
             }
             fs.writeFileSync('release-info-latest.json', JSON.stringify(urls, null, 2));
@@ -506,14 +515,14 @@ jobs:
           echo "=== claude-studio/releases/latest/ ==="
           ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/ --short
 
-      - name: Clean up old versions (keep last 10)
+      - name: Clean up old versions (keep last 3)
         run: |
           # List all version directories
           ALL_VERSIONS=$(ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/ | grep 'oss://' | grep -E '/v[0-9]+\.[0-9]+' | sed 's|.*/||' | sed 's|/$||' | sort -V)
 
-          # Get the list of versions to keep (last 10)
-          KEEP_VERSIONS=$(echo "$ALL_VERSIONS" | tail -n 10)
-          echo "Versions to keep (last 10):"
+          # Get the list of versions to keep (last 3)
+          KEEP_VERSIONS=$(echo "$ALL_VERSIONS" | tail -n 3)
+          echo "Versions to keep (last 3):"
           echo "$KEEP_VERSIONS"
 
           # Delete old versions
