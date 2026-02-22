@@ -426,31 +426,6 @@ jobs:
             oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/${{ steps.version.outputs.TAG }}/ \
             --force
 
-      - name: Upload to OSS — claude-studio/releases/latest/
-        run: |
-          # Create a directory with non-versioned filenames for latest/
-          mkdir -p upload-latest/
-          TAG="${{ steps.version.outputs.TAG }}"
-          VERSION="${TAG#v}"
-          # Escape dots in version for sed (dots are regex metacharacters)
-          VERSION_ESCAPED=$(echo "$VERSION" | sed 's/\./\\./g')
-          TAG_ESCAPED=$(echo "$TAG" | sed 's/\./\\./g')
-          # Copy files, stripping version from filenames
-          for f in upload/*; do
-            filename=$(basename "$f")
-            # Remove version patterns:
-            #   -0.1.25- or _0.1.25_ (mid-filename version)
-            #   -v0.1.25.tar.gz -> .tar.gz (server tarball trailing version)
-            newname=$(echo "$filename" | sed "s/-${VERSION_ESCAPED}-/-/;s/_${VERSION_ESCAPED}_/_/;s/-${TAG_ESCAPED}\\.tar\\.gz/.tar.gz/")
-            cp "$f" "upload-latest/$newname"
-          done
-          echo "Latest files (without version):"
-          ls -lh upload-latest/
-          # Upload to latest/
-          ossutil cp -r upload-latest/ \
-            oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/latest/ \
-            --force
-
       - name: Generate release-info.json
         run: |
           CDN_BASE="${{ vars.ALIYUN_OSS_CDN_URL }}/claude-studio/releases/${{ steps.version.outputs.TAG }}"
@@ -473,23 +448,16 @@ jobs:
             console.log(JSON.stringify(urls, null, 2));
           "
 
-          # Generate release-info.json for latest/ (non-versioned filenames, but cdnBase points to versioned path)
+          # Generate release-info.json for latest/ (files point to versioned path)
           node -e "
             const fs = require('fs');
             const files = fs.readdirSync('upload/');
             const baseVersioned = '${CDN_BASE}';
-            const baseLatest = '${CDN_BASE}'.replace('/' + '${TAG}', '/latest');
             const tag = '${TAG}';
             const version = tag.replace('v','');
-            // For latest, cdnBase points to versioned path so downloads work
             const urls = { version: version, cdnBase: baseVersioned, files: {} };
             for (const f of files) {
-              // Remove version from filename:
-              //   ClaudeStudio-0.1.25-Setup.exe -> ClaudeStudio-Setup.exe
-              //   claude-studio-server-v0.1.25.tar.gz -> claude-studio-server.tar.gz
-              const tag = '${TAG}';
-              const newname = f.replace('-' + version, '').replace('_' + version + '_', '_').replace('-' + tag + '.tar.gz', '.tar.gz');
-              urls.files[newname] = baseVersioned + '/' + f;  // Point to actual versioned file
+              urls.files[f] = baseVersioned + '/' + f;
             }
             fs.writeFileSync('release-info-latest.json', JSON.stringify(urls, null, 2));
             console.log('Latest release-info.json:');
