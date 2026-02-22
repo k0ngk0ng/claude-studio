@@ -353,10 +353,8 @@ class MobileRelayClient {
 
     const { payload, seq } = encrypt(session, plaintext);
 
-    // Periodically persist seq counters
-    if (seq % 5 === 0) {
-      this.saveE2EESessions();
-    }
+    // Persist seq after every encrypt to prevent replay on reload
+    this.saveE2EESessions();
 
     return this.send({ type: 'relay', to: targetDeviceId, payload, seq });
   }

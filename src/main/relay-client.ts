@@ -484,13 +484,12 @@ export class RelayClient extends EventEmitter {
         if (device) {
           device.lastSeen = Date.now();
 
-          // Mobile reconnected — clear its E2EE session so it can reinitialize
-          // This fixes the seq mismatch issue when mobile reconnects
+          // Mobile reconnected — reset peerSeq so we accept its next seq
+          // (mobile persists seq, but it may have rolled back on reload)
           if (device.deviceType === 'mobile') {
             const session = this.sessions.get(deviceId);
             if (session) {
-              console.log(`[relay] Mobile ${deviceId} reconnected — clearing E2EE session for reinit`);
-              this.sessions.delete(deviceId);
+              session.peerSeq = -1;
               this.savePersistedSessions();
             }
           }
