@@ -485,22 +485,24 @@ jobs:
 
       - name: Clean up old versions (keep last 3)
         run: |
-          # List all version directories
-          ALL_VERSIONS=$(ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/ | grep 'oss://' | grep -E '/v[0-9]+\.[0-9]+' | sed 's|.*/||' | sed 's|/$||' | sort -V)
+          # List all version directories (exclude 'latest')
+          ALL_VERSIONS=$(ossutil ls oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/ -d | grep 'oss://' | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' | sort -uV)
+          TOTAL=$(echo "$ALL_VERSIONS" | wc -l | tr -d ' ')
+          echo "Found $TOTAL version(s): $ALL_VERSIONS"
 
-          # Get the list of versions to keep (last 3)
-          KEEP_VERSIONS=$(echo "$ALL_VERSIONS" | tail -n 3)
-          echo "Versions to keep (last 3):"
-          echo "$KEEP_VERSIONS"
+          if [ "$TOTAL" -le 3 ]; then
+            echo "Only $TOTAL version(s), nothing to clean up."
+            exit 0
+          fi
 
-          # Delete old versions
-          for dir in $ALL_VERSIONS; do
-            if echo "$KEEP_VERSIONS" | grep -q "^$dir$"; then
-              echo "Keeping: $dir"
-            else
-              echo "Deleting: $dir"
-              ossutil rm "oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/$dir/" -r --force
-            fi
+          # Versions to delete (all except last 3)
+          DELETE_VERSIONS=$(echo "$ALL_VERSIONS" | head -n -3)
+          echo "Versions to delete:"
+          echo "$DELETE_VERSIONS"
+
+          for ver in $DELETE_VERSIONS; do
+            echo "Deleting: v$ver"
+            ossutil rm "oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/v${ver}/" -r --force
           done
 
       - name: Refresh CDN cache
