@@ -76,12 +76,14 @@ export class RemoteControl extends EventEmitter {
   handleControlRequest(deviceId: string, deviceName: string): void {
     if (!this.allowRemoteControl) {
       // Reject — remote control disabled
+      console.log(`[remote-control] Rejecting ${deviceName} (${deviceId}) — remote control disabled`);
       relayClient.sendControlAck(deviceId, false);
       return;
     }
 
     if (this.state.mode !== 'local') {
       // Already controlled by another device
+      console.log(`[remote-control] Rejecting ${deviceName} (${deviceId}) — already in ${this.state.mode} mode by ${this.state.controllingDeviceId}`);
       relayClient.sendControlAck(deviceId, false);
       return;
     }
@@ -94,6 +96,7 @@ export class RemoteControl extends EventEmitter {
     }
 
     // Accept control request
+    console.log(`[remote-control] Accepting control request from ${deviceName} (${deviceId})`);
     relayClient.sendControlAck(deviceId, true);
 
     // Apply auto-lock timeout

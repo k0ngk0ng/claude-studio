@@ -6,7 +6,7 @@ import { useRemoteStore } from '../../stores/remoteStore';
  * Displays a 6-digit PIN input for unlocking.
  */
 export function LockOverlay() {
-  const { controlMode, controllingDeviceName, tryUnlock, unlockError } = useRemoteStore();
+  const { controlMode, controllingDeviceId, controllingDeviceName, tryUnlock, unlockError } = useRemoteStore();
   const [digits, setDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
@@ -133,6 +133,14 @@ export function LockOverlay() {
             <span className="text-accent font-medium">
               {controllingDeviceName || 'a mobile device'}
             </span>
+            {controllingDeviceId && (
+              <>
+                <br />
+                <span className="text-white/30 text-xs font-mono">
+                  {controllingDeviceId}
+                </span>
+              </>
+            )}
           </p>
         </div>
 

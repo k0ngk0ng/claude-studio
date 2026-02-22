@@ -2,7 +2,7 @@
  * Desktop list screen — shows paired desktops, connect/scan QR.
  */
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import {
   View,
   Text,
@@ -25,11 +25,13 @@ interface Props {
 export function DesktopListScreen({ onScanQR, onSelectDesktop }: Props) {
   const { connected, desktops, connect } = useRemoteStore();
   const [refreshing, setRefreshing] = React.useState(false);
+  const [deviceId, setDeviceId] = useState('');
 
   useEffect(() => {
     if (!connected) {
       connect();
     }
+    relayClient.getDeviceId().then(setDeviceId);
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -87,6 +89,11 @@ export function DesktopListScreen({ onScanQR, onSelectDesktop }: Props) {
               {connected ? 'Connected to relay' : 'Disconnected'}
             </Text>
           </View>
+          {deviceId ? (
+            <Text style={styles.deviceIdText} selectable>
+              ID: {deviceId}
+            </Text>
+          ) : null}
         </View>
         <TouchableOpacity onPress={handleDisconnect} style={styles.disconnectBtn}>
           <Text style={styles.disconnectText}>Disconnect</Text>
@@ -213,9 +220,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.textMuted,
   },
+  deviceIdText: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
+    fontFamily: 'monospace',
+  },
   disconnectBtn: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
     backgroundColor: colors.surface,
     borderRadius: borderRadius.sm,
     borderWidth: 1,

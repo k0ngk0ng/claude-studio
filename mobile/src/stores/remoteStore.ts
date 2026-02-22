@@ -104,7 +104,8 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
     });
 
     if (!ack.accepted) {
-      // Desktop rejected or timed out — don't destroy pairing, just inform user
+      // Desktop rejected or timed out — release in case desktop already locked
+      relayClient.releaseControl(desktopId);
       Alert.alert(
         'Control Rejected',
         'Desktop did not accept the connection. It may be busy or offline. Try again.',
