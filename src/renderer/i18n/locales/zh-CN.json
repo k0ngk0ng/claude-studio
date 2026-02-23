@@ -44,7 +44,12 @@
     "workingIn": "工作目录",
     "on": "分支",
     "notFound": "未找到",
-    "install": "安装"
+    "install": "安装",
+    "installClaudeCode": "安装 Claude Code",
+    "installing": "安装中…",
+    "installSuccess": "已安装",
+    "installError": "安装失败",
+    "retry": "重试"
   },
   "chat": {
     "placeholder": "向 Claude 提问，@ 添加文件，/ 使用命令",

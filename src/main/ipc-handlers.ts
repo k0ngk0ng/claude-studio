@@ -388,7 +388,7 @@ export function registerIpcHandlers(): void {
   });
 
   handle('app:getClaudeCodeVersion', () => {
-    // Try 1: run `claude --version` from the global CLI
+    // Only detect the real Claude Code CLI — do NOT fall back to bundled SDK metadata
     try {
       const claudePath = getClaudeBinary();
       const raw = execSync(`${claudePath} --version`, {
@@ -399,22 +399,6 @@ export function registerIpcHandlers(): void {
       // Output is like "2.1.33 (Claude Code)" — extract just the version number
       const version = raw.split(/\s/)[0];
       if (version) return version;
-    } catch {
-      // fall through
-    }
-    // Try 2: read version from SDK's manifest.json
-    try {
-      const manifestPath = require.resolve('@anthropic-ai/claude-agent-sdk/manifest.json');
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-      if (manifest.version) return manifest.version;
-    } catch {
-      // fall through
-    }
-    // Try 3: read claudeCodeVersion from SDK's package.json
-    try {
-      const sdkPkgPath = require.resolve('@anthropic-ai/claude-agent-sdk/package.json');
-      const sdkPkg = JSON.parse(fs.readFileSync(sdkPkgPath, 'utf-8'));
-      if (sdkPkg.claudeCodeVersion) return sdkPkg.claudeCodeVersion;
     } catch {
       // fall through
     }

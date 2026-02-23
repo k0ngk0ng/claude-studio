@@ -44,7 +44,12 @@
     "workingIn": "Working in",
     "on": "on",
     "notFound": "not found",
-    "install": "Install"
+    "install": "Install",
+    "installClaudeCode": "Install Claude Code",
+    "installing": "Installing…",
+    "installSuccess": "Installed",
+    "installError": "Install failed",
+    "retry": "Retry"
   },
   "chat": {
     "placeholder": "Ask anything, @ to add files, / for commands",

@@ -40,7 +40,14 @@
     "subtitle": "Клиент Claude Code для desktop",
     "startChat": "Начать новый разговор",
     "recentThreads": "Недавние темы",
-    "noRecentThreads": "Нет недавних тем"
+    "noRecentThreads": "Нет недавних тем",
+    "notFound": "не найден",
+    "install": "Установить",
+    "installClaudeCode": "Установить Claude Code",
+    "installing": "Установка…",
+    "installSuccess": "Установлено",
+    "installError": "Ошибка установки",
+    "retry": "Повторить"
   },
   "chat": {
     "placeholder": "Спросите Claude...",

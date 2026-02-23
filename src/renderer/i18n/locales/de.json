@@ -40,7 +40,14 @@
     "subtitle": "Desktop-Client für Claude Code",
     "startChat": "Neue Konversation starten",
     "recentThreads": "Aktuelle Threads",
-    "noRecentThreads": "Keine aktuellen Threads"
+    "noRecentThreads": "Keine aktuellen Threads",
+    "notFound": "nicht gefunden",
+    "install": "Installieren",
+    "installClaudeCode": "Claude Code installieren",
+    "installing": "Installiere…",
+    "installSuccess": "Installiert",
+    "installError": "Installation fehlgeschlagen",
+    "retry": "Erneut versuchen"
   },
   "chat": {
     "placeholder": "Frage Claude...",

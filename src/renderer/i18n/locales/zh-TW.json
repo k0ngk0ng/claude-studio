@@ -40,7 +40,14 @@
     "subtitle": "Claude Code 桌面客戶端",
     "startChat": "開始新對話",
     "recentThreads": "最近的對話",
-    "noRecentThreads": "尚無最近對話"
+    "noRecentThreads": "尚無最近對話",
+    "notFound": "未找到",
+    "install": "安裝",
+    "installClaudeCode": "安裝 Claude Code",
+    "installing": "安裝中…",
+    "installSuccess": "已安裝",
+    "installError": "安裝失敗",
+    "retry": "重試"
   },
   "chat": {
     "placeholder": "向 Claude 提問...",

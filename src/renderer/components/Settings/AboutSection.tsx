@@ -482,7 +482,7 @@ export function AboutSection() {
                   style={{ width: `${updateStatus.progress}%` }}
                 />
               </div>
-              <div className="text-xs text-text-muted text-right">{updateStatus.progress}%</div>
+              <div className="text-xs text-text-muted text-right">{Math.floor(updateStatus.progress)}%</div>
             </div>
           )}
 

@@ -40,7 +40,14 @@
     "subtitle": "Claude Code 데스크톱 클라이언트",
     "startChat": "새 대화 시작",
     "recentThreads": "최근 스레드",
-    "noRecentThreads": "최근 스레드가 없습니다"
+    "noRecentThreads": "최근 스레드가 없습니다",
+    "notFound": "을(를) 찾을 수 없음",
+    "install": "설치",
+    "installClaudeCode": "Claude Code 설치",
+    "installing": "설치 중…",
+    "installSuccess": "설치 완료",
+    "installError": "설치 실패",
+    "retry": "재시도"
   },
   "chat": {
     "placeholder": "Claude에게 질문...",

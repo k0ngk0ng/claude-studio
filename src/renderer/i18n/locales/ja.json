@@ -40,7 +40,14 @@
     "subtitle": "Claude Code デスクトップクライアント",
     "startChat": "新しい会話を始める",
     "recentThreads": "最近のスレッド",
-    "noRecentThreads": "最近のスレッドはありません"
+    "noRecentThreads": "最近のスレッドはありません",
+    "notFound": "が見つかりません",
+    "install": "インストール",
+    "installClaudeCode": "Claude Code をインストール",
+    "installing": "インストール中…",
+    "installSuccess": "インストール完了",
+    "installError": "インストール失敗",
+    "retry": "再試行"
   },
   "chat": {
     "placeholder": "Claude に質問...",
