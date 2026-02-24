@@ -36,6 +36,7 @@ function parseRawMessages(rawMessages: any[]): Message[] {
     tools: ToolUseInfo[];
     timestamp: string;
     id: string;
+    model?: string;
   } | null = null;
 
   function flushAssistant() {
@@ -49,6 +50,7 @@ function parseRawMessages(rawMessages: any[]): Message[] {
         content: content,
         toolUse: currentAssistant.tools.length > 0 ? currentAssistant.tools : undefined,
         timestamp: currentAssistant.timestamp,
+        model: currentAssistant.model,
       });
     }
     currentAssistant = null;
@@ -92,12 +94,14 @@ function parseRawMessages(rawMessages: any[]): Message[] {
       }
     } else if (role === 'assistant') {
       // Start or continue building an assistant message
+      const model = raw.message.model;
       if (!currentAssistant) {
         currentAssistant = {
           texts: [],
           tools: [],
           timestamp,
           id,
+          model,
         };
       }
 

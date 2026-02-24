@@ -475,16 +475,6 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
           {message.model && (
             <span className="opacity-60">{message.model}</span>
           )}
-          {message.costUsd !== undefined && (
-            <span className="opacity-60">
-              ${message.costUsd.toFixed(4)}
-            </span>
-          )}
-          {message.durationMs !== undefined && (
-            <span className="opacity-60">
-              {(message.durationMs / 1000).toFixed(1)}s
-            </span>
-          )}
           {copyButton}
           {forkButton}
         </div>
