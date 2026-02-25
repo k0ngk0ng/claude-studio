@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
 import path from 'path';
+import os from 'os';
 import { createRequire } from 'module';
 import { app } from 'electron';
 import fs from 'fs';
@@ -257,14 +258,24 @@ class ClaudeProcessManager extends EventEmitter {
     // Extract model from merged env — pass explicitly to SDK options
     const modelFromEnv = childEnv.ANTHROPIC_MODEL;
 
-    // Build options — settingSources excludes 'user' so ~/.claude/settings.json
-    // does NOT leak into the SDK (the Agent SDK is independent from Claude Code CLI)
+    // Build options — settingSources NEVER includes 'user' so ~/.claude/settings.json
+    // does NOT leak into the SDK. But 'project' is also dangerous when cwd = ~ because
+    // <cwd>/.claude/settings.json IS ~/.claude/settings.json (same file!).
+    // So: when cwd is home dir → settingSources: [] (full isolation)
+    //     otherwise → settingSources: ['project', 'local'] (load CLAUDE.md + project settings)
+    const homedir = os.homedir();
+    const isHomeCwd = managed.cwd === homedir || managed.cwd === homedir + '/';
+    const settingSources = isHomeCwd ? [] : ['project', 'local'];
+    debugLog('settingSources:', settingSources, isHomeCwd ? '(cwd is home dir — full isolation)' : '');
+
+    const sdkDebugFile = path.join(app.getPath('userData'), 'sdk-debug.log');
     const options: Record<string, unknown> = {
       cwd: managed.cwd,
       abortController: managed.abortController,
       includePartialMessages: true,
-      settingSources: ['project', 'local'],
+      settingSources,
       env: childEnv,
+      debugFile: sdkDebugFile,
       systemPrompt: langInstruction
         ? { type: 'preset', preset: 'claude_code', append: langInstruction }
         : { type: 'preset', preset: 'claude_code' },
@@ -373,17 +384,23 @@ class ClaudeProcessManager extends EventEmitter {
 
     // Async generator for streaming input
     async function* streamInput() {
+      debugLog('streamInput generator started');
       while (!inputDone) {
         if (inputQueue.length > 0) {
-          yield inputQueue.shift()!;
+          const msg = inputQueue.shift()!;
+          debugLog('streamInput yielding message — type:', msg.type, 'content length:', msg.message?.content?.length);
+          yield msg;
         } else {
+          debugLog('streamInput waiting for input...');
           // Wait for new input
           await new Promise<void>((resolve) => {
             inputResolve = resolve;
             (managed as any)._inputResolve = () => resolve();
           });
+          debugLog('streamInput woke up — queue length:', inputQueue.length);
         }
       }
+      debugLog('streamInput generator done');
     }
 
     try {
@@ -503,10 +520,14 @@ class ClaudeProcessManager extends EventEmitter {
 
   sendMessage(processId: string, content: string): boolean {
     const managed = this.sessions.get(processId);
+    debugLog('sendMessage called — processId:', processId, 'found:', !!managed, 'content length:', content?.length);
     if (!managed) return false;
 
     const queue = (managed as any)._inputQueue as Array<any>;
-    if (!queue) return false;
+    if (!queue) {
+      debugLog('sendMessage — no input queue found!');
+      return false;
+    }
 
     const isFollowUp = managed.messageCount > 0;
     managed.messageCount++;
