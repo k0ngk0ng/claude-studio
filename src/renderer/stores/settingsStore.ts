@@ -420,9 +420,13 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   setEnvVars: (envVars) => {
     set((state) => {
+      const activeId = state.settings.provider.activeProfileId;
+      const newProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === activeId ? { ...p, envVars } : p
+      );
       const newSettings = {
         ...state.settings,
-        provider: { ...state.settings.provider, envVars },
+        provider: { ...state.settings.provider, envVars, profiles: newProfiles },
       };
       saveSettings(newSettings);
       return { settings: newSettings };
@@ -431,11 +435,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   addEnvVar: (envVar) => {
     set((state) => {
+      const newEnvVars = [...state.settings.provider.envVars, envVar];
+      const activeId = state.settings.provider.activeProfileId;
+      const newProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === activeId ? { ...p, envVars: newEnvVars } : p
+      );
       const newSettings = {
         ...state.settings,
         provider: {
           ...state.settings.provider,
-          envVars: [...state.settings.provider.envVars, envVar],
+          envVars: newEnvVars,
+          profiles: newProfiles,
         },
       };
       saveSettings(newSettings);
@@ -445,11 +455,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   removeEnvVar: (key) => {
     set((state) => {
+      const newEnvVars = state.settings.provider.envVars.filter((v) => v.key !== key);
+      const activeId = state.settings.provider.activeProfileId;
+      const newProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === activeId ? { ...p, envVars: newEnvVars } : p
+      );
       const newSettings = {
         ...state.settings,
         provider: {
           ...state.settings.provider,
-          envVars: state.settings.provider.envVars.filter((v) => v.key !== key),
+          envVars: newEnvVars,
+          profiles: newProfiles,
         },
       };
       saveSettings(newSettings);
@@ -459,13 +475,19 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
 
   updateEnvVar: (key, updates) => {
     set((state) => {
+      const newEnvVars = state.settings.provider.envVars.map((v) =>
+        v.key === key ? { ...v, ...updates } : v
+      );
+      const activeId = state.settings.provider.activeProfileId;
+      const newProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === activeId ? { ...p, envVars: newEnvVars } : p
+      );
       const newSettings = {
         ...state.settings,
         provider: {
           ...state.settings.provider,
-          envVars: state.settings.provider.envVars.map((v) =>
-            v.key === key ? { ...v, ...updates } : v
-          ),
+          envVars: newEnvVars,
+          profiles: newProfiles,
         },
       };
       saveSettings(newSettings);
@@ -528,11 +550,16 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       temperature: 0,
     };
     set((state) => {
+      // Save current envVars back to current profile before switching to new one
+      const currentId = state.settings.provider.activeProfileId;
+      const updatedProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === currentId ? { ...p, envVars: state.settings.provider.envVars } : p
+      );
       const newSettings = {
         ...state.settings,
         provider: {
           ...state.settings.provider,
-          profiles: [...state.settings.provider.profiles, newProfile],
+          profiles: [...updatedProfiles, newProfile],
           activeProfileId: id,
           envVars: newProfile.envVars,
         },
@@ -605,7 +632,12 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   duplicateProfile: (id) => {
     const newId = `profile-${Date.now()}`;
     set((state) => {
-      const source = state.settings.provider.profiles.find((p) => p.id === id);
+      // Save current envVars back to current profile before switching
+      const currentId = state.settings.provider.activeProfileId;
+      const updatedProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === currentId ? { ...p, envVars: state.settings.provider.envVars } : p
+      );
+      const source = updatedProfiles.find((p) => p.id === id);
       if (!source) return state;
       const newProfile: ClaudeCodeProfile = {
         ...source,
@@ -617,7 +649,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
         ...state.settings,
         provider: {
           ...state.settings.provider,
-          profiles: [...state.settings.provider.profiles, newProfile],
+          profiles: [...updatedProfiles, newProfile],
           activeProfileId: newId,
           envVars: newProfile.envVars,
         },
