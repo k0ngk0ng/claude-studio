@@ -211,6 +211,10 @@ class ClaudeProcessManager extends EventEmitter {
       ? `IMPORTANT: Always respond in ${langMap[lang]}. All explanations, comments, and conversation must be in ${langMap[lang]}.`
       : '';
 
+    // Extract model from env vars — pass explicitly to SDK so it takes priority
+    // over any model set in ~/.claude/settings.json
+    const modelFromEnv = process.env.ANTHROPIC_MODEL;
+
     // Build options
     const options: Record<string, unknown> = {
       cwd: managed.cwd,
@@ -226,6 +230,12 @@ class ClaudeProcessManager extends EventEmitter {
         debugLog('SDK stderr:', data);
       },
     };
+
+    // Explicitly pass model to SDK so profile env vars override settings.json
+    if (modelFromEnv) {
+      options.model = modelFromEnv;
+      debugLog('model (from ANTHROPIC_MODEL):', modelFromEnv);
+    }
 
     debugLog('SDK cli path:', getSdkCliPath());
     debugLog('cwd:', managed.cwd);
