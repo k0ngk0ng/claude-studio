@@ -399,12 +399,24 @@ export interface ProviderEnvVar {
   enabled: boolean;
 }
 
+export interface ClaudeCodeProfile {
+  id: string;
+  name: string;
+  envVars: ProviderEnvVar[];
+  includeCoAuthoredBy: boolean;
+  systemPrompt: string;
+  temperature: number;
+}
+
 export interface ProviderSettings {
   maxTokens: number;
   temperature: number;
   systemPrompt: string;
   // New: environment variable overrides
   envVars: ProviderEnvVar[];
+  // Multi-profile support
+  profiles: ClaudeCodeProfile[];
+  activeProfileId: string;
 }
 
 export interface PermissionSettings {

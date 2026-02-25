@@ -8,6 +8,7 @@ import type {
   ModelSettings,
   ProviderSettings,
   ProviderEnvVar,
+  ClaudeCodeProfile,
   PermissionSettings,
   PermissionMode,
   McpServer,
@@ -19,6 +20,19 @@ import type {
 } from '../types';
 
 const STORAGE_KEY = 'claude-studio-settings';
+
+const DEFAULT_PROFILE_ID = 'default';
+
+function createDefaultProfile(): ClaudeCodeProfile {
+  return {
+    id: DEFAULT_PROFILE_ID,
+    name: 'Default',
+    envVars: [],
+    includeCoAuthoredBy: false,
+    systemPrompt: '',
+    temperature: 0,
+  };
+}
 
 const defaultSettings: AppSettings = {
   general: {
@@ -36,6 +50,8 @@ const defaultSettings: AppSettings = {
     temperature: 0,
     systemPrompt: '',
     envVars: [],
+    profiles: [createDefaultProfile()],
+    activeProfileId: DEFAULT_PROFILE_ID,
   },
   permissions: {
     allowFileWrite: true,
@@ -139,6 +155,8 @@ function mergeWithDefaults(parsed: Record<string, unknown>): AppSettings {
       ...defaultSettings.provider,
       ...(providerSource as Partial<ProviderSettings>),
       envVars: (providerSource.envVars as ProviderEnvVar[]) || defaultSettings.provider.envVars,
+      profiles: (providerSource.profiles as ClaudeCodeProfile[]) || defaultSettings.provider.profiles,
+      activeProfileId: (providerSource.activeProfileId as string) || defaultSettings.provider.activeProfileId,
     },
     permissions: { ...defaultSettings.permissions, ...(parsed.permissions as Partial<PermissionSettings>) },
     mcpServers: (parsed.mcpServers as McpServer[]) || defaultSettings.mcpServers,
@@ -148,6 +166,25 @@ function mergeWithDefaults(parsed: Record<string, unknown>): AppSettings {
     security: { ...defaultSettings.security, ...(parsed.security as Partial<SecuritySettings>) },
     server: { ...defaultSettings.server, ...(parsed.server as Partial<ServerSettings>) },
   };
+
+  // Migrate: if no profiles exist but envVars do, create default profile from envVars
+  if (!providerSource.profiles && settings.provider.envVars.length > 0) {
+    settings.provider.profiles = [{
+      id: DEFAULT_PROFILE_ID,
+      name: 'Default',
+      envVars: [...settings.provider.envVars],
+      includeCoAuthoredBy: false,
+      systemPrompt: settings.provider.systemPrompt || '',
+      temperature: settings.provider.temperature || 0,
+    }];
+    settings.provider.activeProfileId = DEFAULT_PROFILE_ID;
+  }
+
+  // Sync envVars from active profile
+  const activeProfile = settings.provider.profiles.find(p => p.id === settings.provider.activeProfileId);
+  if (activeProfile) {
+    settings.provider.envVars = activeProfile.envVars;
+  }
 
   // Migrate old autoApprove values to new permission mode values
   const modeMap: Record<string, string> = {
@@ -191,6 +228,39 @@ async function loadSettingsFromFile(): Promise<AppSettings> {
     } catch {
       // Ignore localStorage errors
     }
+
+    // No local data — seed defaults from ~/.claude/settings.json if available
+    try {
+      const claudeConfig = await window.api.claudeConfig.read();
+      if (claudeConfig && typeof claudeConfig === 'object') {
+        const env = claudeConfig.env as Record<string, string> | undefined;
+        const envVars: ProviderEnvVar[] = env
+          ? Object.entries(env).map(([key, value]) => ({ key, value, enabled: true }))
+          : [];
+
+        if (envVars.length > 0) {
+          const seeded: AppSettings = { ...defaultSettings };
+          const profile: ClaudeCodeProfile = {
+            id: DEFAULT_PROFILE_ID,
+            name: 'Default',
+            envVars,
+            includeCoAuthoredBy: !!claudeConfig.includeCoAuthoredBy,
+            systemPrompt: '',
+            temperature: 0,
+          };
+          seeded.provider = {
+            ...seeded.provider,
+            envVars,
+            profiles: [profile],
+            activeProfileId: DEFAULT_PROFILE_ID,
+          };
+          saveSettings(seeded);
+          return seeded;
+        }
+      }
+    } catch {
+      // Ignore claude config read errors
+    }
   } catch {
     // Ignore file read errors
   }
@@ -229,6 +299,15 @@ interface SettingsStore {
   updateMcpServer: (id: string, updates: Partial<McpServer>) => void;
   removeMcpServer: (id: string) => void;
   toggleMcpServer: (id: string) => void;
+
+  // Profiles
+  addProfile: (name: string) => string;
+  removeProfile: (id: string) => void;
+  renameProfile: (id: string, name: string) => void;
+  switchProfile: (id: string) => void;
+  duplicateProfile: (id: string) => string;
+  updateActiveProfile: (updates: Partial<ClaudeCodeProfile>) => void;
+  getActiveProfile: () => ClaudeCodeProfile;
 
   // Reset
   resetSettings: () => void;
@@ -436,6 +515,143 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       saveSettings(newSettings);
       return { settings: newSettings };
     });
+  },
+
+  addProfile: (name) => {
+    const id = `profile-${Date.now()}`;
+    const newProfile: ClaudeCodeProfile = {
+      id,
+      name,
+      envVars: [],
+      includeCoAuthoredBy: false,
+      systemPrompt: '',
+      temperature: 0,
+    };
+    set((state) => {
+      const newSettings = {
+        ...state.settings,
+        provider: {
+          ...state.settings.provider,
+          profiles: [...state.settings.provider.profiles, newProfile],
+          activeProfileId: id,
+          envVars: newProfile.envVars,
+        },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+    return id;
+  },
+
+  removeProfile: (id) => {
+    set((state) => {
+      const profiles = state.settings.provider.profiles;
+      if (profiles.length <= 1) return state; // Can't remove last profile
+      const newProfiles = profiles.filter((p) => p.id !== id);
+      const isActive = state.settings.provider.activeProfileId === id;
+      const newActiveId = isActive ? newProfiles[0].id : state.settings.provider.activeProfileId;
+      const activeProfile = newProfiles.find((p) => p.id === newActiveId)!;
+      const newSettings = {
+        ...state.settings,
+        provider: {
+          ...state.settings.provider,
+          profiles: newProfiles,
+          activeProfileId: newActiveId,
+          envVars: activeProfile.envVars,
+        },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  renameProfile: (id, name) => {
+    set((state) => {
+      const newProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === id ? { ...p, name } : p
+      );
+      const newSettings = {
+        ...state.settings,
+        provider: { ...state.settings.provider, profiles: newProfiles },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  switchProfile: (id) => {
+    set((state) => {
+      // Save current envVars back to current profile before switching
+      const currentId = state.settings.provider.activeProfileId;
+      const updatedProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === currentId ? { ...p, envVars: state.settings.provider.envVars } : p
+      );
+      const targetProfile = updatedProfiles.find((p) => p.id === id);
+      if (!targetProfile) return state;
+      const newSettings = {
+        ...state.settings,
+        provider: {
+          ...state.settings.provider,
+          profiles: updatedProfiles,
+          activeProfileId: id,
+          envVars: targetProfile.envVars,
+        },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  duplicateProfile: (id) => {
+    const newId = `profile-${Date.now()}`;
+    set((state) => {
+      const source = state.settings.provider.profiles.find((p) => p.id === id);
+      if (!source) return state;
+      const newProfile: ClaudeCodeProfile = {
+        ...source,
+        id: newId,
+        name: `${source.name} (Copy)`,
+        envVars: source.envVars.map((v) => ({ ...v })),
+      };
+      const newSettings = {
+        ...state.settings,
+        provider: {
+          ...state.settings.provider,
+          profiles: [...state.settings.provider.profiles, newProfile],
+          activeProfileId: newId,
+          envVars: newProfile.envVars,
+        },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+    return newId;
+  },
+
+  updateActiveProfile: (updates) => {
+    set((state) => {
+      const activeId = state.settings.provider.activeProfileId;
+      const newProfiles = state.settings.provider.profiles.map((p) =>
+        p.id === activeId ? { ...p, ...updates } : p
+      );
+      const activeProfile = newProfiles.find((p) => p.id === activeId)!;
+      const newSettings = {
+        ...state.settings,
+        provider: {
+          ...state.settings.provider,
+          profiles: newProfiles,
+          envVars: activeProfile.envVars,
+        },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  getActiveProfile: () => {
+    const state = get();
+    const activeId = state.settings.provider.activeProfileId;
+    return state.settings.provider.profiles.find((p) => p.id === activeId) || state.settings.provider.profiles[0];
   },
 
   resetSettings: () => {

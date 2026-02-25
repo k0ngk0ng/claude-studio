@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { SettingsInput } from './controls/SettingsInput';
 import { SettingsSelect } from './controls/SettingsSelect';
@@ -151,86 +151,18 @@ function PasswordInput({
 
 // ─── Main component ─────────────────────────────────────────────────
 export function ClaudeCodeSection() {
-  const { settings, updateProvider, setEnvVars, addEnvVar, removeEnvVar, updateEnvVar } = useSettingsStore();
+  const {
+    settings, updateProvider, setEnvVars, addEnvVar, removeEnvVar, updateEnvVar,
+    updateActiveProfile, getActiveProfile,
+    addProfile, removeProfile, renameProfile, switchProfile, duplicateProfile,
+  } = useSettingsStore();
   const { provider } = settings;
   const { envVars } = provider;
   const importRef = useRef<HTMLInputElement>(null);
   const [newCustomKey, setNewCustomKey] = useState('');
   const [newCustomValue, setNewCustomValue] = useState('');
-
-  // ─── Claude Code config (~/.claude/settings.json) bidirectional sync ──
-  const [includeCoAuthoredBy, setIncludeCoAuthoredBy] = useState(false);
-  const [claudeConfigLoaded, setClaudeConfigLoaded] = useState(false);
-  const syncingRef = useRef(false); // prevent write-back during initial load
-
-  // On mount: read ~/.claude/settings.json and merge env vars into store
-  useEffect(() => {
-    syncingRef.current = true;
-    window.api.claudeConfig.read().then((config) => {
-      setIncludeCoAuthoredBy(config.includeCoAuthoredBy === true);
-
-      // Merge env field from settings.json into store envVars
-      const fileEnv = (config.env || {}) as Record<string, string>;
-      const currentVars = useSettingsStore.getState().settings.provider.envVars;
-      const currentKeys = new Set(currentVars.map((v) => v.key));
-
-      let merged = [...currentVars];
-      let changed = false;
-
-      // Update existing keys with file values, add new keys from file
-      for (const [key, value] of Object.entries(fileEnv)) {
-        if (typeof value !== 'string') continue;
-        if (currentKeys.has(key)) {
-          // Update value from file if the store value is empty
-          const existing = merged.find((v) => v.key === key);
-          if (existing && !existing.value && value) {
-            merged = merged.map((v) => v.key === key ? { ...v, value, enabled: true } : v);
-            changed = true;
-          }
-        } else {
-          // New key from file — add as enabled
-          merged.push({ key, value, enabled: true });
-          changed = true;
-        }
-      }
-
-      if (changed) {
-        setEnvVars(merged);
-      }
-
-      setClaudeConfigLoaded(true);
-      // Allow write-back after a tick so the merge doesn't trigger a write
-      setTimeout(() => { syncingRef.current = false; }, 100);
-    }).catch(() => {
-      setClaudeConfigLoaded(true);
-      syncingRef.current = false;
-    });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Write envVars back to ~/.claude/settings.json whenever they change
-  useEffect(() => {
-    if (!claudeConfigLoaded || syncingRef.current) return;
-
-    // Convert envVars to flat Record<string, string> (only enabled with non-empty values)
-    const envRecord: Record<string, string> = {};
-    for (const { key, value, enabled } of envVars) {
-      if (enabled && key && value) {
-        envRecord[key] = value;
-      }
-    }
-
-    window.api.claudeConfig.write({ env: envRecord }).catch(() => {
-      // Silently ignore write errors
-    });
-  }, [envVars, claudeConfigLoaded]);
-
-  const handleCoAuthoredByChange = useCallback((checked: boolean) => {
-    setIncludeCoAuthoredBy(checked);
-    window.api.claudeConfig.write({ includeCoAuthoredBy: checked }).catch(() => {
-      // Revert on failure
-      setIncludeCoAuthoredBy(!checked);
-    });
-  }, []);
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
+  const [editingProfileName, setEditingProfileName] = useState('');
 
   // ─── Env var helpers ────────────────────────────────────────────
   const setEnv = useCallback((key: string, value: string) => {
@@ -251,19 +183,22 @@ export function ClaudeCodeSection() {
     }
   }, [envVars, updateEnvVar, addEnvVar]);
 
-  // ─── Import / Export (compatible with ~/.claude/settings.json format) ──
+  // ─── Import / Export (profile-aware, compatible with ~/.claude/settings.json) ──
   const handleExport = useCallback(() => {
-    // Build a settings.json-compatible object
+    const profile = getActiveProfile();
+    // Build a settings.json-compatible env record from profile envVars
     const envRecord: Record<string, string> = {};
-    for (const { key, value, enabled } of envVars) {
+    for (const { key, value, enabled } of profile.envVars) {
       if (enabled && key && value) {
         envRecord[key] = value;
       }
     }
-    const exportData: Record<string, unknown> = { env: envRecord };
-    if (includeCoAuthoredBy !== undefined) {
-      exportData.includeCoAuthoredBy = includeCoAuthoredBy;
-    }
+    const exportData: Record<string, unknown> = {
+      env: envRecord,
+      includeCoAuthoredBy: profile.includeCoAuthoredBy,
+      systemPrompt: profile.systemPrompt,
+      temperature: profile.temperature,
+    };
 
     const data = JSON.stringify(exportData, null, 2);
     const blob = new Blob([data], { type: 'application/json' });
@@ -275,7 +210,7 @@ export function ClaudeCodeSection() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [envVars, includeCoAuthoredBy]);
+  }, [getActiveProfile]);
 
   const handleImport = useCallback(() => {
     importRef.current?.click();
@@ -289,23 +224,42 @@ export function ClaudeCodeSection() {
       try {
         const data = JSON.parse(reader.result as string);
 
+        // Parse env vars from either format
+        let importedVars: ProviderEnvVar[] | null = null;
+
         // Support ~/.claude/settings.json format: { env: { KEY: "value" } }
         if (data.env && typeof data.env === 'object' && !Array.isArray(data.env)) {
-          const newVars: ProviderEnvVar[] = Object.entries(data.env)
+          importedVars = Object.entries(data.env)
             .filter(([, v]) => typeof v === 'string')
             .map(([key, value]) => ({ key, value: value as string, enabled: true }));
-          if (newVars.length > 0) {
-            setEnvVars(newVars);
-          }
         }
         // Also support legacy format: { envVars: [{ key, value, enabled }] }
         else if (data.envVars && Array.isArray(data.envVars)) {
-          setEnvVars(data.envVars);
+          importedVars = data.envVars;
         }
 
-        // Import includeCoAuthoredBy if present
+        // Build profile updates from imported data
+        const profileUpdates: Partial<import('../../types').ClaudeCodeProfile> = {};
+        if (importedVars && importedVars.length > 0) {
+          profileUpdates.envVars = importedVars;
+        }
         if (typeof data.includeCoAuthoredBy === 'boolean') {
-          handleCoAuthoredByChange(data.includeCoAuthoredBy);
+          profileUpdates.includeCoAuthoredBy = data.includeCoAuthoredBy;
+        }
+        if (typeof data.systemPrompt === 'string') {
+          profileUpdates.systemPrompt = data.systemPrompt;
+        }
+        if (typeof data.temperature === 'number') {
+          profileUpdates.temperature = data.temperature;
+        }
+
+        // Apply all updates to active profile at once
+        if (Object.keys(profileUpdates).length > 0) {
+          updateActiveProfile(profileUpdates);
+          // Also sync envVars to top-level provider for immediate UI update
+          if (profileUpdates.envVars) {
+            setEnvVars(profileUpdates.envVars);
+          }
         }
       } catch {
         // Invalid JSON — ignore
@@ -313,7 +267,7 @@ export function ClaudeCodeSection() {
     };
     reader.readAsText(file);
     e.target.value = '';
-  }, [setEnvVars, handleCoAuthoredByChange]);
+  }, [updateActiveProfile, setEnvVars]);
 
   // Custom env vars (not in predefined list)
   const customEnvVars = envVars.filter((v) => !PREDEFINED_KEYS.has(v.key));
@@ -349,9 +303,94 @@ export function ClaudeCodeSection() {
           <input ref={importRef} type="file" accept=".json" onChange={handleImportFile} className="hidden" />
         </div>
       </div>
-      <p className="text-sm text-text-muted mb-6">
+      <p className="text-sm text-text-muted mb-4">
         Configure Claude Code model, environment, and runtime settings.
       </p>
+
+      {/* ── Profile Switcher ──────────────────────────────────────── */}
+      <div className="flex items-center gap-2 mb-6">
+        <select
+          value={provider.activeProfileId}
+          onChange={(e) => switchProfile(e.target.value)}
+          className="flex-1 px-3 py-1.5 text-sm rounded-lg border border-border bg-surface
+                     text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+        >
+          {provider.profiles.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+
+        {/* Rename active profile (inline) */}
+        {editingProfileId === provider.activeProfileId ? (
+          <form
+            className="flex items-center gap-1"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (editingProfileName.trim()) {
+                renameProfile(provider.activeProfileId, editingProfileName.trim());
+              }
+              setEditingProfileId(null);
+            }}
+          >
+            <input
+              autoFocus
+              value={editingProfileName}
+              onChange={(e) => setEditingProfileName(e.target.value)}
+              onBlur={() => {
+                if (editingProfileName.trim()) {
+                  renameProfile(provider.activeProfileId, editingProfileName.trim());
+                }
+                setEditingProfileId(null);
+              }}
+              className="w-28 px-2 py-1 text-xs rounded border border-border bg-surface text-text-primary
+                         focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+          </form>
+        ) : (
+          <button
+            onClick={() => {
+              setEditingProfileId(provider.activeProfileId);
+              setEditingProfileName(getActiveProfile().name);
+            }}
+            title="Rename profile"
+            className="p-1.5 text-xs rounded-lg border border-border text-text-secondary
+                       hover:text-text-primary hover:bg-surface-hover transition-colors"
+          >
+            ✏️
+          </button>
+        )}
+
+        <button
+          onClick={() => duplicateProfile(provider.activeProfileId)}
+          title="Duplicate profile"
+          className="p-1.5 text-xs rounded-lg border border-border text-text-secondary
+                     hover:text-text-primary hover:bg-surface-hover transition-colors"
+        >
+          📋
+        </button>
+        <button
+          onClick={() => addProfile(`Profile ${provider.profiles.length + 1}`)}
+          title="New profile"
+          className="p-1.5 text-xs rounded-lg border border-border text-text-secondary
+                     hover:text-text-primary hover:bg-surface-hover transition-colors"
+        >
+          ＋
+        </button>
+        {provider.profiles.length > 1 && (
+          <button
+            onClick={() => {
+              if (confirm(`Delete profile "${getActiveProfile().name}"?`)) {
+                removeProfile(provider.activeProfileId);
+              }
+            }}
+            title="Delete profile"
+            className="p-1.5 text-xs rounded-lg border border-border text-red-400
+                       hover:text-red-300 hover:bg-surface-hover transition-colors"
+          >
+            🗑
+          </button>
+        )}
+      </div>
 
       <div className="space-y-4">
         {/* ── Model Configuration (expanded by default) ─────────── */}
@@ -566,10 +605,9 @@ export function ClaudeCodeSection() {
         <CollapsibleSection title="Advanced">
           <SettingsToggle
             label="Include Co-Authored-By"
-            description="Add a 'Co-Authored-By: Claude' trailer to git commits made during Claude sessions. Saved to ~/.claude/settings.json."
-            checked={includeCoAuthoredBy}
-            onChange={handleCoAuthoredByChange}
-            disabled={!claudeConfigLoaded}
+            description="Add a 'Co-Authored-By: Claude' trailer to git commits made during Claude sessions."
+            checked={getActiveProfile().includeCoAuthoredBy}
+            onChange={(v) => updateActiveProfile({ includeCoAuthoredBy: v })}
           />
           <SettingsTextarea
             label="Custom system prompt"
