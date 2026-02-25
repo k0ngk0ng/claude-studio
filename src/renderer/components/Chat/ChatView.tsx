@@ -362,14 +362,18 @@ export function ChatView() {
         aria-label={isStreaming ? 'New messages — scroll to bottom' : 'Scroll to bottom'}
       >
         {isStreaming && (
-          <>
-            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-            <span className="text-text-primary">New messages</span>
-          </>
+          <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
         )}
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M8 3v10M4 9l4 4 4-4" />
-        </svg>
+        {isStreaming ? (
+          <svg width="16" height="16" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 2l3 3 3-3" />
+            <path d="M3 7l3 3 3-3" />
+          </svg>
+        ) : (
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 3v10M4 9l4 4 4-4" />
+          </svg>
+        )}
       </button>
     )}
     </div>
