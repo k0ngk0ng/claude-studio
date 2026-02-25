@@ -489,7 +489,9 @@ export const MessageBubble = React.memo(function MessageBubble({ message, hideAv
 
 function formatTime(timestamp: string): string {
   try {
+    if (!timestamp) return '';
     const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return '';
     const now = new Date();
     const isToday =
       date.getFullYear() === now.getFullYear() &&

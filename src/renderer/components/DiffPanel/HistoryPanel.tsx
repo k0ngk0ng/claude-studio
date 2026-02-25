@@ -225,7 +225,9 @@ export function HistoryPanel() {
 
   const formatDate = (dateStr: string) => {
     try {
+      if (!dateStr) return '';
       const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
       const now = new Date();
       const diffMs = now.getTime() - d.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
