@@ -10,7 +10,7 @@ export function RemoteControlSection() {
   const { t } = useTranslation();
   const { settings, updateSecurity } = useSettingsStore();
   const { security } = settings;
-  const { relayConnected, connect, disconnect } = useRemoteStore();
+  const { relayConnected, desktopId, connect, disconnect } = useRemoteStore();
   const { token } = useAuthStore();
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [relayStatus, setRelayStatus] = useState<{ ok: boolean; message: string } | null>(null);
@@ -91,6 +91,12 @@ export function RemoteControlSection() {
                     {relayConnected ? t('remoteControl.connected') : t('remoteControl.disconnected')}
                   </span>
                 </div>
+
+                {relayConnected && desktopId && (
+                  <span className="text-xs text-text-muted font-mono select-all" title={`Device ID: ${desktopId}`}>
+                    {desktopId}
+                  </span>
+                )}
 
                 {relayConnected ? (
                   <button

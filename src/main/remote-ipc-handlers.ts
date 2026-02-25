@@ -101,6 +101,7 @@ function getFullState() {
   const controlState = remoteControl.getState();
   return {
     relayConnected: relayClient.isConnected(),
+    desktopId: relayClient.getDesktopId(),
     controlMode: controlState.mode,
     controllingDeviceId: controlState.controllingDeviceId,
     controllingDeviceName: controlState.controllingDeviceName,

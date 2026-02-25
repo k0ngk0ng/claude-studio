@@ -142,7 +142,8 @@ export function DesktopListScreen({ onScanQR, onSelectDesktop }: Props) {
                 <Text style={styles.desktopIcon}>🖥️</Text>
                 <View style={styles.desktopText}>
                   <Text style={[styles.desktopName, !item.online && styles.textOffline]}>
-                    {item.deviceName}
+                    {item.deviceName}{' '}
+                    <Text style={styles.desktopIdInline}>({item.desktopId})</Text>
                   </Text>
                   <View style={styles.desktopStatus}>
                     <View style={[styles.smallDot, item.online ? styles.dotOnline : styles.dotOffline]} />
@@ -287,6 +288,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xl,
     color: colors.accent,
     fontWeight: '600',
+  },
+  desktopIdInline: {
+    fontSize: fontSize.xs,
+    fontWeight: '400',
+    color: colors.textMuted,
+    fontFamily: 'monospace',
   },
   removeAction: {
     backgroundColor: colors.error,

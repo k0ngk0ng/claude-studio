@@ -4,6 +4,7 @@ import type { ControlMode, PairedDevice, RemoteState } from '../types';
 interface RemoteStore {
   // State
   relayConnected: boolean;
+  desktopId: string | null;
   controlMode: ControlMode;
   controllingDeviceId: string | null;
   controllingDeviceName: string | null;
@@ -26,6 +27,7 @@ interface RemoteStore {
 
 export const useRemoteStore = create<RemoteStore>((set, get) => ({
   relayConnected: false,
+  desktopId: null,
   controlMode: 'local',
   controllingDeviceId: null,
   controllingDeviceName: null,
@@ -103,6 +105,7 @@ export const useRemoteStore = create<RemoteStore>((set, get) => ({
       if (state) {
         set({
           relayConnected: (state as any).relayConnected ?? false,
+          desktopId: (state as any).desktopId ?? null,
           controlMode: (state as any).controlMode ?? 'local',
           controllingDeviceId: (state as any).controllingDeviceId ?? null,
           controllingDeviceName: (state as any).controllingDeviceName ?? null,
@@ -129,6 +132,7 @@ export function initRemoteListeners(): () => void {
     const s = state as any;
     useRemoteStore.setState({
       relayConnected: s.relayConnected ?? false,
+      desktopId: s.desktopId ?? null,
       controlMode: s.controlMode ?? 'local',
       controllingDeviceId: s.controllingDeviceId ?? null,
       controllingDeviceName: s.controllingDeviceName ?? null,
