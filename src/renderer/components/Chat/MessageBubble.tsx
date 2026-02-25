@@ -445,7 +445,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message, hideAv
               }
 
               // Extract a brief input description from common fields
-              const input = tool.input;
+              const input = tool.input ?? {};
               const brief =
                 (input.file_path as string) ||
                 (input.command as string) ||
