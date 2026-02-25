@@ -7,6 +7,10 @@ import { useSettingsStore } from '../../stores/settingsStore';
 import { ToolCard } from './ToolCard';
 import { AskUserQuestionCard } from './AskUserQuestionCard';
 
+/* ── Stable plugin arrays (hoisted to module scope to avoid re-renders) ── */
+const REMARK_PLUGINS = [remarkGfm];
+const REHYPE_PLUGINS = [rehypeHighlight];
+
 /* ── Streaming cursor styles ─────────────────────────────────────── */
 
 function PulseDotCursor() {
@@ -248,7 +252,7 @@ interface MessageBubbleProps {
   onFork?: (messageId: string) => void;
 }
 
-export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProps) {
+export const MessageBubble = React.memo(function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
   const isAssistant = message.role === 'assistant';
@@ -403,8 +407,8 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
             className="text-[length:var(--ui-font-size,14px)] leading-relaxed text-text-primary markdown-content"
           >
             <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
+              remarkPlugins={REMARK_PLUGINS}
+              rehypePlugins={REHYPE_PLUGINS}
               components={markdownComponents}
             >
               {message.content}
@@ -481,7 +485,7 @@ export function MessageBubble({ message, hideAvatar, onFork }: MessageBubbleProp
       </div>
     </div>
   );
-}
+});
 
 function formatTime(timestamp: string): string {
   try {

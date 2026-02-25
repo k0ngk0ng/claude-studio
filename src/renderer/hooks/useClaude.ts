@@ -129,6 +129,9 @@ export function useClaude() {
   const toolInputJsonRef = useRef('');
   // Queue for tool results that arrive before the tool activity is added
   const pendingToolResultsRef = useRef<Map<string, { status: 'done'; output: string }>>(new Map());
+  // Throttle streaming content updates to reduce re-renders (~50ms)
+  const streamingFlushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamingDirtyRef = useRef(false);
 
   // Sync processIdRef when currentSession.processId changes (e.g., after restoreRuntime)
   useEffect(() => {
@@ -348,6 +351,12 @@ export function useClaude() {
                   }
                   // Reset streaming state for the new turn
                   streamingTextRef.current = '';
+                  // Flush any pending throttled update before clearing
+                  if (streamingFlushTimerRef.current) {
+                    clearTimeout(streamingFlushTimerRef.current);
+                    streamingFlushTimerRef.current = null;
+                  }
+                  streamingDirtyRef.current = false;
                   clearStreamingContent();
                   clearToolActivities();
                 }
@@ -405,7 +414,17 @@ export function useClaude() {
             case 'content_block_delta': {
               if (evt.delta?.type === 'text_delta' && evt.delta.text) {
                 streamingTextRef.current += evt.delta.text;
-                setStreamingContent(streamingTextRef.current);
+                // Throttle store updates to ~50ms to avoid per-token re-renders
+                streamingDirtyRef.current = true;
+                if (!streamingFlushTimerRef.current) {
+                  streamingFlushTimerRef.current = setTimeout(() => {
+                    streamingFlushTimerRef.current = null;
+                    if (streamingDirtyRef.current) {
+                      streamingDirtyRef.current = false;
+                      useAppStore.getState().setStreamingContent(streamingTextRef.current);
+                    }
+                  }, 50);
+                }
               } else if (evt.delta?.type === 'input_json_delta' && evt.delta.partial_json) {
                 // Accumulate tool input JSON for display
                 toolInputJsonRef.current += evt.delta.partial_json;
@@ -639,6 +658,12 @@ export function useClaude() {
           });
 
           setIsStreaming(false);
+          // Flush any pending throttled streaming update
+          if (streamingFlushTimerRef.current) {
+            clearTimeout(streamingFlushTimerRef.current);
+            streamingFlushTimerRef.current = null;
+          }
+          streamingDirtyRef.current = false;
           clearStreamingContent();
 
           // Safety net: mark any still-running tools as done before committing
@@ -763,6 +788,12 @@ export function useClaude() {
           }
 
           setIsStreaming(false);
+          // Flush any pending throttled streaming update
+          if (streamingFlushTimerRef.current) {
+            clearTimeout(streamingFlushTimerRef.current);
+            streamingFlushTimerRef.current = null;
+          }
+          streamingDirtyRef.current = false;
           clearStreamingContent();
           clearToolActivities();
           turnCountRef.current = 0;
@@ -799,6 +830,12 @@ export function useClaude() {
           }
 
           setIsStreaming(false);
+          // Flush any pending throttled streaming update
+          if (streamingFlushTimerRef.current) {
+            clearTimeout(streamingFlushTimerRef.current);
+            streamingFlushTimerRef.current = null;
+          }
+          streamingDirtyRef.current = false;
           clearStreamingContent();
           clearToolActivities();
           setProcessId(null);

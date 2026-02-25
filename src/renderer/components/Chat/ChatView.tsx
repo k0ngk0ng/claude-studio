@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { usePermissionStore } from '../../stores/permissionStore';
@@ -85,6 +85,15 @@ export function ChatView() {
     if (!canFork) return;
     forkSession(messageId);
   }, [canFork, forkSession]);
+
+  // Stable message object for the streaming bubble so React.memo works
+  const streamingMessage = useMemo(() => ({
+    id: 'streaming' as const,
+    role: 'assistant' as const,
+    content: streamingContent || '',
+    timestamp: '',
+    isStreaming: true,
+  }), [streamingContent]);
 
   // When sessionId changes, check if there's a saved scroll position to restore
   useEffect(() => {
@@ -206,13 +215,7 @@ export function ChatView() {
               {/* Streaming text content */}
               {streamingContent && (
                 <MessageBubble
-                  message={{
-                    id: 'streaming',
-                    role: 'assistant',
-                    content: streamingContent,
-                    timestamp: new Date().toISOString(),
-                    isStreaming: true,
-                  }}
+                  message={streamingMessage}
                   hideAvatar
                 />
               )}
