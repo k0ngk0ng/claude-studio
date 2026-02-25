@@ -42,14 +42,33 @@ export function ChatView() {
 
   // Track if user is at bottom of chat (to enable/disable auto-scroll)
   const isAtBottom = useRef(true);
+  // Track whether the user intentionally scrolled up (locks auto-scroll off)
+  const userScrolledUp = useRef(false);
+  // Track last scroll position to detect scroll direction
+  const lastScrollTop = useRef(0);
+  // Show "scroll to bottom" button
+  const [showScrollButton, setShowScrollButton] = useState(false);
 
   // Detect if user has scrolled away from bottom
   const checkIfAtBottom = useCallback(() => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    // Consider "at bottom" if within 50px of bottom
-    const atBottom = scrollHeight - scrollTop - clientHeight < 50;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    const atBottom = distanceFromBottom < 50;
+
+    // Detect intentional upward scroll by user
+    if (scrollTop < lastScrollTop.current && !atBottom) {
+      userScrolledUp.current = true;
+    }
+
+    // Only unlock when user scrolls back to the very bottom
+    if (atBottom) {
+      userScrolledUp.current = false;
+    }
+
+    lastScrollTop.current = scrollTop;
     isAtBottom.current = atBottom;
+    setShowScrollButton(!atBottom);
   }, []);
 
   const { messages, isStreaming, id: sessionId } = currentSession;
@@ -143,14 +162,24 @@ export function ChatView() {
     });
   }, [messages, isLoadingSession]);
 
-  // Auto-scroll to bottom only when streaming AND user is at bottom, not during tab restore
+  // Auto-scroll to bottom only when streaming AND user hasn't scrolled up, not during tab restore
   useEffect(() => {
     if (isRestoringScroll.current) return;
-    // Only auto-scroll if user is currently at bottom
-    if (isStreaming && isAtBottom.current && bottomRef.current) {
+    // Only auto-scroll if user hasn't intentionally scrolled up
+    if (isStreaming && isAtBottom.current && !userScrolledUp.current && bottomRef.current) {
       bottomRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [isStreaming, messages.length, streamingContent, toolActivities.length, pendingRequests.length]);
+
+  // Scroll to bottom handler for the floating button
+  const scrollToBottom = useCallback(() => {
+    if (bottomRef.current) {
+      userScrolledUp.current = false;
+      isAtBottom.current = true;
+      setShowScrollButton(false);
+      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, []);
 
   // Cmd/Ctrl+F to open search
   useEffect(() => {
@@ -316,6 +345,22 @@ export function ChatView() {
         <div ref={bottomRef} />
       </div>
     </div>
+
+    {/* Floating scroll-to-bottom button */}
+    {showScrollButton && (
+      <button
+        onClick={scrollToBottom}
+        className="absolute bottom-4 right-6 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface border border-border shadow-lg hover:bg-surface-hover transition-all text-sm text-text-secondary"
+        aria-label="Scroll to bottom"
+      >
+        {isStreaming && (
+          <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+        )}
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M8 3v10M4 9l4 4 4-4" />
+        </svg>
+      </button>
+    )}
     </div>
   );
 }
