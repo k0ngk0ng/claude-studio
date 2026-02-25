@@ -128,6 +128,7 @@ interface ManagedSession {
   sessionId?: string;
   permissionMode?: string;
   language?: string;
+  envVars?: Array<{ key: string; value: string; enabled: boolean }>;
   abortController: AbortController;
   permissionResolvers: Map<string, (result: PermissionResponse) => void>;
   queryInstance?: any; // SDK Query object — has setPermissionMode(), interrupt(), etc.
@@ -153,16 +154,6 @@ class ClaudeProcessManager extends EventEmitter {
   ): Promise<string> {
     debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode, 'envVars:', envVars?.length || 0, 'language:', language, 'mcpServers:', mcpServers?.length || 0);
 
-    // Apply enabled env vars to process.env so the SDK child process inherits them
-    if (envVars && envVars.length > 0) {
-      for (const { key, value, enabled } of envVars) {
-        if (enabled && key && value) {
-          process.env[key] = value;
-          debugLog('set env:', key, '=', key.includes('KEY') || key.includes('TOKEN') ? '***' : value);
-        }
-      }
-    }
-
     const processId = randomUUID();
     const abortController = new AbortController();
 
@@ -171,6 +162,7 @@ class ClaudeProcessManager extends EventEmitter {
       sessionId,
       permissionMode,
       language,
+      envVars,
       abortController,
       permissionResolvers: new Map(),
       messageCount: 0,
@@ -211,9 +203,22 @@ class ClaudeProcessManager extends EventEmitter {
       ? `IMPORTANT: Always respond in ${langMap[lang]}. All explanations, comments, and conversation must be in ${langMap[lang]}.`
       : '';
 
-    // Extract model from env vars — pass explicitly to SDK so it takes priority
+    // Build env for the SDK child process:
+    // Start with process.env, then overlay user's env vars so they take priority
+    // over both inherited env AND settings.json env block
+    const childEnv: Record<string, string | undefined> = { ...process.env };
+    if (managed.envVars && managed.envVars.length > 0) {
+      for (const { key, value, enabled } of managed.envVars) {
+        if (enabled && key && value) {
+          childEnv[key] = value;
+          debugLog('set env:', key, '=', key.includes('KEY') || key.includes('TOKEN') ? '***' : value);
+        }
+      }
+    }
+
+    // Extract model from merged env — pass explicitly to SDK so it takes priority
     // over any model set in ~/.claude/settings.json
-    const modelFromEnv = process.env.ANTHROPIC_MODEL;
+    const modelFromEnv = childEnv.ANTHROPIC_MODEL;
 
     // Build options
     const options: Record<string, unknown> = {
@@ -221,6 +226,7 @@ class ClaudeProcessManager extends EventEmitter {
       abortController: managed.abortController,
       includePartialMessages: true,
       settingSources: ['user', 'project', 'local'],
+      env: childEnv,
       systemPrompt: langInstruction
         ? { type: 'preset', preset: 'claude_code', append: langInstruction }
         : { type: 'preset', preset: 'claude_code' },
