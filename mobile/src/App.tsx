@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, StatusBar } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useRemoteStore, initRelayListeners } from './stores/remoteStore';
 import { relayClient } from './services/relay';
@@ -94,6 +94,7 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
       {content}
     </GestureHandlerRootView>
   );

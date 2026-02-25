@@ -3,6 +3,8 @@
  *
  * Handles pairing, E2EE messaging, and remote command execution.
  * No login required — token comes from the scanned QR code.
+ *
+ * Uses react-native-keychain instead of expo-secure-store.
  */
 
 import {
@@ -15,13 +17,37 @@ import {
   type E2EEKeyPair,
   type E2EESession,
 } from './e2ee';
-import * as SecureStore from 'expo-secure-store';
+import * as Keychain from 'react-native-keychain';
 import type { DesktopInfo, QRPayload, RemoteCommand, RemoteResponse, RemoteEvent } from '../types';
 
 const DEVICE_ID_KEY = 'claude-studio-device-id';
 const RELAY_CONFIG_KEY = 'claude-studio-relay-config';
 const E2EE_SESSIONS_KEY = 'claude-studio-e2ee-sessions';
 const DEVICE_NAME = 'Mobile';
+
+// ─── Keychain helpers ─────────────────────────────────────────────────
+// react-native-keychain stores username+password pairs keyed by "service".
+// We use the key name as the service and store value as the password.
+
+async function secureGet(key: string): Promise<string | null> {
+  try {
+    const result = await Keychain.getGenericPassword({ service: key });
+    if (result) {
+      return result.password;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function secureSet(key: string, value: string): Promise<void> {
+  await Keychain.setGenericPassword(key, value, { service: key });
+}
+
+async function secureDelete(key: string): Promise<void> {
+  await Keychain.resetGenericPassword({ service: key });
+}
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -82,10 +108,10 @@ class MobileRelayClient {
   async getDeviceId(): Promise<string> {
     if (this.deviceId) return this.deviceId;
 
-    let id = await SecureStore.getItemAsync(DEVICE_ID_KEY);
+    let id = await secureGet(DEVICE_ID_KEY);
     if (!id) {
       id = generateDeviceId();
-      await SecureStore.setItemAsync(DEVICE_ID_KEY, id);
+      await secureSet(DEVICE_ID_KEY, id);
     }
     this.deviceId = id;
     return id;
@@ -95,7 +121,7 @@ class MobileRelayClient {
 
   async loadSavedConfig(): Promise<SavedConfig | null> {
     try {
-      const raw = await SecureStore.getItemAsync(RELAY_CONFIG_KEY);
+      const raw = await secureGet(RELAY_CONFIG_KEY);
       if (raw) {
         const config = JSON.parse(raw) as SavedConfig;
         if (config.serverUrl && config.token) {
@@ -113,14 +139,14 @@ class MobileRelayClient {
   private async saveConfig(serverUrl: string, token: string): Promise<void> {
     this.serverUrl = serverUrl;
     this.token = token;
-    await SecureStore.setItemAsync(RELAY_CONFIG_KEY, JSON.stringify({ serverUrl, token }));
+    await secureSet(RELAY_CONFIG_KEY, JSON.stringify({ serverUrl, token }));
   }
 
   async clearConfig(): Promise<void> {
     this.serverUrl = null;
     this.token = null;
-    await SecureStore.deleteItemAsync(RELAY_CONFIG_KEY);
-    await SecureStore.deleteItemAsync(E2EE_SESSIONS_KEY);
+    await secureDelete(RELAY_CONFIG_KEY);
+    await secureDelete(E2EE_SESSIONS_KEY);
   }
 
   hasConfig(): boolean {
@@ -147,7 +173,7 @@ class MobileRelayClient {
           peerSeq: session.peerSeq,
         });
       }
-      await SecureStore.setItemAsync(E2EE_SESSIONS_KEY, JSON.stringify(entries));
+      await secureSet(E2EE_SESSIONS_KEY, JSON.stringify(entries));
     } catch {
       // Ignore save errors
     }
@@ -159,7 +185,7 @@ class MobileRelayClient {
    */
   async loadE2EESessions(): Promise<void> {
     try {
-      const raw = await SecureStore.getItemAsync(E2EE_SESSIONS_KEY);
+      const raw = await secureGet(E2EE_SESSIONS_KEY);
       if (!raw) {
         console.log('[relay] No persisted E2EE sessions found');
         return;

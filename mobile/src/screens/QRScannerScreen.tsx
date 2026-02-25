@@ -1,17 +1,25 @@
 /**
  * QR Scanner screen — scans desktop pairing QR codes.
  * No login required — token comes embedded in the QR code.
+ *
+ * Uses react-native-vision-camera instead of expo-camera.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Alert,
+  Linking,
 } from 'react-native';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import {
+  Camera,
+  useCameraDevice,
+  useCameraPermission,
+  useCodeScanner,
+} from 'react-native-vision-camera';
 import { relayClient } from '../services/relay';
 import type { QRPayload } from '../types';
 import { colors, spacing, fontSize, borderRadius } from '../utils/theme';
@@ -23,12 +31,13 @@ interface Props {
 }
 
 export function QRScannerScreen({ onPaired, onCancel, showCancel = false }: Props) {
-  const [permission, requestPermission] = useCameraPermissions();
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('back');
   const [scanned, setScanned] = useState(false);
   const [processing, setProcessing] = useState(false);
   const scanLock = useRef(false);
 
-  const handleBarCodeScanned = async ({ data }: { data: string }) => {
+  const handleBarCodeScanned = useCallback(async (data: string) => {
     // Use ref for synchronous lock — React state updates are async
     if (scanLock.current) return;
     scanLock.current = true;
@@ -81,17 +90,18 @@ export function QRScannerScreen({ onPaired, onCancel, showCancel = false }: Prop
     } finally {
       setProcessing(false);
     }
-  };
+  }, [onPaired]);
 
-  if (!permission) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.permText}>Requesting camera permission…</Text>
-      </View>
-    );
-  }
+  const codeScanner = useCodeScanner({
+    codeTypes: ['qr'],
+    onCodeScanned: (codes) => {
+      if (codes.length > 0 && codes[0].value && !scanned) {
+        handleBarCodeScanned(codes[0].value);
+      }
+    },
+  });
 
-  if (!permission.granted) {
+  if (!hasPermission) {
     return (
       <View style={styles.container}>
         <View style={styles.permContainer}>
@@ -112,48 +122,56 @@ export function QRScannerScreen({ onPaired, onCancel, showCancel = false }: Prop
     );
   }
 
+  if (!device) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.permText}>No camera device found</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <CameraView
+      <Camera
         style={styles.camera}
-        barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
-        onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-      >
-        {/* Overlay */}
-        <View style={styles.overlay}>
-          {/* Top bar */}
-          <View style={styles.topBar}>
-            {showCancel ? (
-              <TouchableOpacity onPress={onCancel} style={styles.backButton}>
-                <Text style={styles.backText}>← Back</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={{ width: 60 }} />
-            )}
-            <Text style={styles.topTitle}>Scan QR Code</Text>
+        device={device}
+        isActive={!scanned}
+        codeScanner={codeScanner}
+      />
+      {/* Overlay */}
+      <View style={[styles.overlay, StyleSheet.absoluteFill]} pointerEvents="box-none">
+        {/* Top bar */}
+        <View style={styles.topBar}>
+          {showCancel ? (
+            <TouchableOpacity onPress={onCancel} style={styles.backButton}>
+              <Text style={styles.backText}>← Back</Text>
+            </TouchableOpacity>
+          ) : (
             <View style={{ width: 60 }} />
-          </View>
+          )}
+          <Text style={styles.topTitle}>Scan QR Code</Text>
+          <View style={{ width: 60 }} />
+        </View>
 
-          {/* Scan frame */}
-          <View style={styles.frameContainer}>
-            <View style={styles.scanFrame}>
-              <View style={[styles.corner, styles.cornerTL]} />
-              <View style={[styles.corner, styles.cornerTR]} />
-              <View style={[styles.corner, styles.cornerBL]} />
-              <View style={[styles.corner, styles.cornerBR]} />
-            </View>
-          </View>
-
-          {/* Instructions */}
-          <View style={styles.instructions}>
-            <Text style={styles.instructionText}>
-              {processing
-                ? 'Connecting & pairing…'
-                : 'Point your camera at the QR code\nin Desktop Settings → Remote Control'}
-            </Text>
+        {/* Scan frame */}
+        <View style={styles.frameContainer}>
+          <View style={styles.scanFrame}>
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
           </View>
         </View>
-      </CameraView>
+
+        {/* Instructions */}
+        <View style={styles.instructions}>
+          <Text style={styles.instructionText}>
+            {processing
+              ? 'Connecting & pairing…'
+              : 'Point your camera at the QR code\nin Desktop Settings → Remote Control'}
+          </Text>
+        </View>
+      </View>
     </View>
   );
 }

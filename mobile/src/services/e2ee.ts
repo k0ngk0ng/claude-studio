@@ -4,6 +4,9 @@
  * Uses @noble/curves for ECDH (P-256), @noble/hashes for HKDF-SHA256,
  * and @noble/ciphers for AES-256-GCM. All pure JS — no native deps needed.
  *
+ * Uses react-native-get-random-values polyfill (imported in index.js)
+ * instead of expo-crypto.
+ *
  * Wire-compatible with the desktop Node.js crypto implementation.
  */
 
@@ -11,7 +14,6 @@ import { p256 } from '@noble/curves/p256';
 import { hkdf } from '@noble/hashes/hkdf';
 import { sha256 } from '@noble/hashes/sha256';
 import { gcm } from '@noble/ciphers/aes';
-import * as ExpoCrypto from 'expo-crypto';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -94,7 +96,8 @@ export function encrypt(
   session: E2EESession,
   plaintext: string,
 ): { payload: string; seq: number } {
-  const iv = new Uint8Array(ExpoCrypto.getRandomBytes(12));
+  const iv = new Uint8Array(12);
+  crypto.getRandomValues(iv);
   const aes = gcm(session.derivedKey, iv);
   const encoded = new TextEncoder().encode(plaintext);
   const ciphertext = aes.encrypt(encoded); // returns ciphertext + tag appended
@@ -172,6 +175,7 @@ function base64ToUint8(base64: string): Uint8Array {
  * Generate a unique device ID for this mobile device.
  */
 export function generateDeviceId(): string {
-  const bytes = new Uint8Array(ExpoCrypto.getRandomBytes(8));
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
   return bytesToHex(bytes);
 }
