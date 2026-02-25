@@ -204,28 +204,47 @@ class ClaudeProcessManager extends EventEmitter {
       : '';
 
     // Build env for the SDK child process:
-    // Start with process.env, then overlay user's env vars so they take priority
-    // over both inherited env AND settings.json env block
+    // Start with process.env, then overlay user's env vars so they take priority.
+    // IMPORTANT: We do NOT include 'user' in settingSources — the Agent SDK must
+    // be independent from ~/.claude/settings.json (Claude Code CLI config).
+    // All API configuration (BASE_URL, API_KEY, MODEL) comes from profile envVars.
     const childEnv: Record<string, string | undefined> = { ...process.env };
     if (managed.envVars && managed.envVars.length > 0) {
       for (const { key, value, enabled } of managed.envVars) {
         if (enabled && key && value) {
           childEnv[key] = value;
-          debugLog('set env:', key, '=', key.includes('KEY') || key.includes('TOKEN') ? '***' : value);
         }
       }
     }
 
-    // Extract model from merged env — pass explicitly to SDK so it takes priority
-    // over any model set in ~/.claude/settings.json
+    // Log SDK configuration for debugging — show what the SDK will actually use
+    const effectiveBaseUrl = childEnv.ANTHROPIC_BASE_URL || childEnv.OPENAI_BASE_URL || '(default: api.anthropic.com)';
+    const effectiveApiKey = childEnv.ANTHROPIC_API_KEY
+      ? `ANTHROPIC_API_KEY=${childEnv.ANTHROPIC_API_KEY.slice(0, 8)}...${childEnv.ANTHROPIC_API_KEY.slice(-4)}`
+      : childEnv.ANTHROPIC_AUTH_TOKEN
+        ? `ANTHROPIC_AUTH_TOKEN=${childEnv.ANTHROPIC_AUTH_TOKEN.slice(0, 8)}...${childEnv.ANTHROPIC_AUTH_TOKEN.slice(-4)}`
+        : childEnv.OPENAI_API_KEY
+          ? `OPENAI_API_KEY=${childEnv.OPENAI_API_KEY.slice(0, 8)}...${childEnv.OPENAI_API_KEY.slice(-4)}`
+          : '(no explicit key — will use default)';
+    const effectiveModel = childEnv.ANTHROPIC_MODEL || childEnv.CLAUDE_MODEL || '(SDK default)';
+
+    debugLog('=== SDK Configuration ===');
+    debugLog('  BASE_URL:', effectiveBaseUrl);
+    debugLog('  AUTH:', effectiveApiKey);
+    debugLog('  MODEL:', effectiveModel);
+    debugLog('  Profile envVars:', (managed.envVars || []).filter(v => v.enabled).map(v => `${v.key}=${v.key.includes('KEY') || v.key.includes('TOKEN') ? '***' : v.value}`).join(', ') || '(none)');
+    debugLog('========================');
+
+    // Extract model from merged env — pass explicitly to SDK options
     const modelFromEnv = childEnv.ANTHROPIC_MODEL;
 
-    // Build options
+    // Build options — settingSources excludes 'user' so ~/.claude/settings.json
+    // does NOT leak into the SDK (the Agent SDK is independent from Claude Code CLI)
     const options: Record<string, unknown> = {
       cwd: managed.cwd,
       abortController: managed.abortController,
       includePartialMessages: true,
-      settingSources: ['user', 'project', 'local'],
+      settingSources: ['project', 'local'],
       env: childEnv,
       systemPrompt: langInstruction
         ? { type: 'preset', preset: 'claude_code', append: langInstruction }
@@ -237,15 +256,13 @@ class ClaudeProcessManager extends EventEmitter {
       },
     };
 
-    // Explicitly pass model to SDK so profile env vars override settings.json
+    // Explicitly pass model to SDK so profile env vars take effect
     if (modelFromEnv) {
       options.model = modelFromEnv;
-      debugLog('model (from ANTHROPIC_MODEL):', modelFromEnv);
     }
 
     debugLog('SDK cli path:', getSdkCliPath());
     debugLog('cwd:', managed.cwd);
-    debugLog('PATH:', process.env.PATH?.split(':').slice(0, 10).join(':'));
 
     // Permission mode
     if (permissionMode && permissionMode !== 'default') {
