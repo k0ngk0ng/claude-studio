@@ -40,36 +40,37 @@ export function ChatView() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [showSearch, setShowSearch] = useState(false);
 
-  // Track if user is at bottom of chat (to enable/disable auto-scroll)
-  const isAtBottom = useRef(true);
-  // Track whether the user intentionally scrolled up (locks auto-scroll off)
-  const userScrolledUp = useRef(false);
-  // Track last scroll position to detect scroll direction
-  const lastScrollTop = useRef(0);
-  // Show "scroll to bottom" button
+  // Whether auto-scroll is active (user hasn't scrolled up)
+  const autoScrollEnabled = useRef(true);
+  // Flag to ignore scroll events triggered by programmatic scrolling
+  const programmaticScroll = useRef(false);
+  // Show "scroll to bottom" floating button
   const [showScrollButton, setShowScrollButton] = useState(false);
 
-  // Detect if user has scrolled away from bottom
-  const checkIfAtBottom = useCallback(() => {
-    if (!scrollRef.current) return;
+  // Helper: check if scroll container is near the bottom
+  const isNearBottom = useCallback(() => {
+    if (!scrollRef.current) return true;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    const atBottom = distanceFromBottom < 50;
-
-    // Detect intentional upward scroll by user
-    if (scrollTop < lastScrollTop.current && !atBottom) {
-      userScrolledUp.current = true;
-    }
-
-    // Only unlock when user scrolls back to the very bottom
-    if (atBottom) {
-      userScrolledUp.current = false;
-    }
-
-    lastScrollTop.current = scrollTop;
-    isAtBottom.current = atBottom;
-    setShowScrollButton(!atBottom);
+    return scrollHeight - scrollTop - clientHeight < 80;
   }, []);
+
+  // Scroll event handler — only reacts to USER-initiated scrolls
+  const handleScroll = useCallback(() => {
+    // Skip scroll events caused by our own programmatic scrolling
+    if (programmaticScroll.current) return;
+
+    const nearBottom = isNearBottom();
+
+    if (nearBottom) {
+      // User scrolled back to bottom — re-enable auto-scroll
+      autoScrollEnabled.current = true;
+      setShowScrollButton(false);
+    } else {
+      // User scrolled up — disable auto-scroll, show button
+      autoScrollEnabled.current = false;
+      setShowScrollButton(true);
+    }
+  }, [isNearBottom]);
 
   const { messages, isStreaming, id: sessionId } = currentSession;
   const hasMessages = messages.length > 0;
@@ -84,18 +85,16 @@ export function ChatView() {
   });
 
   // Add scroll listener to detect when user scrolls away from bottom
+  // Re-bind after isLoadingSession toggles because LoadingSkeleton unmounts the scroll DOM
   useEffect(() => {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
 
-    scrollElement.addEventListener('scroll', checkIfAtBottom, { passive: true });
-    // Check initial position
-    checkIfAtBottom();
-
+    scrollElement.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
-      scrollElement.removeEventListener('scroll', checkIfAtBottom);
+      scrollElement.removeEventListener('scroll', handleScroll);
     };
-  }, [checkIfAtBottom]);
+  }, [handleScroll, isLoadingSession]);
 
   // Only allow fork when we have a saved session (not streaming, has session id)
   const canFork = !!currentSession.id && !isStreaming;
@@ -162,23 +161,32 @@ export function ChatView() {
     });
   }, [messages, isLoadingSession]);
 
-  // Auto-scroll to bottom only when streaming AND user hasn't scrolled up, not during tab restore
+  // Auto-scroll to bottom only when streaming AND auto-scroll is enabled
   useEffect(() => {
     if (isRestoringScroll.current) return;
-    // Only auto-scroll if user hasn't intentionally scrolled up
-    if (isStreaming && isAtBottom.current && !userScrolledUp.current && bottomRef.current) {
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (!isStreaming || !autoScrollEnabled.current || !scrollRef.current) return;
+
+    // Use direct scrollTop assignment to avoid smooth-scroll race conditions
+    programmaticScroll.current = true;
+    const el = scrollRef.current;
+    el.scrollTop = el.scrollHeight;
+
+    // Clear the flag after the browser processes the scroll
+    requestAnimationFrame(() => {
+      programmaticScroll.current = false;
+    });
   }, [isStreaming, messages.length, streamingContent, toolActivities.length, pendingRequests.length]);
 
   // Scroll to bottom handler for the floating button
   const scrollToBottom = useCallback(() => {
-    if (bottomRef.current) {
-      userScrolledUp.current = false;
-      isAtBottom.current = true;
-      setShowScrollButton(false);
-      bottomRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
+    if (!scrollRef.current) return;
+    autoScrollEnabled.current = true;
+    setShowScrollButton(false);
+    programmaticScroll.current = true;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    requestAnimationFrame(() => {
+      programmaticScroll.current = false;
+    });
   }, []);
 
   // Cmd/Ctrl+F to open search
@@ -346,15 +354,18 @@ export function ChatView() {
       </div>
     </div>
 
-    {/* Floating scroll-to-bottom button */}
+    {/* Floating scroll-to-bottom / new messages button */}
     {showScrollButton && (
       <button
         onClick={scrollToBottom}
         className="absolute bottom-4 right-6 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface border border-border shadow-lg hover:bg-surface-hover transition-all text-sm text-text-secondary"
-        aria-label="Scroll to bottom"
+        aria-label={isStreaming ? 'New messages — scroll to bottom' : 'Scroll to bottom'}
       >
         {isStreaming && (
-          <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+          <>
+            <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+            <span className="text-text-primary">New messages</span>
+          </>
         )}
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
           <path d="M8 3v10M4 9l4 4 4-4" />
