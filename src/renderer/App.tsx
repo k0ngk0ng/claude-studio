@@ -82,6 +82,20 @@ export default function App() {
     settings.appearance.editorFontFamily,
   ]);
 
+  // ─── Kill running process when provider profile changes ────────────
+  // The spawned Claude process inherits envVars at start time. When the
+  // user switches profiles the env vars in the store update, but the
+  // already-running process still uses the old values. Killing it here
+  // ensures the next message will spawn a fresh process with the new env.
+  const activeProfileId = settings.provider.activeProfileId;
+  const prevProfileIdRef = useRef(activeProfileId);
+  useEffect(() => {
+    if (prevProfileIdRef.current !== activeProfileId) {
+      prevProfileIdRef.current = activeProfileId;
+      stopSession();
+    }
+  }, [activeProfileId, stopSession]);
+
   // Initialize app
   useEffect(() => {
     async function init() {
