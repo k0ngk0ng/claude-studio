@@ -204,11 +204,30 @@ class ClaudeProcessManager extends EventEmitter {
       : '';
 
     // Build env for the SDK child process:
-    // Start with process.env, then overlay user's env vars so they take priority.
     // IMPORTANT: We do NOT include 'user' in settingSources — the Agent SDK must
     // be independent from ~/.claude/settings.json (Claude Code CLI config).
     // All API configuration (BASE_URL, API_KEY, MODEL) comes from profile envVars.
+    //
+    // Step 1: Start with process.env but REMOVE all API-related vars so stale
+    //         credentials from the shell don't leak into the SDK child process.
+    // Step 2: Overlay only the profile's env vars.
     const childEnv: Record<string, string | undefined> = { ...process.env };
+
+    // Clean API-related env vars inherited from the shell/parent process
+    // to ensure ONLY profile env vars determine auth and endpoint config
+    const apiEnvPrefixes = ['ANTHROPIC_', 'OPENAI_', 'CLAUDE_CODE_', 'CLAUDE_MODEL'];
+    const cleanedKeys: string[] = [];
+    for (const key of Object.keys(childEnv)) {
+      if (apiEnvPrefixes.some(prefix => key.startsWith(prefix))) {
+        cleanedKeys.push(key);
+        delete childEnv[key];
+      }
+    }
+    if (cleanedKeys.length > 0) {
+      debugLog('Cleaned inherited env vars:', cleanedKeys.join(', '));
+    }
+
+    // Now overlay the active profile's env vars — these are the ONLY source of truth
     if (managed.envVars && managed.envVars.length > 0) {
       for (const { key, value, enabled } of managed.envVars) {
         if (enabled && key && value) {
