@@ -264,9 +264,14 @@ class ClaudeProcessManager extends EventEmitter {
     debugLog('SDK cli path:', getSdkCliPath());
     debugLog('cwd:', managed.cwd);
 
-    // Permission mode
+    // Permission mode — when bypassPermissions, also set the SDK flag so it
+    // doesn't wait for interactive confirmation (replaces settings.json's
+    // skipDangerousModePermissionPrompt which we no longer load)
     if (permissionMode && permissionMode !== 'default') {
       options.permissionMode = permissionMode;
+      if (permissionMode === 'bypassPermissions') {
+        options.allowDangerouslySkipPermissions = true;
+      }
     }
 
     // Resume session
