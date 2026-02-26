@@ -501,8 +501,8 @@ jobs:
           echo "$DELETE_VERSIONS"
 
           for ver in $DELETE_VERSIONS; do
-            echo "Deleting: v$ver"
-            ossutil rm "oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/v${ver}/" -r --force
+            echo "Deleting: $ver"
+            ossutil rm "oss://${{ secrets.ALIYUN_OSS_BUCKET }}/claude-studio/releases/${ver}/" -r --force
           done
 
       - name: Refresh CDN cache
