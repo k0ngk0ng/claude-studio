@@ -209,10 +209,54 @@ class ClaudeProcessManager extends EventEmitter {
     // be independent from ~/.claude/settings.json (Claude Code CLI config).
     // All API configuration (BASE_URL, API_KEY, MODEL) comes from profile envVars.
     //
+    // However, the SDK's internal qZq() function unconditionally reads
+    // ~/.claude/settings.json env vars and overrides process.env, regardless
+    // of settingSources. To prevent this, we redirect CLAUDE_CONFIG_DIR to an
+    // isolated directory that symlinks everything from ~/.claude/ EXCEPT
+    // settings.json (which would override our profile env vars).
+    //
     // Step 1: Start with process.env but REMOVE all API-related vars so stale
     //         credentials from the shell don't leak into the SDK child process.
     // Step 2: Overlay only the profile's env vars.
+    // Step 3: Set CLAUDE_CONFIG_DIR to isolated config dir.
     const childEnv: Record<string, string | undefined> = { ...process.env };
+
+    // Redirect CLAUDE_CONFIG_DIR to an isolated directory to prevent
+    // ~/.claude/settings.json env vars from overriding profile config
+    const isolatedConfigDir = path.join(app.getPath('userData'), 'sdk-config');
+    const realClaudeDir = path.join(os.homedir(), '.claude');
+    try {
+      if (!fs.existsSync(isolatedConfigDir)) {
+        fs.mkdirSync(isolatedConfigDir, { recursive: true });
+      }
+      // Sync symlinks: link everything from ~/.claude/ except settings.json
+      if (fs.existsSync(realClaudeDir)) {
+        const entries = fs.readdirSync(realClaudeDir);
+        for (const entry of entries) {
+          if (entry === 'settings.json') continue; // Skip — this is what we want to isolate
+          const linkPath = path.join(isolatedConfigDir, entry);
+          const targetPath = path.join(realClaudeDir, entry);
+          try {
+            const linkStat = fs.lstatSync(linkPath);
+            // If it's a symlink, check if it still points to the right target
+            if (linkStat.isSymbolicLink()) {
+              const existing = fs.readlinkSync(linkPath);
+              if (existing === targetPath) continue; // Already correct
+              fs.unlinkSync(linkPath); // Wrong target, recreate
+            } else {
+              continue; // Real file/dir in isolated dir, don't touch
+            }
+          } catch {
+            // linkPath doesn't exist, create it
+          }
+          fs.symlinkSync(targetPath, linkPath);
+        }
+      }
+      childEnv.CLAUDE_CONFIG_DIR = isolatedConfigDir;
+      debugLog('CLAUDE_CONFIG_DIR set to isolated dir:', isolatedConfigDir);
+    } catch (e) {
+      debugLog('Failed to set up isolated config dir, falling back:', e);
+    }
 
     // Clean API-related env vars inherited from the shell/parent process
     // to ensure ONLY profile env vars determine auth and endpoint config
@@ -258,11 +302,12 @@ class ClaudeProcessManager extends EventEmitter {
     // Extract model from merged env — pass explicitly to SDK options
     const modelFromEnv = childEnv.ANTHROPIC_MODEL;
 
-    // Build options — settingSources NEVER includes 'user' so ~/.claude/settings.json
-    // does NOT leak into the SDK. But 'project' is also dangerous when cwd = ~ because
-    // <cwd>/.claude/settings.json IS ~/.claude/settings.json (same file!).
-    // So: when cwd is home dir → settingSources: [] (full isolation)
-    //     otherwise → settingSources: ['project', 'local'] (load CLAUDE.md + project settings)
+    // Build options — settingSources controls which settings files the SDK loads
+    // for permissions, hooks, CLAUDE.md, etc. We use 'project' + 'local' so
+    // project-level settings work, but NEVER 'user' (which would load
+    // ~/.claude/settings.json). The CLAUDE_CONFIG_DIR redirect above already
+    // prevents the SDK's internal qZq() from reading ~/.claude/settings.json env.
+    // When cwd is home dir, use [] to avoid <cwd>/.claude/settings.json collision.
     const homedir = os.homedir();
     const isHomeCwd = managed.cwd === homedir || managed.cwd === homedir + '/';
     const settingSources = isHomeCwd ? [] : ['project', 'local'];
