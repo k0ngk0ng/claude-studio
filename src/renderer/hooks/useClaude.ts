@@ -319,6 +319,11 @@ export function useClaude() {
             }
 
             setCurrentSession({ id: event.session_id });
+            // Remove pending project since it now has a real session
+            const projectPath = useAppStore.getState().currentSession.projectPath || useAppStore.getState().currentProject.path;
+            if (projectPath) {
+              useAppStore.getState().removePendingProject(projectPath);
+            }
             // Trigger sessions reload — a new session may have been created
             // Use a short delay to let the JSONL file be written to disk
             setTimeout(() => {

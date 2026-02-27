@@ -45,6 +45,13 @@ export interface SessionRuntime {
   messages: import('../types').Message[];
 }
 
+// A project folder added via "Add Folder" that has no real session yet
+export interface PendingProject {
+  path: string;
+  name: string;
+  branch?: string;
+}
+
 interface AppStore {
   // Current session state
   currentSession: CurrentSession;
@@ -65,6 +72,8 @@ interface AppStore {
   platform: 'mac' | 'windows' | 'linux';
   revealFile: string | null; // file path to reveal in FileTree
   pendingQuestion: PendingQuestion | null;
+  // Folders added via "Add Folder" that don't have real sessions yet
+  pendingProjects: PendingProject[];
 
   // Session actions
   setCurrentSession: (session: Partial<CurrentSession>) => void;
@@ -120,6 +129,10 @@ interface AppStore {
   // AskUserQuestion
   setPendingQuestion: (q: PendingQuestion | null) => void;
   markQuestionAnswered: () => void;
+
+  // Pending projects (folders added without real sessions)
+  addPendingProject: (project: PendingProject) => void;
+  removePendingProject: (path: string) => void;
 }
 
 const defaultSession: CurrentSession = {
@@ -158,6 +171,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   platform: 'mac',
   revealFile: null,
   pendingQuestion: null,
+  pendingProjects: [],
 
   // Session actions
   setCurrentSession: (session) =>
@@ -379,5 +393,17 @@ export const useAppStore = create<AppStore>((set, get) => ({
       pendingQuestion: state.pendingQuestion
         ? { ...state.pendingQuestion, answered: true }
         : null,
+    })),
+
+  // Pending projects
+  addPendingProject: (project) =>
+    set((state) => {
+      // Don't add if already exists
+      if (state.pendingProjects.some((p) => p.path === project.path)) return state;
+      return { pendingProjects: [...state.pendingProjects, project] };
+    }),
+  removePendingProject: (path) =>
+    set((state) => ({
+      pendingProjects: state.pendingProjects.filter((p) => p.path !== path),
     })),
 }));

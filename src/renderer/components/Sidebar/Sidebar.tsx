@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThreadList } from './ThreadList';
 import { useAppStore } from '../../stores/appStore';
+import { useTabStore } from '../../stores/tabStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useResizable } from '../../hooks/useResizable';
 
@@ -11,7 +12,7 @@ interface SidebarProps {
 
 export function Sidebar({ onNewThread }: SidebarProps) {
   const { t } = useTranslation();
-  const { platform, setCurrentProject, panelSizes, setPanelSize } = useAppStore();
+  const { platform, setCurrentProject, addPendingProject, panelSizes, setPanelSize } = useAppStore();
   const { openSettings } = useSettingsStore();
   const isMac = platform === 'mac';
   const [collapseAllKey, setCollapseAllKey] = useState(0);
@@ -33,13 +34,36 @@ export function Sidebar({ onNewThread }: SidebarProps) {
       const name = selected.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || selected;
       setCurrentProject({ path: selected, name });
 
+      // Add as pending project so it shows in sidebar even without sessions
+      addPendingProject({ path: selected, name });
+
       // Try to get git branch
       try {
         const branch = await window.api.git.branch(selected);
         setCurrentProject({ path: selected, name, branch });
+        addPendingProject({ path: selected, name, branch });
       } catch {
         // Not a git repo
       }
+
+      // Create a new thread in this folder so user sees it immediately
+      const tempId = `new-${Date.now()}`;
+      useAppStore.getState().saveCurrentRuntime();
+      useAppStore.getState().resetCurrentSession();
+      useAppStore.getState().setCurrentSession({
+        id: tempId,
+        projectPath: selected,
+        messages: [],
+        isStreaming: false,
+        processId: null,
+      });
+
+      useTabStore.getState().openTab({
+        id: tempId,
+        title: 'New Thread',
+        isNew: true,
+        projectPath: selected,
+      });
     }
   };
 

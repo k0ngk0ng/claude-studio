@@ -56,7 +56,7 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 export function ThreadList({ collapseAllKey, expandAllKey }: { collapseAllKey: number; expandAllKey: number }) {
-  const { sessions, currentSession, currentProject, sessionRuntimes } = useAppStore();
+  const { sessions, currentSession, currentProject, sessionRuntimes, pendingProjects } = useAppStore();
   const { createNewSession } = useSessions();
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
@@ -110,8 +110,20 @@ export function ThreadList({ collapseAllKey, expandAllKey }: { collapseAllKey: n
       }
     }
 
+    // Ensure pending projects (added via "Add Folder") always show even without sessions
+    for (const pending of pendingProjects) {
+      const exists = groups.some((g) => g.projectPath === pending.path);
+      if (!exists) {
+        groups.push({
+          projectName: pending.name,
+          projectPath: pending.path,
+          sessions: [],
+        });
+      }
+    }
+
     return groups;
-  }, [filteredSessions, hasUntitledThread, untitledProjectPath]);
+  }, [filteredSessions, hasUntitledThread, untitledProjectPath, pendingProjects]);
 
   const toggleProject = (key: string) => {
     setCollapsedProjects((prev) => {
@@ -185,6 +197,7 @@ export function ThreadList({ collapseAllKey, expandAllKey }: { collapseAllKey: n
       {projectGroups.map((group) => {
         const key = group.projectPath || group.projectName;
         const isCollapsed = collapsedProjects.has(key);
+        const isPending = pendingProjects.some((p) => p.path === group.projectPath) && group.sessions.length === 0;
 
         return (
           <div key={key} className="mb-1">
@@ -205,7 +218,7 @@ export function ThreadList({ collapseAllKey, expandAllKey }: { collapseAllKey: n
                     strokeWidth="1.2"
                   />
                 </svg>
-                <span className="text-[13px] font-semibold truncate flex-1 text-left">
+                <span className={`text-[13px] font-semibold truncate flex-1 text-left${isPending ? ' italic opacity-60' : ''}`}>
                   {group.projectName}
                 </span>
                 {/* Collapse indicator + count */}
