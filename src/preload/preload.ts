@@ -202,10 +202,13 @@ export interface AppAPI {
     message?: string;
   }) => void) => void;
   removeUpdateStatusListener: (callback: (data: any) => void) => void;
+  onDebugLog: (callback: (data: { category: string; message: string; level: string }) => void) => void;
+  removeDebugLogListener: (callback: (data: any) => void) => void;
 }
 
 const claudeMessageListeners = new Map<Function, (...args: any[]) => void>();
 const claudePermissionListeners = new Map<Function, (...args: any[]) => void>();
+const debugLogListeners = new Map<Function, (...args: any[]) => void>();
 const terminalDataListeners = new Map<Function, (...args: any[]) => void>();
 const terminalExitListeners = new Map<Function, (...args: any[]) => void>();
 const installProgressListeners = new Map<Function, (...args: any[]) => void>();
@@ -429,6 +432,20 @@ contextBridge.exposeInMainWorld('api', {
       if (wrappedCallback) {
         ipcRenderer.removeListener('app:update-status', wrappedCallback);
         updateStatusListeners.delete(callback);
+      }
+    },
+    onDebugLog: (callback: (data: { category: string; message: string; level: string }) => void) => {
+      const wrappedCallback = (_event: Electron.IpcRendererEvent, data: { category: string; message: string; level: string }) => {
+        callback(data);
+      };
+      debugLogListeners.set(callback, wrappedCallback);
+      ipcRenderer.on('debug-log', wrappedCallback);
+    },
+    removeDebugLogListener: (callback: (data: any) => void) => {
+      const wrappedCallback = debugLogListeners.get(callback);
+      if (wrappedCallback) {
+        ipcRenderer.removeListener('debug-log', wrappedCallback);
+        debugLogListeners.delete(callback);
       }
     },
   } satisfies AppAPI,

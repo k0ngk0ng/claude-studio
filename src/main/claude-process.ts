@@ -3,13 +3,31 @@ import { randomUUID } from 'crypto';
 import path from 'path';
 import os from 'os';
 import { createRequire } from 'module';
-import { app } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import fs from 'fs';
 import { getSessionsDir, encodePath } from './platform';
 
-// Debug log helper — console only (no file writes)
+// Debug log helper — sends to both console and renderer debug logs panel
 function debugLog(...args: unknown[]) {
   console.log('[claude-process]', ...args);
+
+  // Send to renderer's debug logs panel
+  try {
+    const windows = BrowserWindow.getAllWindows();
+    if (windows.length > 0) {
+      const message = args.map(arg =>
+        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+      ).join(' ');
+
+      windows[0].webContents.send('debug-log', {
+        category: 'claude',
+        message,
+        level: 'info',
+      });
+    }
+  } catch {
+    // Ignore errors if window is not ready
+  }
 }
 
 debugLog('claude-process module loaded, isPackaged:', app?.isPackaged);
@@ -252,6 +270,12 @@ class ClaudeProcessManager extends EventEmitter {
           fs.symlinkSync(targetPath, linkPath);
         }
       }
+      // Write an empty settings.json so the SDK's 'user' settingSource loads
+      // successfully (with no env overrides) and the auth flow works normally
+      const isolatedSettings = path.join(isolatedConfigDir, 'settings.json');
+      if (!fs.existsSync(isolatedSettings)) {
+        fs.writeFileSync(isolatedSettings, '{}\n');
+      }
       childEnv.CLAUDE_CONFIG_DIR = isolatedConfigDir;
       debugLog('CLAUDE_CONFIG_DIR set to isolated dir:', isolatedConfigDir);
     } catch (e) {
@@ -283,12 +307,22 @@ class ClaudeProcessManager extends EventEmitter {
 
     // Log SDK configuration for debugging — show what the SDK will actually use
     const effectiveBaseUrl = childEnv.ANTHROPIC_BASE_URL || childEnv.OPENAI_BASE_URL || '(default: api.anthropic.com)';
+
+    // Mask sensitive keys: show first 4 and last 4 chars, rest as asterisks
+    const maskKey = (key: string | undefined, prefix: string): string => {
+      if (!key) return '(none)';
+      if (key.length <= 8) return `${prefix}=${key.slice(0, 2)}${'*'.repeat(key.length - 2)}`;
+      const visibleChars = 4;
+      const maskedLength = key.length - visibleChars * 2;
+      return `${prefix}=${key.slice(0, visibleChars)}${'*'.repeat(maskedLength)}${key.slice(-visibleChars)}`;
+    };
+
     const effectiveApiKey = childEnv.ANTHROPIC_API_KEY
-      ? `ANTHROPIC_API_KEY=${childEnv.ANTHROPIC_API_KEY.slice(0, 8)}...${childEnv.ANTHROPIC_API_KEY.slice(-4)}`
+      ? maskKey(childEnv.ANTHROPIC_API_KEY, 'ANTHROPIC_API_KEY')
       : childEnv.ANTHROPIC_AUTH_TOKEN
-        ? `ANTHROPIC_AUTH_TOKEN=${childEnv.ANTHROPIC_AUTH_TOKEN.slice(0, 8)}...${childEnv.ANTHROPIC_AUTH_TOKEN.slice(-4)}`
+        ? maskKey(childEnv.ANTHROPIC_AUTH_TOKEN, 'ANTHROPIC_AUTH_TOKEN')
         : childEnv.OPENAI_API_KEY
-          ? `OPENAI_API_KEY=${childEnv.OPENAI_API_KEY.slice(0, 8)}...${childEnv.OPENAI_API_KEY.slice(-4)}`
+          ? maskKey(childEnv.OPENAI_API_KEY, 'OPENAI_API_KEY')
           : '(no explicit key — will use default)';
     const effectiveModel = childEnv.ANTHROPIC_MODEL || childEnv.CLAUDE_MODEL || '(SDK default)';
 
@@ -296,21 +330,26 @@ class ClaudeProcessManager extends EventEmitter {
     debugLog('  BASE_URL:', effectiveBaseUrl);
     debugLog('  AUTH:', effectiveApiKey);
     debugLog('  MODEL:', effectiveModel);
-    debugLog('  Profile envVars:', (managed.envVars || []).filter(v => v.enabled).map(v => `${v.key}=${v.key.includes('KEY') || v.key.includes('TOKEN') ? '***' : v.value}`).join(', ') || '(none)');
+    debugLog('  Profile envVars:', (managed.envVars || []).filter(v => v.enabled).map(v => {
+      if (v.key.includes('KEY') || v.key.includes('TOKEN')) {
+        return `${v.key}=${maskKey(v.value, '').replace('=', '')}`;
+      }
+      return `${v.key}=${v.value}`;
+    }).join(', ') || '(none)');
     debugLog('========================');
 
     // Extract model from merged env — pass explicitly to SDK options
     const modelFromEnv = childEnv.ANTHROPIC_MODEL;
 
     // Build options — settingSources controls which settings files the SDK loads
-    // for permissions, hooks, CLAUDE.md, etc. We use 'project' + 'local' so
-    // project-level settings work, but NEVER 'user' (which would load
-    // ~/.claude/settings.json). The CLAUDE_CONFIG_DIR redirect above already
-    // prevents the SDK's internal qZq() from reading ~/.claude/settings.json env.
-    // When cwd is home dir, use [] to avoid <cwd>/.claude/settings.json collision.
+    // for permissions, hooks, CLAUDE.md, etc. We include 'user' so the SDK's
+    // auth flow works normally (reads API key from env vars). This is safe
+    // because CLAUDE_CONFIG_DIR points to an isolated dir with an empty
+    // settings.json, so no env vars from ~/.claude/settings.json leak in.
+    // When cwd is home dir, only include 'user' to avoid <cwd>/.claude/settings.json collision.
     const homedir = os.homedir();
     const isHomeCwd = managed.cwd === homedir || managed.cwd === homedir + '/';
-    const settingSources = isHomeCwd ? [] : ['project', 'local'];
+    const settingSources = isHomeCwd ? ['user'] : ['user', 'project', 'local'];
     debugLog('settingSources:', settingSources, isHomeCwd ? '(cwd is home dir — full isolation)' : '');
 
     const sdkDebugFile = path.join(app.getPath('userData'), 'sdk-debug.log');

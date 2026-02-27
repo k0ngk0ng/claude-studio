@@ -138,6 +138,22 @@ export default function App() {
     return cleanup;
   }, []);
 
+  // Forward main process debug logs to renderer debug log store
+  useEffect(() => {
+    const handleDebugLog = (data: { category: string; message: string; level: string }) => {
+      debugLog(
+        data.category as any,
+        data.message,
+        undefined,
+        data.level as any,
+      );
+    };
+    window.api.app.onDebugLog(handleDebugLog);
+    return () => {
+      window.api.app.removeDebugLogListener(handleDebugLog);
+    };
+  }, []);
+
   // Auto-reload sessions when files change
   useEffect(() => {
     const handleChanged = () => {

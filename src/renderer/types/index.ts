@@ -119,6 +119,8 @@ export interface AppAPI {
     message?: string;
   }) => void) => void;
   removeUpdateStatusListener: (callback: (data: any) => void) => void;
+  onDebugLog: (callback: (data: { category: string; message: string; level: string }) => void) => void;
+  removeDebugLogListener: (callback: (data: any) => void) => void;
 }
 
 export interface ClaudeConfigAPI {
