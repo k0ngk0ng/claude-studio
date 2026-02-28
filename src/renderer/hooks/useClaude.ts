@@ -931,13 +931,18 @@ export function useClaude() {
       const settingsMcpServers = useSettingsStore.getState().settings.mcpServers;
       const mcpServers = mcpServersOverride ?? settingsMcpServers;
 
+      // Read includeCoAuthoredBy from active profile
+      const activeProfile = useSettingsStore.getState().getActiveProfile();
+      const includeCoAuthoredBy = activeProfile?.includeCoAuthoredBy;
+
       debugLog('claude', `spawning SDK session — cwd: ${cwd}${sessionId ? ', resume: ' + sessionId : ''}, mode: ${mode}, envVars: ${envVars.length}, mcpServers: ${mcpServers.filter(s => s.enabled).length}`, {
         cwd,
         sessionId,
         permissionMode: mode,
         envVarCount: envVars.length,
         mcpServerCount: mcpServers.filter(s => s.enabled).length,
-        mcpServerNames: mcpServers.filter(s => s.enabled).map(s => s.name).join(', '),
+        mcpServerNames: mcpServers.filter(s => s.enabled).map(s => s.name).join(', ') || '(none)',
+        includeCoAuthoredBy,
       });
 
       // Save current process to background runtime before starting new one
@@ -955,7 +960,7 @@ export function useClaude() {
       // Clear any pending permission requests from previous session
       usePermissionStore.getState().clearRequests();
 
-      const pid = await window.api.claude.spawn(cwd, sessionId, mode, envVars, language, mcpServers);
+      const pid = await window.api.claude.spawn(cwd, sessionId, mode, envVars, language, mcpServers, includeCoAuthoredBy);
       processIdRef.current = pid;
       useAppStore.getState().setProcessId(pid);
       useAppStore.getState().setIsStreaming(false);

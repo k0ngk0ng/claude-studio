@@ -148,6 +148,7 @@ interface ManagedSession {
   permissionMode?: string;
   language?: string;
   envVars?: Array<{ key: string; value: string; enabled: boolean }>;
+  includeCoAuthoredBy?: boolean;
   abortController: AbortController;
   permissionResolvers: Map<string, (result: PermissionResponse) => void>;
   queryInstance?: any; // SDK Query object — has setPermissionMode(), interrupt(), etc.
@@ -170,8 +171,9 @@ class ClaudeProcessManager extends EventEmitter {
     envVars?: Array<{ key: string; value: string; enabled: boolean }>,
     language?: string,
     mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>,
+    includeCoAuthoredBy?: boolean,
   ): Promise<string> {
-    debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode, 'envVars:', envVars?.length || 0, 'language:', language, 'mcpServers:', mcpServers?.length || 0);
+    debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode, 'envVars:', envVars?.length || 0, 'language:', language, 'mcpServers:', mcpServers?.length || 0, 'includeCoAuthoredBy:', includeCoAuthoredBy);
 
     const processId = randomUUID();
     const abortController = new AbortController();
@@ -182,6 +184,7 @@ class ClaudeProcessManager extends EventEmitter {
       permissionMode,
       language,
       envVars,
+      includeCoAuthoredBy,
       abortController,
       permissionResolvers: new Map(),
       messageCount: 0,
@@ -270,14 +273,17 @@ class ClaudeProcessManager extends EventEmitter {
           fs.symlinkSync(targetPath, linkPath);
         }
       }
-      // Write an empty settings.json so the SDK's 'user' settingSource loads
-      // successfully (with no env overrides) and the auth flow works normally
+      // Write settings.json with includeCoAuthoredBy from profile.
+      // This setting can only be set via settings.json (not env vars), so we
+      // must write it to the isolated config dir for the SDK to pick it up.
       const isolatedSettings = path.join(isolatedConfigDir, 'settings.json');
-      if (!fs.existsSync(isolatedSettings)) {
-        fs.writeFileSync(isolatedSettings, '{}\n');
+      const settingsContent: Record<string, unknown> = {};
+      if (managed.includeCoAuthoredBy !== undefined) {
+        settingsContent.includeCoAuthoredBy = managed.includeCoAuthoredBy;
       }
+      fs.writeFileSync(isolatedSettings, JSON.stringify(settingsContent, null, 2) + '\n');
       childEnv.CLAUDE_CONFIG_DIR = isolatedConfigDir;
-      debugLog('CLAUDE_CONFIG_DIR set to isolated dir:', isolatedConfigDir);
+      debugLog('CLAUDE_CONFIG_DIR set to isolated dir:', isolatedConfigDir, 'includeCoAuthoredBy:', managed.includeCoAuthoredBy);
     } catch (e) {
       debugLog('Failed to set up isolated config dir, falling back:', e);
     }
