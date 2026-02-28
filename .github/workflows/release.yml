@@ -287,13 +287,13 @@ jobs:
           cd server-release
           npm install --omit=dev
           cd ..
-          tar -czf claude-studio-server-${{ steps.version.outputs.TAG }}.tar.gz -C server-release .
+          tar -czf claude-studio-server-${{ steps.version.outputs.VERSION }}.tar.gz -C server-release .
 
       - name: Upload server artifact
         uses: actions/upload-artifact@v4
         with:
           name: release-server
-          path: claude-studio-server-${{ steps.version.outputs.TAG }}.tar.gz
+          path: claude-studio-server-${{ steps.version.outputs.VERSION }}.tar.gz
           retention-days: 5
 
   # release-mobile:
