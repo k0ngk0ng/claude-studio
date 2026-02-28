@@ -10,7 +10,7 @@ export interface McpServer {
 }
 
 export interface ClaudeAPI {
-  spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: McpServer[]) => Promise<string>;
+  spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: McpServer[], includeCoAuthoredBy?: boolean) => Promise<string>;
   send: (processId: string, content: string) => Promise<boolean>;
   kill: (processId: string) => Promise<boolean>;
   onMessage: (
@@ -220,8 +220,8 @@ const remoteControlRequestListeners = new Map<Function, (...args: any[]) => void
 
 contextBridge.exposeInMainWorld('api', {
   claude: {
-    spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: McpServer[]) =>
-      ipcRenderer.invoke('claude:spawn', cwd, sessionId, permissionMode, envVars, language, mcpServers),
+    spawn: (cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: McpServer[], includeCoAuthoredBy?: boolean) =>
+      ipcRenderer.invoke('claude:spawn', cwd, sessionId, permissionMode, envVars, language, mcpServers, includeCoAuthoredBy),
     send: (processId: string, content: string) =>
       ipcRenderer.invoke('claude:send', processId, content),
     kill: (processId: string) => ipcRenderer.invoke('claude:kill', processId),

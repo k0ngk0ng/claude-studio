@@ -126,13 +126,13 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  handle('claude:spawn', async (_event, cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>) => {
+  handle('claude:spawn', async (_event, cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>, includeCoAuthoredBy?: boolean) => {
     // Log enabled MCP servers (don't write to file - pass directly to SDK for security)
     if (mcpServers && mcpServers.length > 0) {
       const enabledServers = mcpServers.filter(s => s.enabled);
       console.log('[mcp-manager] Enabled MCP servers:', enabledServers.map(s => s.name).join(', ') || 'none');
     }
-    return claudeProcessManager.spawn(cwd, sessionId, permissionMode, envVars, language, mcpServers);
+    return claudeProcessManager.spawn(cwd, sessionId, permissionMode, envVars, language, mcpServers, includeCoAuthoredBy);
   });
 
   handle('claude:send', (_event, processId: string, content: string) => {
