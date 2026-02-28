@@ -285,10 +285,11 @@ export function AboutSection() {
   }, [updateStatus, platform]);
 
   const handleInstall = useCallback(async () => {
-    if (updateStatus.state !== 'downloaded') return;
+    // Allow install if update is downloaded or ready to install
+    if (updateStatus.state !== 'downloaded' && !updateReady) return;
     // Quit and install - electron-updater will replace the app and restart
     await window.api.app.installUpdate();
-  }, [updateStatus]);
+  }, [updateStatus, updateReady]);
 
   const handleInstallClaudeCode = useCallback(async () => {
     setClaudeCodeInstall({ status: 'installing' });

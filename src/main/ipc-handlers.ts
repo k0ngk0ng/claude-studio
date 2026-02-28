@@ -910,19 +910,69 @@ export function registerIpcHandlers(): void {
   });
 
   handle('app:installUpdate', async () => {
+    // If electron-updater has downloaded an update, use it
+    if (updateState.isDownloaded) {
+      console.log('[app] Installing auto-downloaded update via electron-updater');
+      autoUpdater.quitAndInstall(false, true);
+      return true;
+    }
+    // Fallback to manual download path
     const pendingPath = (global as any).pendingUpdatePath;
     if (pendingPath && fs.existsSync(pendingPath)) {
-      console.log('app', `Installing update from: ${pendingPath}`);
-      const { shell } = require('electron');
-      // Open the installer - this will trigger the install process
+      console.log('[app] Installing update from:', pendingPath);
+
+      // macOS .dmg handling
+      if (pendingPath.endsWith('.dmg')) {
+        try {
+          // Mount the DMG
+          const { execSync } = require('child_process');
+          const mountResult = execSync(`hdiutil attach "${pendingPath}" -nobrowse`, { encoding: 'utf-8' });
+          const mountMatch = mountResult.match(/(\/Volumes\/[^\n]+)/);
+
+          if (mountMatch) {
+            const mountPath = mountMatch[1];
+            // Find the .app bundle
+            const apps = fs.readdirSync(mountPath).filter((f: string) => f.endsWith('.app'));
+
+            if (apps.length > 0) {
+              const appName = apps[0];
+              const sourceApp = path.join(mountPath, appName);
+              const targetApp = '/Applications/ClaudeStudio.app';
+
+              console.log('[app] Installing', appName, 'to', targetApp);
+
+              // Remove old app if exists
+              if (fs.existsSync(targetApp)) {
+                execSync(`rm -rf "${targetApp}"`);
+              }
+
+              // Copy new app
+              execSync(`cp -R "${sourceApp}" "${targetApp}"`);
+
+              // Unmount DMG
+              execSync(`hdiutil detach "${mountPath}"`);
+
+              // Launch new version and quit
+              execSync('open "/Applications/ClaudeStudio.app"');
+              app.quit();
+              return true;
+            }
+          }
+        } catch (err) {
+          console.error('[app] DMG install failed:', err);
+          // Fallback: just open the DMG for manual install
+          shell.openPath(pendingPath);
+          app.quit();
+          return true;
+        }
+      }
+
+      // For other platforms, open the installer
       shell.openPath(pendingPath);
-      // Quit the app so the installer can proceed
       app.quit();
       return true;
     }
-    // Fallback to autoUpdater (for auto-downloaded updates)
-    autoUpdater.quitAndInstall(false, true);
-    return true;
+    throw new Error('No update available to install');
   });
 
   handle('app:getModel', () => {
