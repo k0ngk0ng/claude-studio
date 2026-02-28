@@ -17,6 +17,7 @@ import type {
   KeyBinding,
   SecuritySettings,
   ServerSettings,
+  UpdateSettings,
 } from '../types';
 
 const STORAGE_KEY = 'claude-studio-settings';
@@ -94,6 +95,11 @@ const defaultSettings: AppSettings = {
   server: {
     serverUrl: '',
   },
+  updates: {
+    autoUpdate: 'auto-download',
+    updateChannel: 'stable',
+    autoCheckOnStartup: true,
+  },
 };
 
 function saveSettings(settings: AppSettings) {
@@ -165,6 +171,7 @@ function mergeWithDefaults(parsed: Record<string, unknown>): AppSettings {
     keybindings: (parsed.keybindings as KeyBinding[])?.length ? (parsed.keybindings as KeyBinding[]) : defaultSettings.keybindings,
     security: { ...defaultSettings.security, ...(parsed.security as Partial<SecuritySettings>) },
     server: { ...defaultSettings.server, ...(parsed.server as Partial<ServerSettings>) },
+    updates: { ...defaultSettings.updates, ...(parsed.updates as Partial<UpdateSettings>) },
   };
 
   // Migrate: if no profiles exist but envVars do, create default profile from envVars
@@ -286,6 +293,7 @@ interface SettingsStore {
   updateAppearance: (updates: Partial<AppearanceSettings>) => void;
   updateSecurity: (updates: Partial<SecuritySettings>) => void;
   updateServer: (updates: Partial<ServerSettings>) => void;
+  updateUpdates: (updates: Partial<UpdateSettings>) => void;
   updateKeybinding: (id: string, keys: string) => void;
 
   // Provider env vars
@@ -401,6 +409,17 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
       const newSettings = {
         ...state.settings,
         server: { ...state.settings.server, ...updates },
+      };
+      saveSettings(newSettings);
+      return { settings: newSettings };
+    });
+  },
+
+  updateUpdates: (updates) => {
+    set((state) => {
+      const newSettings = {
+        ...state.settings,
+        updates: { ...state.settings.updates, ...updates },
       };
       saveSettings(newSettings);
       return { settings: newSettings };

@@ -1,7 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { debugLog } from '../../stores/debugLogStore';
 import { useUpdateStore } from '../../stores/updateStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import type { UpdateStatus } from '../../stores/updateStore';
+import { SettingsSelect } from './controls/SettingsSelect';
+import { SettingsToggle } from './controls/SettingsToggle';
 
 interface ReleaseInfo {
   version: string;
@@ -160,6 +163,10 @@ export function AboutSection() {
   const [claudeCodeVersion, setClaudeCodeVersion] = useState('');
   const [gitVersion, setGitVersion] = useState('');
   const [platform, setPlatform] = useState('');
+  const [updateReady, setUpdateReady] = useState(false);  // Track if update is ready to install
+
+  // Settings store for update preferences
+  const { settings, updateUpdates } = useSettingsStore();
 
   // Global update state — persists across page navigation
   const { status: updateStatus, setStatus: setUpdateStatus, updateProgress } = useUpdateStore();
@@ -182,6 +189,13 @@ export function AboutSection() {
     window.api.app.getClaudeCodeVersion().then(setClaudeCodeVersion).catch(() => {});
     window.api.app.getGitVersion().then(setGitVersion).catch(() => {});
     window.api.app.getPlatform().then(setPlatform).catch(() => {});
+
+    // Check if there's already an update downloaded (from auto-download)
+    window.api.app.getUpdateState().then((state) => {
+      if (state.isDownloaded || state.autoDownloaded) {
+        setUpdateReady(true);
+      }
+    }).catch(() => {});
   }, []);
 
   // Update status listener — receives events from electron-updater via main process
@@ -214,6 +228,7 @@ export function AboutSection() {
           break;
         case 'downloaded':
           setUpdateStatus({ state: 'downloaded' });
+          setUpdateReady(true);
           break;
         case 'error':
           setUpdateStatus({ state: 'error', message: data.message || 'Update failed' });
@@ -394,6 +409,46 @@ export function AboutSection() {
         {/* Update section */}
         <div>
           <div className="text-sm font-medium text-text-primary mb-3">Updates</div>
+
+          {/* Auto-update settings */}
+          <div className="space-y-3 mb-4 p-3 rounded-lg bg-surface border border-border">
+            <SettingsToggle
+              label="Auto-check on startup"
+              description="Automatically check for updates when the app starts"
+              checked={settings.updates?.autoCheckOnStartup ?? true}
+              onChange={(checked) => updateUpdates({ autoCheckOnStartup: checked })}
+            />
+            <SettingsSelect
+              label="Auto-update mode"
+              description="How to handle available updates"
+              value={settings.updates?.autoUpdate ?? 'auto-download'}
+              options={[
+                { value: 'auto-download', label: 'Auto-download patch updates' },
+                { value: 'prompt', label: 'Prompt for all updates' },
+                { value: 'off', label: 'Disable auto-check' },
+              ]}
+              onChange={(value) => updateUpdates({ autoUpdate: value as 'auto-download' | 'prompt' | 'off' })}
+            />
+          </div>
+
+          {/* Restart to update prompt (shown when update is downloaded) */}
+          {updateReady && updateStatus.state !== 'downloading' && updateStatus.state !== 'available' && (
+            <div className="mb-4 p-3 rounded-lg bg-success/10 border border-success/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-success">
+                  <CheckIcon />
+                  <span>Update downloaded — restart to install</span>
+                </div>
+                <button
+                  onClick={handleInstall}
+                  className="px-3 py-1.5 rounded-md bg-success text-white text-xs font-medium
+                             hover:bg-success/90 transition-colors"
+                >
+                  Restart Now
+                </button>
+              </div>
+            </div>
+          )}
 
           {updateStatus.state === 'idle' && (
             <button

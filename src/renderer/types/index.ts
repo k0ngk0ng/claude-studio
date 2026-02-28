@@ -81,6 +81,13 @@ export interface AppAPI {
   getPlatform: () => Promise<'mac' | 'windows' | 'linux'>;
   getHomePath: () => Promise<string>;
   getVersion: () => Promise<string>;
+  getUpdateState: () => Promise<{
+    currentVersion: string;
+    latestVersion: string | null;
+    isUpdateAvailable: boolean;
+    isDownloaded: boolean;
+    autoDownloaded: boolean;
+  }>;
   getModel: () => Promise<string>;
   getAgentSdkVersion: () => Promise<string>;
   getClaudeCodeVersion: () => Promise<string>;
@@ -475,6 +482,15 @@ export interface ServerSettings {
   serverUrl: string;
 }
 
+export type UpdateChannel = 'stable' | 'beta';
+export type AutoUpdateMode = 'prompt' | 'auto-download' | 'off';
+
+export interface UpdateSettings {
+  autoUpdate: AutoUpdateMode;      // auto-download = silent download, prompt = notify only, off = disable
+  updateChannel: UpdateChannel;    // stable or beta releases
+  autoCheckOnStartup: boolean;     // check for updates on app startup
+}
+
 export interface AppSettings {
   general: GeneralSettings;
   provider: ProviderSettings;
@@ -485,6 +501,7 @@ export interface AppSettings {
   keybindings: KeyBinding[];
   security: SecuritySettings;
   server: ServerSettings;
+  updates: UpdateSettings;
 }
 
 // ─── Remote control types ────────────────────────────────────────────

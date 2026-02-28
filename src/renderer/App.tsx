@@ -132,6 +132,35 @@ export default function App() {
     init();
   }, []);
 
+  // Auto-check for updates on startup (after settings are loaded)
+  useEffect(() => {
+    async function checkUpdates() {
+      try {
+        // Check if there's already an update downloaded (from previous auto-download)
+        const updateState = await window.api.app.getUpdateState();
+        if (updateState.isDownloaded) {
+          debugLog('app', 'Update already downloaded, ready to install on restart');
+          return;
+        }
+
+        // Trigger auto-update check via main process
+        if (settings.updates?.autoCheckOnStartup) {
+          debugLog('app', 'Auto-checking for updates...');
+          // This triggers the check in main process
+          await window.api.app.checkForUpdates();
+        }
+      } catch (err) {
+        // Silent fail for auto-check
+        console.error('Auto-update check failed:', err);
+      }
+    }
+
+    // Only check if settings are loaded
+    if (settings?.updates) {
+      checkUpdates();
+    }
+  }, [settings?.updates?.autoCheckOnStartup]);
+
   // Initialize remote control event listeners
   useEffect(() => {
     const cleanup = initRemoteListeners();

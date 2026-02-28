@@ -165,6 +165,13 @@ export interface AppAPI {
   getSystemLocale: () => Promise<string>;
   getHomePath: () => Promise<string>;
   getVersion: () => Promise<string>;
+  getUpdateState: () => Promise<{
+    currentVersion: string;
+    latestVersion: string | null;
+    isUpdateAvailable: boolean;
+    isDownloaded: boolean;
+    autoDownloaded: boolean;
+  }>;
   getModel: () => Promise<string>;
   getAgentSdkVersion: () => Promise<string>;
   getClaudeCodeVersion: () => Promise<string>;
@@ -380,6 +387,7 @@ contextBridge.exposeInMainWorld('api', {
     getSystemLocale: () => ipcRenderer.invoke('app:getSystemLocale'),
     getHomePath: () => ipcRenderer.invoke('app:getHomePath'),
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
+    getUpdateState: () => ipcRenderer.invoke('app:getUpdateState'),
     getModel: () => ipcRenderer.invoke('app:getModel'),
     getAgentSdkVersion: () => ipcRenderer.invoke('app:getAgentSdkVersion'),
     getClaudeCodeVersion: () => ipcRenderer.invoke('app:getClaudeCodeVersion'),
