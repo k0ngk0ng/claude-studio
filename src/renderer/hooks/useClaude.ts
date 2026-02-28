@@ -143,9 +143,37 @@ export function useClaude() {
    * Updates the cached sessionRuntime so messages aren't lost.
    */
   const handleBackgroundEvent = useCallback((processId: string, event: StreamEvent) => {
-    const { updateBackgroundRuntime, findSessionKeyByProcessId } = useAppStore.getState();
-    const sessionKey = findSessionKeyByProcessId(processId);
-    if (!sessionKey) return; // orphan process, ignore
+    const state = useAppStore.getState();
+    const { updateBackgroundRuntime, findSessionKeyByProcessId, sessionRuntimes } = state;
+
+    // First try to find existing session key for this process
+    let sessionKey = findSessionKeyByProcessId(processId);
+
+    // If not found in current session or existing runtimes, check if we need to
+    // create/update runtime based on event.session_id
+    if (!sessionKey && event.session_id) {
+      sessionKey = event.session_id;
+
+      // Ensure there's a runtime entry for this session
+      if (!sessionRuntimes.has(sessionKey)) {
+        const runtimes = new Map(sessionRuntimes);
+        runtimes.set(sessionKey, {
+          processId: processId,
+          isStreaming: true,
+          streamingContent: '',
+          toolActivities: [],
+          messages: [],
+        });
+        useAppStore.setState({ sessionRuntimes: runtimes });
+      }
+    }
+
+    if (!sessionKey) {
+      // Orphan process - we can't route this message anywhere useful.
+      // Log it for debugging but don't lose the message entirely.
+      debugLog('claude', `orphan message from process ${processId}: ${event.type}`, { event });
+      return;
+    }
 
     // Handle key event types for background sessions
     if (event.type === 'assistant' && event.message) {
@@ -204,15 +232,20 @@ export function useClaude() {
     const handler = (processId: string, raw: unknown) => {
       const event = raw as StreamEvent;
 
-      // Check both processIdRef (fast path) and store (handles restoreRuntime
-      // where useEffect hasn't synced processIdRef yet)
-      const storeProcessId = useAppStore.getState().currentSession.processId;
-      const isCurrentSession = processId === processIdRef.current || processId === storeProcessId;
+      // ALWAYS use store as the source of truth for current session identification.
+      // processIdRef is only used for tracking the process we're actively managing
+      // in the current hook instance, not for message routing decisions.
+      const storeState = useAppStore.getState();
+      const storeProcessId = storeState.currentSession.processId;
 
-      // Eagerly sync processIdRef if store has a value we don't
-      if (storeProcessId && processIdRef.current !== storeProcessId) {
+      // Sync processIdRef to match store (this hook instance only manages one process)
+      if (processIdRef.current !== storeProcessId) {
         processIdRef.current = storeProcessId;
       }
+
+      // Determine if this message belongs to the currently active session.
+      // A message belongs to current session ONLY if its processId matches the store's processId.
+      const isCurrentSession = processId === storeProcessId && storeProcessId !== null;
 
       // If this message is NOT for the current session, route to background runtime
       if (!isCurrentSession) {
@@ -819,8 +852,8 @@ export function useClaude() {
           setProcessId(null);
           processIdRef.current = null;
 
-          // Clean up runtime cache
-          const errSessionKey = useAppStore.getState().currentSession.id;
+          // Clean up runtime cache using the correct session key
+          const errSessionKey = event.session_id || useAppStore.getState().findSessionKeyByProcessId(processId);
           if (errSessionKey) {
             useAppStore.getState().removeRuntime(errSessionKey);
           }
@@ -847,8 +880,8 @@ export function useClaude() {
           turnCountRef.current = 0;
           pendingToolResultsRef.current.clear();
 
-          // Clean up runtime cache
-          const exitSessionKey = useAppStore.getState().currentSession.id;
+          // Clean up runtime cache using the correct session key
+          const exitSessionKey = event.session_id || useAppStore.getState().findSessionKeyByProcessId(processId);
           if (exitSessionKey) {
             useAppStore.getState().removeRuntime(exitSessionKey);
           }
@@ -947,10 +980,13 @@ export function useClaude() {
 
       // Save current process to background runtime before starting new one
       // (don't kill it — let it continue running)
-      if (processIdRef.current) {
+      // Use store as source of truth, not processIdRef which may be stale
+      const existingProcessId = useAppStore.getState().currentSession.processId;
+      if (existingProcessId) {
         useAppStore.getState().saveCurrentRuntime();
-        processIdRef.current = null;
       }
+      // Always reset the ref to match the new state
+      processIdRef.current = null;
 
       streamingTextRef.current = '';
       currentModelRef.current = undefined;
@@ -974,16 +1010,17 @@ export function useClaude() {
     const { addMessage, setIsStreaming, clearStreamingContent, clearToolActivities, toolActivities } =
       useAppStore.getState();
 
-    // Eagerly sync processIdRef from store — the useEffect may not have fired yet
-    // after a tab switch + restoreRuntime
+    // ALWAYS use store as source of truth for processId
+    // processIdRef may be stale after tab switches
     const storeProcessId = useAppStore.getState().currentSession.processId;
-    if (storeProcessId && !processIdRef.current) {
+
+    // Sync processIdRef to match store for consistency
+    if (processIdRef.current !== storeProcessId) {
       processIdRef.current = storeProcessId;
     }
 
     // If no process, need to spawn one first
-    const pid = processIdRef.current;
-    if (!pid) return;
+    if (!storeProcessId) return;
 
     // Commit any in-flight assistant response before clearing
     if (streamingTextRef.current || toolActivities.length > 0) {
@@ -1004,24 +1041,30 @@ export function useClaude() {
     turnCountRef.current = 0;
     pendingToolResultsRef.current.clear();
 
-    await window.api.claude.send(pid, content);
+    await window.api.claude.send(storeProcessId, content);
   }, []);
 
   const stopSession = useCallback(async () => {
-    debugLog('claude', `stopSession called, processIdRef=${processIdRef.current}`);
-    if (processIdRef.current) {
-      await window.api.claude.kill(processIdRef.current);
-      debugLog('claude', `kill sent for ${processIdRef.current}`);
-      processIdRef.current = null;
+    // ALWAYS use store as source of truth for processId
+    const storeProcessId = useAppStore.getState().currentSession.processId;
+    debugLog('claude', `stopSession called, processId=${storeProcessId}`);
+
+    if (storeProcessId) {
+      await window.api.claude.kill(storeProcessId);
+      debugLog('claude', `kill sent for ${storeProcessId}`);
+
       const { setProcessId, setIsStreaming, clearStreamingContent, clearToolActivities } =
         useAppStore.getState();
       setProcessId(null);
       setIsStreaming(false);
       clearStreamingContent();
       clearToolActivities();
-      streamingTextRef.current = '';
-      turnCountRef.current = 0;
     }
+
+    // Always reset refs and local state
+    processIdRef.current = null;
+    streamingTextRef.current = '';
+    turnCountRef.current = 0;
   }, []);
 
   return {
