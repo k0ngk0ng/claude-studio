@@ -159,7 +159,6 @@ function VersionRow({
 
 export function AboutSection() {
   const [version, setVersion] = useState('');
-  const [sdkVersion, setSdkVersion] = useState('');
   const [claudeCodeVersion, setClaudeCodeVersion] = useState('');
   const [gitVersion, setGitVersion] = useState('');
   const [platform, setPlatform] = useState('');
@@ -185,7 +184,6 @@ export function AboutSection() {
 
   useEffect(() => {
     window.api.app.getVersion().then(setVersion).catch(() => {});
-    window.api.app.getAgentSdkVersion().then(setSdkVersion).catch(() => {});
     window.api.app.getClaudeCodeVersion().then(setClaudeCodeVersion).catch(() => {});
     window.api.app.getGitVersion().then(setGitVersion).catch(() => {});
     window.api.app.getPlatform().then(setPlatform).catch(() => {});
@@ -374,12 +372,6 @@ export function AboutSection() {
             label="App Version"
             sublabel="ClaudeStudio"
             version={version}
-          />
-
-          <VersionRow
-            label="Claude Agent SDK"
-            sublabel="@anthropic-ai/claude-agent-sdk"
-            version={sdkVersion}
           />
 
           <VersionRow

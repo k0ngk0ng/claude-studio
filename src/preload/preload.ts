@@ -173,7 +173,6 @@ export interface AppAPI {
     autoDownloaded: boolean;
   }>;
   getModel: () => Promise<string>;
-  getAgentSdkVersion: () => Promise<string>;
   getClaudeCodeVersion: () => Promise<string>;
   getGitVersion: () => Promise<string>;
   installClaudeCode: () => Promise<{ success: boolean; error?: string; message?: string }>;
@@ -389,7 +388,6 @@ contextBridge.exposeInMainWorld('api', {
     getVersion: () => ipcRenderer.invoke('app:getVersion'),
     getUpdateState: () => ipcRenderer.invoke('app:getUpdateState'),
     getModel: () => ipcRenderer.invoke('app:getModel'),
-    getAgentSdkVersion: () => ipcRenderer.invoke('app:getAgentSdkVersion'),
     getClaudeCodeVersion: () => ipcRenderer.invoke('app:getClaudeCodeVersion'),
     getGitVersion: () => ipcRenderer.invoke('app:getGitVersion'),
     installClaudeCode: () => ipcRenderer.invoke('app:installClaudeCode'),

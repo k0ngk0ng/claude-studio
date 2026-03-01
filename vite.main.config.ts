@@ -17,7 +17,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['node-pty', '@anthropic-ai/claude-agent-sdk', 'ws', 'bufferutil', 'utf-8-validate'],
+      external: ['node-pty', 'ws', 'bufferutil', 'utf-8-validate'],
     },
   },
   resolve: {

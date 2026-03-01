@@ -497,16 +497,6 @@ export function registerIpcHandlers(): void {
     await checkForUpdatesOnStartup(settings);
   });
 
-  handle('app:getAgentSdkVersion', () => {
-    try {
-      const sdkPkgPath = require.resolve('@anthropic-ai/claude-agent-sdk/package.json');
-      const sdkPkg = JSON.parse(fs.readFileSync(sdkPkgPath, 'utf-8'));
-      return sdkPkg.version || 'unknown';
-    } catch {
-      return 'not installed';
-    }
-  });
-
   handle('app:getClaudeCodeVersion', () => {
     // Only detect the real Claude Code CLI — do NOT fall back to bundled SDK metadata
     try {
@@ -1187,20 +1177,12 @@ export function registerIpcHandlers(): void {
     // In packaged app, deps are bundled by forge hook — always report found
     if (app.isPackaged) {
       return [
-        { name: '@anthropic-ai/claude-agent-sdk', found: true },
         { name: 'node-pty', found: true },
       ];
     }
 
     // Dev mode: actually check
     const results: { name: string; found: boolean; error?: string }[] = [];
-
-    try {
-      const sdkPath = path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'sdk.mjs');
-      results.push({ name: '@anthropic-ai/claude-agent-sdk', found: fs.existsSync(sdkPath) });
-    } catch {
-      results.push({ name: '@anthropic-ai/claude-agent-sdk', found: false });
-    }
 
     try {
       require('node-pty');
@@ -1230,17 +1212,13 @@ export function registerIpcHandlers(): void {
       fs.mkdirSync(installDir, { recursive: true });
     }
 
-    const depsToInstall = ['@anthropic-ai/claude-agent-sdk', 'node-pty'];
+    const depsToInstall = ['node-pty'];
     const missing: string[] = [];
 
     // Check which deps are actually missing
     for (const dep of depsToInstall) {
       try {
-        if (dep === '@anthropic-ai/claude-agent-sdk') {
-          await import(dep);
-        } else {
-          require(dep);
-        }
+        require(dep);
       } catch {
         missing.push(dep);
       }

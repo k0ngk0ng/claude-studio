@@ -8,7 +8,7 @@ import fs from 'fs';
 import { execSync } from 'child_process';
 
 // Externalized native/ESM modules that must be copied into the packaged app
-const EXTERNAL_MODULES = ['@anthropic-ai/claude-agent-sdk', 'ws'];
+const EXTERNAL_MODULES = ['ws'];
 
 // node-pty directories/files to SKIP when copying (avoids electron-rebuild trigger)
 // NOTE: We keep 'build' because it contains the Electron-rebuilt pty.node
@@ -70,11 +70,10 @@ const config: ForgeConfig = {
     asar: {
       // Unpack native binaries and executable files so they can be loaded/executed at runtime
       // - .node/.dll/.dylib/.so: native Node addons
-      // - cli.js: SDK's CLI entry point (spawned as child process)
-      // - rg/rg.exe: ripgrep binary used by SDK
+      // - rg/rg.exe: ripgrep binary
       // - .wasm: WebAssembly modules
       // - spawn-helper: node-pty Unix helper
-      unpack: '{*.node,*.dll,*.dylib,*.so,*.wasm,*.exe,**/cli.js,**/vendor/ripgrep/*/rg,**/spawn-helper,**/claude-agent-sdk/package.json}',
+      unpack: '{*.node,*.dll,*.dylib,*.so,*.wasm,*.exe,**/vendor/ripgrep/*/rg,**/spawn-helper}',
     },
     icon: './assets/icon', // electron-packager auto-resolves .icns (macOS) / .ico (Windows)
     extraResource: ['./assets'],

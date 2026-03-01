@@ -89,7 +89,6 @@ export interface AppAPI {
     autoDownloaded: boolean;
   }>;
   getModel: () => Promise<string>;
-  getAgentSdkVersion: () => Promise<string>;
   getClaudeCodeVersion: () => Promise<string>;
   getGitVersion: () => Promise<string>;
   getSystemLocale: () => Promise<string>;

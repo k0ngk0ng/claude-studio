@@ -2,10 +2,11 @@ import { EventEmitter } from 'events';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import os from 'os';
-import { createRequire } from 'module';
+import { spawn, ChildProcess } from 'child_process';
+import readline from 'readline';
 import { app, BrowserWindow } from 'electron';
 import fs from 'fs';
-import { getSessionsDir, encodePath } from './platform';
+import { getClaudeBinary, getSessionsDir, encodePath } from './platform';
 
 // Debug log helper — sends to both console and renderer debug logs panel
 function debugLog(...args: unknown[]) {
@@ -31,78 +32,6 @@ function debugLog(...args: unknown[]) {
 }
 
 debugLog('claude-process module loaded, isPackaged:', app?.isPackaged);
-
-// Dynamic import for ESM module
-let queryFn: typeof import('@anthropic-ai/claude-agent-sdk').query | null = null;
-let sdkCliPath: string | undefined;
-
-async function getQuery() {
-  if (!queryFn) {
-    const sdk = await import('@anthropic-ai/claude-agent-sdk');
-    queryFn = sdk.query;
-  }
-  return queryFn;
-}
-
-function getSdkCliPath(): string {
-  if (sdkCliPath) return sdkCliPath;
-
-  // Try multiple resolution strategies
-  const candidates: string[] = [];
-
-  if (app?.isPackaged) {
-    // In production: cli.js MUST be from the unpacked directory because
-    // it's spawned as a child process (node can't execute files inside asar)
-    // Priority: unpacked > resources
-    const unpackedBase = path.join(
-      app.getAppPath() + '.unpacked',
-      'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js'
-    );
-    candidates.push(unpackedBase);
-
-    const resourceBase = path.join(
-      process.resourcesPath || '',
-      'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js'
-    );
-    candidates.push(resourceBase);
-  }
-
-  // Dev: use createRequire to resolve from the SDK package
-  try {
-    const req = createRequire(import.meta.url || __filename);
-    const sdkMain = req.resolve('@anthropic-ai/claude-agent-sdk');
-    const resolved = path.join(path.dirname(sdkMain), 'cli.js');
-    // If inside asar, convert to unpacked path
-    if (resolved.includes('app.asar' + path.sep)) {
-      candidates.push(resolved.replace('app.asar' + path.sep, 'app.asar.unpacked' + path.sep));
-    }
-    candidates.push(resolved);
-  } catch {
-    // SDK not resolvable via createRequire
-  }
-
-  // Dev fallback: project root node_modules
-  candidates.push(path.join(process.cwd(), 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js'));
-
-  for (const candidate of candidates) {
-    try {
-      // Use fs.statSync on the real filesystem (not asar-patched)
-      // For unpacked paths, they exist on disk; for asar paths, they don't
-      if (fs.existsSync(candidate) && !candidate.includes('app.asar' + path.sep)) {
-        sdkCliPath = candidate;
-        debugLog('Resolved SDK cli.js:', sdkCliPath);
-        return sdkCliPath;
-      }
-    } catch {
-      // Skip inaccessible paths
-    }
-  }
-
-  // Last resort — return first candidate
-  sdkCliPath = candidates[0] || 'cli.js';
-  debugLog('SDK cli.js (fallback):', sdkCliPath);
-  return sdkCliPath;
-}
 
 export interface ClaudeMessage {
   type: string;
@@ -149,9 +78,10 @@ interface ManagedSession {
   language?: string;
   envVars?: Array<{ key: string; value: string; enabled: boolean }>;
   includeCoAuthoredBy?: boolean;
-  abortController: AbortController;
+  childProcess?: ChildProcess;
+  stdinWriter?: (msg: object) => void;
+  pendingControlResponses: Map<string, (response: any) => void>;
   permissionResolvers: Map<string, (result: PermissionResponse) => void>;
-  queryInstance?: any; // SDK Query object — has setPermissionMode(), interrupt(), etc.
   messageCount: number; // Track messages sent to detect follow-ups
 }
 
@@ -176,7 +106,6 @@ class ClaudeProcessManager extends EventEmitter {
     debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode, 'envVars:', envVars?.length || 0, 'language:', language, 'mcpServers:', mcpServers?.length || 0, 'includeCoAuthoredBy:', includeCoAuthoredBy);
 
     const processId = randomUUID();
-    const abortController = new AbortController();
 
     const managed: ManagedSession = {
       cwd,
@@ -185,28 +114,26 @@ class ClaudeProcessManager extends EventEmitter {
       language,
       envVars,
       includeCoAuthoredBy,
-      abortController,
+      pendingControlResponses: new Map(),
       permissionResolvers: new Map(),
       messageCount: 0,
     };
     this.sessions.set(processId, managed);
 
-    // Start the SDK query in background
-    this._runQuery(processId, managed, permissionMode, mcpServers).catch((err) => {
+    // Start the CLI process in background
+    this._runCli(processId, managed, permissionMode, mcpServers).catch((err) => {
       this.emit('error', processId, err?.message || String(err));
     });
 
     return processId;
   }
 
-  private async _runQuery(
+  private async _runCli(
     processId: string,
     managed: ManagedSession,
     permissionMode?: string,
     mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>,
   ) {
-    const query = await getQuery();
-
     // Build language instruction for system prompt
     const langMap: Record<string, string> = {
       'zh-CN': 'Simplified Chinese (简体中文)',
@@ -225,19 +152,13 @@ class ClaudeProcessManager extends EventEmitter {
       ? `IMPORTANT: Always respond in ${langMap[lang]}. All explanations, comments, and conversation must be in ${langMap[lang]}.`
       : '';
 
-    // Build env for the SDK child process:
-    // IMPORTANT: We do NOT include 'user' in settingSources — the Agent SDK must
-    // be independent from ~/.claude/settings.json (Claude Code CLI config).
-    // All API configuration (BASE_URL, API_KEY, MODEL) comes from profile envVars.
-    //
-    // However, the SDK's internal qZq() function unconditionally reads
-    // ~/.claude/settings.json env vars and overrides process.env, regardless
-    // of settingSources. To prevent this, we redirect CLAUDE_CONFIG_DIR to an
-    // isolated directory that symlinks everything from ~/.claude/ EXCEPT
-    // settings.json (which would override our profile env vars).
+    // Build env for the CLI child process:
+    // IMPORTANT: We redirect CLAUDE_CONFIG_DIR to an isolated directory that
+    // symlinks everything from ~/.claude/ EXCEPT settings.json (which would
+    // override our profile env vars).
     //
     // Step 1: Start with process.env but REMOVE all API-related vars so stale
-    //         credentials from the shell don't leak into the SDK child process.
+    //         credentials from the shell don't leak into the CLI child process.
     // Step 2: Overlay only the profile's env vars.
     // Step 3: Set CLAUDE_CONFIG_DIR to isolated config dir.
     const childEnv: Record<string, string | undefined> = { ...process.env };
@@ -275,7 +196,7 @@ class ClaudeProcessManager extends EventEmitter {
       }
       // Write settings.json with includeCoAuthoredBy from profile.
       // This setting can only be set via settings.json (not env vars), so we
-      // must write it to the isolated config dir for the SDK to pick it up.
+      // must write it to the isolated config dir for the CLI to pick it up.
       const isolatedSettings = path.join(isolatedConfigDir, 'settings.json');
       const settingsContent: Record<string, unknown> = {};
       if (managed.includeCoAuthoredBy !== undefined) {
@@ -311,7 +232,7 @@ class ClaudeProcessManager extends EventEmitter {
       }
     }
 
-    // Log SDK configuration for debugging — show what the SDK will actually use
+    // Log CLI configuration for debugging
     const effectiveBaseUrl = childEnv.ANTHROPIC_BASE_URL || childEnv.OPENAI_BASE_URL || '(default: api.anthropic.com)';
 
     // Mask sensitive keys: show first 4 and last 4 chars, rest as asterisks
@@ -330,9 +251,9 @@ class ClaudeProcessManager extends EventEmitter {
         : childEnv.OPENAI_API_KEY
           ? maskKey(childEnv.OPENAI_API_KEY, 'OPENAI_API_KEY')
           : '(no explicit key — will use default)';
-    const effectiveModel = childEnv.ANTHROPIC_MODEL || childEnv.CLAUDE_MODEL || '(SDK default)';
+    const effectiveModel = childEnv.ANTHROPIC_MODEL || childEnv.CLAUDE_MODEL || '(CLI default)';
 
-    debugLog('=== SDK Configuration ===');
+    debugLog('=== CLI Configuration ===');
     debugLog('  BASE_URL:', effectiveBaseUrl);
     debugLog('  AUTH:', effectiveApiKey);
     debugLog('  MODEL:', effectiveModel);
@@ -344,66 +265,42 @@ class ClaudeProcessManager extends EventEmitter {
     }).join(', ') || '(none)');
     debugLog('========================');
 
-    // Extract model from merged env — pass explicitly to SDK options
+    // Extract model from env
     const modelFromEnv = childEnv.ANTHROPIC_MODEL;
 
-    // Build options — settingSources controls which settings files the SDK loads
-    // for permissions, hooks, CLAUDE.md, etc. We include 'user' so the SDK's
-    // auth flow works normally (reads API key from env vars). This is safe
-    // because CLAUDE_CONFIG_DIR points to an isolated dir with an empty
-    // settings.json, so no env vars from ~/.claude/settings.json leak in.
-    // When cwd is home dir, only include 'user' to avoid <cwd>/.claude/settings.json collision.
-    const homedir = os.homedir();
-    const isHomeCwd = managed.cwd === homedir || managed.cwd === homedir + '/';
-    const settingSources = isHomeCwd ? ['user'] : ['user', 'project', 'local'];
-    debugLog('settingSources:', settingSources, isHomeCwd ? '(cwd is home dir — full isolation)' : '');
+    // Build CLI args
+    const claudeBinary = getClaudeBinary();
+    const args: string[] = [
+      '--output-format', 'stream-json',
+      '--input-format', 'stream-json',
+      '--verbose',
+      '--include-partial-messages',
+      '--permission-prompt-tool', 'stdio',
+    ];
 
-    const sdkDebugFile = path.join(app.getPath('userData'), 'sdk-debug.log');
-    const options: Record<string, unknown> = {
-      cwd: managed.cwd,
-      abortController: managed.abortController,
-      includePartialMessages: true,
-      settingSources,
-      env: childEnv,
-      debugFile: sdkDebugFile,
-      systemPrompt: langInstruction
-        ? { type: 'preset', preset: 'claude_code', append: langInstruction }
-        : { type: 'preset', preset: 'claude_code' },
-      pathToClaudeCodeExecutable: getSdkCliPath(),
-      // Capture stderr for debugging — must be a callback function
-      stderr: (data: string) => {
-        debugLog('SDK stderr:', data);
-      },
-    };
-
-    // Explicitly pass model to SDK so profile env vars take effect
-    if (modelFromEnv) {
-      options.model = modelFromEnv;
-    }
-
-    debugLog('SDK cli path:', getSdkCliPath());
-    debugLog('cwd:', managed.cwd);
-
-    // Permission mode — when bypassPermissions, also set the SDK flag so it
-    // doesn't wait for interactive confirmation (replaces settings.json's
-    // skipDangerousModePermissionPrompt which we no longer load)
     if (permissionMode && permissionMode !== 'default') {
-      options.permissionMode = permissionMode;
       if (permissionMode === 'bypassPermissions') {
-        options.allowDangerouslySkipPermissions = true;
+        args.push('--dangerously-skip-permissions');
+      } else {
+        args.push('--permission-mode', permissionMode);
       }
     }
-
-    // Resume session
     if (managed.sessionId) {
-      options.resume = managed.sessionId;
+      args.push('--resume', managed.sessionId);
+    }
+    if (modelFromEnv) {
+      args.push('--model', modelFromEnv);
+    }
+    if (langInstruction) {
+      args.push('--append-system-prompt', langInstruction);
     }
 
-    // MCP servers - pass directly to SDK instead of writing to file (security: avoid leaking API keys to disk)
+    // Build MCP server config for initialize control_request
+    let mcpServersConfig: Record<string, unknown> | undefined;
     if (mcpServers && mcpServers.length > 0) {
       const enabledServers = mcpServers.filter((s) => s.enabled);
       if (enabledServers.length > 0) {
-        const mcpServersConfig: Record<string, unknown> = {};
+        mcpServersConfig = {};
         for (const server of enabledServers) {
           mcpServersConfig[server.name] = {
             type: 'stdio',
@@ -412,228 +309,199 @@ class ClaudeProcessManager extends EventEmitter {
             env: server.env,
           };
         }
-        options.mcpServers = mcpServersConfig;
         debugLog('MCP servers configured:', enabledServers.map((s) => s.name).join(', '));
       }
     }
 
-    // canUseTool callback — bridges permission requests to renderer
-    options.canUseTool = async (
-      toolName: string,
-      input: Record<string, unknown>,
-      _opts: { signal: AbortSignal },
-    ) => {
-      // Auto-allow everything in bypassPermissions / dontAsk modes
-      if (managed.permissionMode === 'bypassPermissions' || managed.permissionMode === 'dontAsk') {
-        debugLog('canUseTool auto-allow (mode:', managed.permissionMode, '):', toolName);
-        return { behavior: 'allow', updatedInput: input };
+    debugLog('CLI binary:', claudeBinary);
+    debugLog('CLI args:', args.join(' '));
+    debugLog('cwd:', managed.cwd);
+
+    // Spawn the CLI process
+    const child = spawn(claudeBinary, args, {
+      cwd: managed.cwd,
+      env: childEnv as NodeJS.ProcessEnv,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    managed.childProcess = child;
+
+    // stdin writer
+    function writeLine(msg: object) {
+      if (child.stdin.writable) {
+        child.stdin.write(JSON.stringify(msg) + '\n');
+      }
+    }
+    managed.stdinWriter = writeLine;
+
+    // Send initialize control_request
+    const initRequestId = randomUUID();
+    writeLine({
+      type: 'control_request',
+      request_id: initRequestId,
+      request: {
+        subtype: 'initialize',
+        hooks: {},
+        sdkMcpServers: mcpServersConfig ? Object.entries(mcpServersConfig).map(([name, config]) => ({
+          name,
+          ...(config as object),
+        })) : [],
+      },
+    });
+    debugLog('Sent initialize control_request');
+
+    // Read stdout line by line
+    const rl = readline.createInterface({ input: child.stdout });
+    let resultReceived = false;
+
+    rl.on('line', (line) => {
+      let msg: any;
+      try { msg = JSON.parse(line); } catch { return; }
+
+      // Route control_response — CLI answering our requests
+      if (msg.type === 'control_response') {
+        const responseData = msg.response || msg;
+        const reqId = responseData?.request_id || msg.request_id;
+        if (reqId) {
+          const resolver = managed.pendingControlResponses.get(reqId);
+          if (resolver) {
+            managed.pendingControlResponses.delete(reqId);
+            resolver(responseData);
+          }
+        }
+        return;
       }
 
-      const requestId = randomUUID();
+      // Route control_request — CLI asking us for permission
+      if (msg.type === 'control_request') {
+        this.handleControlRequest(processId, managed, msg);
+        return;
+      }
 
-      // Emit permission request to renderer
+      // Filter out noise (same as SDK does)
+      if (msg.type === 'keep_alive') return;
+      if (msg.type === 'streamlined_text') return;
+      if (msg.type === 'streamlined_tool_use_summary') return;
+
+      // Handle cancellation of pending permission requests
+      if (msg.type === 'control_cancel_request') {
+        const reqId = msg.request_id;
+        if (reqId) {
+          managed.permissionResolvers.delete(reqId);
+        }
+        return;
+      }
+
+      // Log all content messages for debugging
+      debugLog('message:', JSON.stringify(msg).slice(0, 500));
+
+      // Forward content messages to renderer
+      this.emit('message', processId, msg);
+
+      // Track session ID and log MCP tools
+      if (msg.type === 'system' && msg.subtype === 'init') {
+        managed.sessionId = msg.session_id;
+        if (msg.tools && Array.isArray(msg.tools)) {
+          debugLog('MCP tools available:', msg.tools.map((t: any) => t.name || t).join(', '));
+        }
+      }
+
+      // Detect result
+      if (msg.type === 'result') {
+        resultReceived = true;
+        debugLog('result details:', JSON.stringify(msg).slice(0, 2000));
+        if (msg.subtype === 'error_during_execution' || msg.is_error) {
+          debugLog('result is an error:', msg.subtype, msg.result);
+        }
+        this.emit('exit', processId, 0, null);
+      }
+    });
+
+    // Capture stderr for debugging
+    child.stderr.on('data', (data: Buffer) => {
+      debugLog('CLI stderr:', data.toString().trimEnd());
+    });
+
+    // Handle process close
+    child.on('close', (code, signal) => {
+      debugLog('CLI process closed — code:', code, 'signal:', signal);
+      if (!resultReceived) {
+        this.emit('exit', processId, code ?? 1, signal);
+      }
+      this.sessions.delete(processId);
+    });
+
+    child.on('error', (err) => {
+      debugLog('CLI process error:', err.message);
+      this.emit('error', processId, err.message);
+      this.emit('exit', processId, 1, null);
+      this.sessions.delete(processId);
+    });
+  }
+
+  private handleControlRequest(processId: string, managed: ManagedSession, msg: any) {
+    const { request_id, request } = msg;
+
+    if (request?.subtype === 'can_use_tool') {
+      // Auto-allow in bypass modes
+      if (managed.permissionMode === 'bypassPermissions' || managed.permissionMode === 'dontAsk') {
+        debugLog('canUseTool auto-allow (mode:', managed.permissionMode, '):', request.tool_name);
+        managed.stdinWriter?.({
+          type: 'control_response',
+          response: {
+            subtype: 'success',
+            request_id,
+            response: { behavior: 'allow', updatedInput: request.input, toolUseID: request.tool_use_id },
+          },
+        });
+        return;
+      }
+
+      // Emit to renderer for user decision
       this.emit('permission-request', processId, {
-        requestId,
-        toolName,
-        input,
+        requestId: request_id,
+        toolName: request.tool_name,
+        input: request.input,
       } as PermissionRequest);
 
-      // Wait for response from renderer
-      return new Promise<{ behavior: string; updatedInput?: unknown; message?: string }>((resolve) => {
-        managed.permissionResolvers.set(requestId, (response: PermissionResponse) => {
-          managed.permissionResolvers.delete(requestId);
-          if (response.behavior === 'allow') {
-            resolve({
-              behavior: 'allow',
-              updatedInput: response.updatedInput || input,
-            });
-          } else {
-            resolve({
-              behavior: 'deny',
-              message: response.message || 'User denied this action',
-            });
-          }
+      // Store resolver that writes control_response to stdin
+      managed.permissionResolvers.set(request_id, (response: PermissionResponse) => {
+        managed.permissionResolvers.delete(request_id);
+        managed.stdinWriter?.({
+          type: 'control_response',
+          response: {
+            subtype: 'success',
+            request_id,
+            response: response.behavior === 'allow'
+              ? { behavior: 'allow', updatedInput: response.updatedInput || request.input, toolUseID: request.tool_use_id }
+              : { behavior: 'deny', message: response.message || 'User denied', toolUseID: request.tool_use_id },
+          },
         });
       });
-    };
-
-    // Create streaming input for multi-turn conversation
-    const inputQueue: Array<{
-      type: string;
-      message: { role: string; content: string };
-    }> = [];
-    let inputResolve: (() => void) | null = null;
-    let inputDone = false;
-
-    // Store the input queue on the managed session for sendMessage
-    (managed as any)._inputQueue = inputQueue;
-    (managed as any)._inputResolve = () => inputResolve?.();
-    (managed as any)._setInputResolve = (fn: () => void) => { inputResolve = fn; };
-    (managed as any)._inputDone = () => inputDone;
-    (managed as any)._setInputDone = (v: boolean) => { inputDone = v; };
-
-    // Async generator for streaming input
-    async function* streamInput() {
-      debugLog('streamInput generator started');
-      while (!inputDone) {
-        if (inputQueue.length > 0) {
-          const msg = inputQueue.shift()!;
-          debugLog('streamInput yielding message — type:', msg.type, 'content length:', msg.message?.content?.length);
-          yield msg;
-        } else {
-          debugLog('streamInput waiting for input...');
-          // Wait for new input
-          await new Promise<void>((resolve) => {
-            inputResolve = resolve;
-            (managed as any)._inputResolve = () => resolve();
-          });
-          debugLog('streamInput woke up — queue length:', inputQueue.length);
-        }
-      }
-      debugLog('streamInput generator done');
     }
-
-    try {
-      let queryIterator: any;
-
-      try {
-        queryIterator = query({
-          prompt: streamInput() as any,
-          options: options as any,
-        });
-
-        // The SDK query() returns an async iterator. For some SDK versions,
-        // the "No conversation" error surfaces on the first iteration rather
-        // than at construction time. Peek at the first message to detect this.
-        // We use a wrapper to re-yield the peeked message.
-        const firstResult = await queryIterator.next();
-        if (!firstResult.done) {
-          const firstMsg = firstResult.value;
-          // Check if the first message is a "No conversation" error result
-          if (firstMsg.type === 'result' && (firstMsg as any).is_error) {
-            const resultText = typeof (firstMsg as any).result === 'string' ? (firstMsg as any).result : '';
-            if (options.resume && /no conversation/i.test(resultText)) {
-              debugLog('Resume returned "No conversation" error, retrying without resume');
-              delete options.resume;
-              managed.sessionId = undefined;
-              // Start a fresh query without resume
-              queryIterator = query({
-                prompt: streamInput() as any,
-                options: options as any,
-              });
-            } else {
-              // Not a resume error — process normally by wrapping the iterator
-              // to re-yield this first message
-              const origIterator = queryIterator;
-              queryIterator = (async function* () {
-                yield firstMsg;
-                yield* origIterator;
-              })();
-            }
-          } else {
-            // Normal first message — wrap to re-yield it
-            const origIterator = queryIterator;
-            queryIterator = (async function* () {
-              yield firstMsg;
-              yield* origIterator;
-            })();
-          }
-        }
-      } catch (initErr: any) {
-        // If resume fails at construction (e.g. "No conversation <id>"), retry without resume
-        const msg = initErr?.message || String(initErr);
-        if (options.resume && /no conversation/i.test(msg)) {
-          debugLog('Resume failed at init, retrying without resume:', msg);
-          delete options.resume;
-          managed.sessionId = undefined;
-          queryIterator = query({
-            prompt: streamInput() as any,
-            options: options as any,
-          });
-        } else {
-          throw initErr;
-        }
-      }
-
-      // Store the query instance for runtime control (setPermissionMode, etc.)
-      managed.queryInstance = queryIterator;
-
-      for await (const message of queryIterator) {
-        // Log all messages for debugging
-        debugLog('message:', JSON.stringify(message).slice(0, 500));
-
-        // Forward SDK messages to renderer (same format as stream-json)
-        this.emit('message', processId, message);
-
-        // Track session ID and log MCP tools
-        if (message.type === 'system' && (message as any).subtype === 'init') {
-          managed.sessionId = (message as any).session_id;
-          // Log MCP tools from init message
-          const msg = message as any;
-          if (msg.tools && Array.isArray(msg.tools)) {
-            debugLog('MCP tools available:', msg.tools.map((t: any) => t.name || t).join(', '));
-            console.log('[claude-process] MCP tools available:', msg.tools.map((t: any) => t.name || t).join(', '));
-          }
-        }
-
-        // Check if result
-        if (message.type === 'result') {
-          // Log full result for debugging (especially error_during_execution)
-          debugLog('result details:', JSON.stringify(message).slice(0, 2000));
-          if ((message as any).subtype === 'error_during_execution' || (message as any).is_error) {
-            debugLog('⚠ result is an error:', (message as any).subtype, (message as any).result);
-          }
-          break;
-        }
-      }
-
-      // Clean exit
-      this.emit('exit', processId, 0, null);
-    } catch (err: any) {
-      if (err?.name === 'AbortError') {
-        this.emit('exit', processId, 0, 'SIGTERM');
-      } else {
-        const errDetail = [
-          err?.message || String(err),
-          err?.stderr ? `\nstderr: ${err.stderr}` : '',
-          err?.cause ? `\ncause: ${err.cause}` : '',
-          err?.code ? `\ncode: ${err.code}` : '',
-        ].join('');
-        debugLog('Query error:', errDetail);
-        this.emit('error', processId, errDetail);
-        this.emit('exit', processId, 1, null);
-      }
-    } finally {
-      this.sessions.delete(processId);
-    }
+    // hook_callback, mcp_message — can be added later if needed
   }
 
   sendMessage(processId: string, content: string): boolean {
     const managed = this.sessions.get(processId);
     debugLog('sendMessage called — processId:', processId, 'found:', !!managed, 'content length:', content?.length);
-    if (!managed) return false;
-
-    const queue = (managed as any)._inputQueue as Array<any>;
-    if (!queue) {
-      debugLog('sendMessage — no input queue found!');
+    if (!managed?.stdinWriter) {
+      debugLog('sendMessage — no stdinWriter found!');
       return false;
     }
 
     const isFollowUp = managed.messageCount > 0;
     managed.messageCount++;
 
-    queue.push({
+    // Write user message to CLI stdin
+    managed.stdinWriter({
       type: 'user',
-      message: {
-        role: 'user',
-        content,
-      },
-      parent_tool_use_id: null,
       session_id: managed.sessionId || '',
+      message: { role: 'user', content: [{ type: 'text', text: content }] },
+      parent_tool_use_id: null,
     });
 
     // Persist follow-up user messages to JSONL so they appear in session history.
-    // The first message is written by the SDK itself, so we only append follow-ups.
+    // The first message is written by the CLI itself, so we only append follow-ups.
     if (isFollowUp && managed.sessionId && managed.cwd) {
       try {
         const sessionsDir = getSessionsDir();
@@ -655,12 +523,6 @@ class ClaudeProcessManager extends EventEmitter {
       }
     }
 
-    // Wake up the input generator
-    const resolve = (managed as any)._inputResolve;
-    if (typeof resolve === 'function') {
-      resolve();
-    }
-
     return true;
   }
 
@@ -677,15 +539,28 @@ class ClaudeProcessManager extends EventEmitter {
 
   async setPermissionMode(processId: string, mode: string): Promise<boolean> {
     const managed = this.sessions.get(processId);
-    if (!managed?.queryInstance) return false;
+    if (!managed?.stdinWriter) return false;
 
-    try {
-      managed.permissionMode = mode;
-      await managed.queryInstance.setPermissionMode(mode);
-      return true;
-    } catch {
-      return false;
-    }
+    const requestId = randomUUID();
+    return new Promise((resolve) => {
+      managed.pendingControlResponses.set(requestId, () => {
+        managed.permissionMode = mode;
+        resolve(true);
+      });
+      managed.stdinWriter!({
+        type: 'control_request',
+        request_id: requestId,
+        request: { subtype: 'set_permission_mode', mode },
+      });
+      // Timeout fallback
+      setTimeout(() => {
+        if (managed.pendingControlResponses.has(requestId)) {
+          managed.pendingControlResponses.delete(requestId);
+          managed.permissionMode = mode; // Still update locally
+          resolve(false);
+        }
+      }, 5000);
+    });
   }
 
   kill(processId: string): boolean {
@@ -693,12 +568,19 @@ class ClaudeProcessManager extends EventEmitter {
     console.log(`[claude-process] kill called for ${processId}, found=${!!managed}`);
     if (!managed) return false;
 
-    // Signal input stream to stop
-    (managed as any)._setInputDone?.(true);
-    (managed as any)._inputResolve?.();
+    // Send interrupt control_request first (graceful)
+    if (managed.stdinWriter) {
+      try {
+        managed.stdinWriter({
+          type: 'control_request',
+          request_id: randomUUID(),
+          request: { subtype: 'interrupt' },
+        });
+      } catch { /* stdin may already be closed */ }
+    }
 
-    // Abort the query
-    managed.abortController.abort();
+    // Kill the child process
+    managed.childProcess?.kill('SIGTERM');
 
     // Resolve any pending permission requests
     for (const [, resolver] of managed.permissionResolvers) {
