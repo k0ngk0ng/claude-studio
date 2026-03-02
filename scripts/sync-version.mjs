@@ -32,7 +32,11 @@ let version;
 // Method 1: Check GITHUB_REF env var (most reliable in GitHub Actions)
 const githubRef = process.env.GITHUB_REF || '';
 if (githubRef.startsWith('refs/tags/v')) {
-  version = githubRef.replace('refs/tags/v', '');
+  const rawVersion = githubRef.replace('refs/tags/v', '');
+  // Extract pure semver (X.Y.Z), strip prerelease/metadata suffixes
+  // e.g. "0.1.61-refactor-remove-agent-sdk" → "0.1.61"
+  const semverMatch = rawVersion.match(/^(\d+\.\d+\.\d+)/);
+  version = semverMatch ? semverMatch[1] : rawVersion;
   console.log(`Version from GITHUB_REF: ${githubRef} → ${version}`);
 }
 
@@ -40,7 +44,9 @@ if (githubRef.startsWith('refs/tags/v')) {
 if (!version) {
   const tag = run('git describe --tags --exact-match HEAD');
   if (tag && /^v?\d+\.\d+\.\d+/.test(tag)) {
-    version = tag.replace(/^v/, '');
+    const raw = tag.replace(/^v/, '');
+    const m = raw.match(/^(\d+\.\d+\.\d+)/);
+    version = m ? m[1] : raw;
     console.log(`Version from git tag: ${tag} → ${version}`);
   }
 }
@@ -51,7 +57,9 @@ if (!version) {
   if (tags) {
     const versionTag = tags.split('\n').find(t => /^v?\d+\.\d+\.\d+/.test(t.trim()));
     if (versionTag) {
-      version = versionTag.trim().replace(/^v/, '');
+      const raw = versionTag.trim().replace(/^v/, '');
+      const m = raw.match(/^(\d+\.\d+\.\d+)/);
+      version = m ? m[1] : raw;
       console.log(`Version from git tag --points-at: ${versionTag} → ${version}`);
     }
   }
