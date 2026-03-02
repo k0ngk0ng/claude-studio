@@ -8,22 +8,27 @@ import { app, BrowserWindow } from 'electron';
 import fs from 'fs';
 import { getClaudeBinary, getSessionsDir, encodePath } from './platform';
 
-// Debug log helper — sends to both console and renderer debug logs panel
-function debugLog(...args: unknown[]) {
+// Console-only log (internal diagnostics, not shown in renderer debug panel)
+function consoleLog(...args: unknown[]) {
   console.log('[claude-process]', ...args);
+}
 
-  // Send to renderer's debug logs panel
+// Log to both console AND renderer debug panel.
+// Use `detail` for large payloads (JSON) — they render as collapsible sections.
+function debugLog(message: string, detail?: unknown, level: 'info' | 'warn' | 'error' = 'info') {
+  const detailStr = detail !== undefined
+    ? (typeof detail === 'object' ? JSON.stringify(detail, null, 2) : String(detail))
+    : undefined;
+  console.log('[claude-process]', message, detailStr ?? '');
+
   try {
     const windows = BrowserWindow.getAllWindows();
     if (windows.length > 0) {
-      const message = args.map(arg =>
-        typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-      ).join(' ');
-
       windows[0].webContents.send('debug-log', {
         category: 'claude',
         message,
-        level: 'info',
+        detail: detailStr,
+        level,
       });
     }
   } catch {
@@ -31,7 +36,7 @@ function debugLog(...args: unknown[]) {
   }
 }
 
-debugLog('claude-process module loaded, isPackaged:', app?.isPackaged);
+consoleLog('module loaded, isPackaged:', app?.isPackaged);
 
 export interface ClaudeMessage {
   type: string;
@@ -105,12 +110,12 @@ class ClaudeProcessManager extends EventEmitter {
     mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>,
     includeCoAuthoredBy?: boolean,
   ): Promise<string> {
-    debugLog('spawn called — cwd:', cwd, 'sessionId:', sessionId, 'permissionMode:', permissionMode, 'envVars:', envVars?.length || 0, 'language:', language, 'mcpServers:', mcpServers?.length || 0, 'includeCoAuthoredBy:', includeCoAuthoredBy);
+    debugLog('Spawning CLI', { cwd, sessionId, permissionMode, mcpServers: mcpServers?.length || 0 });
 
     const processId = randomUUID();
 
     // Create a promise that resolves when CLI initialization is complete
-    let initResolver: () => void;
+    let initResolver!: () => void;
     const initPromise = new Promise<void>((resolve) => {
       initResolver = resolve;
     });
@@ -149,7 +154,7 @@ class ClaudeProcessManager extends EventEmitter {
       if (managed.initFailed) {
         throw new Error('CLI initialization failed');
       }
-      debugLog('CLI initialized successfully — processId:', processId);
+      debugLog(`CLI initialized — processId: ${processId}`);
     } catch (err) {
       // Clean up the session if initialization failed
       this.sessions.delete(processId);
@@ -235,9 +240,9 @@ class ClaudeProcessManager extends EventEmitter {
       }
       fs.writeFileSync(isolatedSettings, JSON.stringify(settingsContent, null, 2) + '\n');
       childEnv.CLAUDE_CONFIG_DIR = isolatedConfigDir;
-      debugLog('CLAUDE_CONFIG_DIR set to isolated dir:', isolatedConfigDir, 'includeCoAuthoredBy:', managed.includeCoAuthoredBy);
+      consoleLog('CLAUDE_CONFIG_DIR set to isolated dir:', isolatedConfigDir);
     } catch (e) {
-      debugLog('Failed to set up isolated config dir, falling back:', e);
+      consoleLog('Failed to set up isolated config dir, falling back:', e);
     }
 
     // Clean API-related env vars inherited from the shell/parent process
@@ -251,7 +256,7 @@ class ClaudeProcessManager extends EventEmitter {
       }
     }
     if (cleanedKeys.length > 0) {
-      debugLog('Cleaned inherited env vars:', cleanedKeys.join(', '));
+      consoleLog('Cleaned inherited env vars:', cleanedKeys.join(', '));
     }
 
     // Now overlay the active profile's env vars — these are the ONLY source of truth
@@ -284,17 +289,17 @@ class ClaudeProcessManager extends EventEmitter {
           : '(no explicit key — will use default)';
     const effectiveModel = childEnv.ANTHROPIC_MODEL || childEnv.CLAUDE_MODEL || '(CLI default)';
 
-    debugLog('=== CLI Configuration ===');
-    debugLog('  BASE_URL:', effectiveBaseUrl);
-    debugLog('  AUTH:', effectiveApiKey);
-    debugLog('  MODEL:', effectiveModel);
-    debugLog('  Profile envVars:', (managed.envVars || []).filter(v => v.enabled).map(v => {
-      if (v.key.includes('KEY') || v.key.includes('TOKEN')) {
-        return `${v.key}=${maskKey(v.value, '').replace('=', '')}`;
-      }
-      return `${v.key}=${v.value}`;
-    }).join(', ') || '(none)');
-    debugLog('========================');
+    debugLog('CLI configuration', {
+      baseUrl: effectiveBaseUrl,
+      auth: effectiveApiKey,
+      model: effectiveModel,
+      envVars: (managed.envVars || []).filter(v => v.enabled).map(v => {
+        if (v.key.includes('KEY') || v.key.includes('TOKEN')) {
+          return `${v.key}=${maskKey(v.value, '').replace('=', '')}`;
+        }
+        return `${v.key}=${v.value}`;
+      }),
+    });
 
     // Extract model from env
     const modelFromEnv = childEnv.ANTHROPIC_MODEL;
@@ -326,27 +331,26 @@ class ClaudeProcessManager extends EventEmitter {
       args.push('--append-system-prompt', langInstruction);
     }
 
-    // Build MCP server config for initialize control_request
-    let mcpServersConfig: Record<string, unknown> | undefined;
+    // Build MCP server config — pass via --mcp-config CLI flag so CLI manages
+    // the MCP server processes directly (no sdkMcpServers / mcp_message relay needed)
     if (mcpServers && mcpServers.length > 0) {
       const enabledServers = mcpServers.filter((s) => s.enabled);
       if (enabledServers.length > 0) {
-        mcpServersConfig = {};
+        const mcpConfig: Record<string, { type: string; command: string; args: string[]; env: Record<string, string> }> = {};
         for (const server of enabledServers) {
-          mcpServersConfig[server.name] = {
+          mcpConfig[server.name] = {
             type: 'stdio',
             command: server.command,
             args: server.args,
             env: server.env,
           };
         }
-        debugLog('MCP servers configured:', enabledServers.map((s) => s.name).join(', '));
+        args.push('--mcp-config', JSON.stringify({ mcpServers: mcpConfig }));
+        debugLog(`MCP servers: ${enabledServers.map((s) => s.name).join(', ')}`);
       }
     }
 
-    debugLog('CLI binary:', claudeBinary);
-    debugLog('CLI args:', args.join(' '));
-    debugLog('cwd:', managed.cwd);
+    consoleLog('CLI binary:', claudeBinary, 'args:', args.join(' '), 'cwd:', managed.cwd);
 
     // Spawn the CLI process
     const child = spawn(claudeBinary, args, {
@@ -356,6 +360,10 @@ class ClaudeProcessManager extends EventEmitter {
     });
     managed.childProcess = child;
 
+    // Set up stdout reader BEFORE sending anything to stdin
+    const rl = readline.createInterface({ input: child.stdout });
+    let resultReceived = false;
+
     // stdin writer
     function writeLine(msg: object) {
       if (child.stdin.writable) {
@@ -364,25 +372,26 @@ class ClaudeProcessManager extends EventEmitter {
     }
     managed.stdinWriter = writeLine;
 
-    // Send initialize control_request
+    // Send initialize control_request and register resolver so we know when CLI is ready
     const initRequestId = randomUUID();
+    managed.pendingControlResponses.set(initRequestId, (response: any) => {
+      debugLog('CLI initialized', response);
+      // Resolve the init promise so spawn() can return
+      if (managed.initResolver) {
+        managed.initResolver();
+        managed.initResolver = undefined;
+      }
+    });
     writeLine({
       type: 'control_request',
       request_id: initRequestId,
       request: {
         subtype: 'initialize',
         hooks: {},
-        sdkMcpServers: mcpServersConfig ? Object.entries(mcpServersConfig).map(([name, config]) => ({
-          name,
-          ...(config as object),
-        })) : [],
+        sdkMcpServers: [],
       },
     });
-    debugLog('Sent initialize control_request');
-
-    // Read stdout line by line
-    const rl = readline.createInterface({ input: child.stdout });
-    let resultReceived = false;
+    debugLog('Sent initialize request');
 
     rl.on('line', (line) => {
       let msg: any;
@@ -392,6 +401,7 @@ class ClaudeProcessManager extends EventEmitter {
       if (msg.type === 'control_response') {
         const responseData = msg.response || msg;
         const reqId = responseData?.request_id || msg.request_id;
+        debugLog(`control_response (reqId=${reqId}, pending=${managed.pendingControlResponses.size})`);
         if (reqId) {
           const resolver = managed.pendingControlResponses.get(reqId);
           if (resolver) {
@@ -423,9 +433,10 @@ class ClaudeProcessManager extends EventEmitter {
       }
 
       // Log content messages for debugging (skip high-frequency types)
-      const skipMessageTypes = ['stream_event', 'keep_alive', 'streamlined_text', 'streamlined_tool_use_summary'];
-      if (!skipMessageTypes.includes(msg.type)) {
-        debugLog('message:', JSON.stringify(msg).slice(0, 500));
+      const skipLogTypes = ['stream_event', 'keep_alive', 'streamlined_text', 'streamlined_tool_use_summary'];
+      if (!skipLogTypes.includes(msg.type)) {
+        const label = msg.subtype ? `${msg.type}/${msg.subtype}` : msg.type;
+        debugLog(`message: ${label}`, msg);
       }
 
       // Forward content messages to renderer
@@ -435,7 +446,7 @@ class ClaudeProcessManager extends EventEmitter {
       if (msg.type === 'system' && msg.subtype === 'init') {
         managed.sessionId = msg.session_id;
         if (msg.tools && Array.isArray(msg.tools)) {
-          debugLog('MCP tools available:', msg.tools.map((t: any) => t.name || t).join(', '));
+          debugLog(`MCP tools available: ${msg.tools.length}`, msg.tools.map((t: any) => t.name || t));
         }
         // Notify that CLI initialization is complete
         if (managed.initResolver) {
@@ -447,22 +458,25 @@ class ClaudeProcessManager extends EventEmitter {
       // Detect result
       if (msg.type === 'result') {
         resultReceived = true;
-        debugLog('result details:', JSON.stringify(msg).slice(0, 2000));
-        if (msg.subtype === 'error_during_execution' || msg.is_error) {
-          debugLog('result is an error:', msg.subtype, msg.result);
-        }
+        const isError = msg.subtype === 'error_during_execution' || msg.is_error;
+        debugLog(
+          isError ? `Result error: ${msg.subtype}` : `Result: ${msg.subtype || 'success'}`,
+          msg,
+          isError ? 'error' : 'info',
+        );
         this.emit('exit', processId, 0, null);
       }
     });
 
-    // Capture stderr for debugging
+    // Capture stderr — shown in debug panel for visibility during CLI startup
     child.stderr.on('data', (data: Buffer) => {
-      debugLog('CLI stderr:', data.toString().trimEnd());
+      const text = data.toString().trimEnd();
+      if (text) debugLog(`stderr: ${text}`);
     });
 
     // Handle process close
     child.on('close', (code, signal) => {
-      debugLog('CLI process closed — code:', code, 'signal:', signal);
+      debugLog(`CLI process exited (code=${code}, signal=${signal})`);
       if (!resultReceived) {
         this.emit('exit', processId, code ?? 1, signal);
       }
@@ -470,7 +484,7 @@ class ClaudeProcessManager extends EventEmitter {
     });
 
     child.on('error', (err) => {
-      debugLog('CLI process error:', err.message);
+      debugLog(`CLI process error: ${err.message}`, undefined, 'error');
       this.emit('error', processId, err.message);
       this.emit('exit', processId, 1, null);
       this.sessions.delete(processId);
@@ -479,11 +493,13 @@ class ClaudeProcessManager extends EventEmitter {
 
   private handleControlRequest(processId: string, managed: ManagedSession, msg: any) {
     const { request_id, request } = msg;
+    const subtype = request?.subtype || 'unknown';
+    debugLog(`control_request: ${subtype}`, request);
 
-    if (request?.subtype === 'can_use_tool') {
+    if (subtype === 'can_use_tool') {
       // Auto-allow in bypass modes
       if (managed.permissionMode === 'bypassPermissions' || managed.permissionMode === 'dontAsk') {
-        debugLog('canUseTool auto-allow (mode:', managed.permissionMode, '):', request.tool_name);
+        consoleLog('canUseTool auto-allow:', request.tool_name);
         managed.stdinWriter?.({
           type: 'control_response',
           response: {
@@ -516,17 +532,30 @@ class ClaudeProcessManager extends EventEmitter {
           },
         });
       });
+      return;
     }
-    // hook_callback, mcp_message — can be added later if needed
+
+    // Respond with success to any unhandled control_request types
+    // (hook_callback, mcp_message, etc.) to prevent CLI from blocking on a timeout
+    debugLog(`Unhandled control_request '${subtype}', responding with success`);
+    managed.stdinWriter?.({
+      type: 'control_response',
+      response: {
+        subtype: 'success',
+        request_id,
+        response: {},
+      },
+    });
   }
 
   sendMessage(processId: string, content: string): boolean {
     const managed = this.sessions.get(processId);
-    debugLog('sendMessage called — processId:', processId, 'found:', !!managed, 'content length:', content?.length);
     if (!managed?.stdinWriter) {
-      debugLog('sendMessage — no stdinWriter found!');
+      debugLog('sendMessage failed — no session or stdinWriter', undefined, 'warn');
       return false;
     }
+
+    debugLog(`sendMessage (${content?.length} chars, followUp=${managed.messageCount > 0})`);
 
     const isFollowUp = managed.messageCount > 0;
     managed.messageCount++;
@@ -555,10 +584,10 @@ class ClaudeProcessManager extends EventEmitter {
             timestamp: new Date().toISOString(),
           };
           fs.appendFileSync(jsonlPath, '\n' + JSON.stringify(entry));
-          debugLog('Appended follow-up user message to JSONL');
+          consoleLog('Appended follow-up user message to JSONL');
         }
       } catch (err: any) {
-        debugLog('Failed to append user message to JSONL:', err?.message);
+        consoleLog('Failed to append user message to JSONL:', err?.message);
       }
     }
 

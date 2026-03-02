@@ -244,6 +244,11 @@ export function AboutSection() {
     debugLog('app', 'Checking for updates...');
     try {
       const release = await window.api.app.checkForUpdates();
+      if (!release) {
+        debugLog('app', 'Update check unavailable (no CDN or GitHub API access)');
+        setUpdateStatus({ state: 'error', message: 'Update check unavailable. Please check your network connection.' });
+        return;
+      }
       debugLog('app', `Latest release: ${release.version} (${release.tagName})`, release);
       if (!release.version || release.version === version) {
         debugLog('app', `Already up to date: ${version}`);

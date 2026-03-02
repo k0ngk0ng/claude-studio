@@ -440,8 +440,8 @@ contextBridge.exposeInMainWorld('api', {
         updateStatusListeners.delete(callback);
       }
     },
-    onDebugLog: (callback: (data: { category: string; message: string; level: string }) => void) => {
-      const wrappedCallback = (_event: Electron.IpcRendererEvent, data: { category: string; message: string; level: string }) => {
+    onDebugLog: (callback: (data: { category: string; message: string; detail?: string; level: string }) => void) => {
+      const wrappedCallback = (_event: Electron.IpcRendererEvent, data: { category: string; message: string; detail?: string; level: string }) => {
         callback(data);
       };
       debugLogListeners.set(callback, wrappedCallback);

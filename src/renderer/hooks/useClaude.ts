@@ -1011,7 +1011,7 @@ export function useClaude() {
     []
   );
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, options?: { skipAddMessage?: boolean }) => {
     debugLog('claude', `sending message: ${content.slice(0, 100)}${content.length > 100 ? '…' : ''}`, { length: content.length });
     const { addMessage, setIsStreaming, clearStreamingContent, clearToolActivities, toolActivities } =
       useAppStore.getState();
@@ -1034,12 +1034,14 @@ export function useClaude() {
       if (partial) addMessage(partial);
     }
 
-    addMessage({
-      id: crypto.randomUUID(),
-      role: 'user',
-      content,
-      timestamp: new Date().toISOString(),
-    });
+    if (!options?.skipAddMessage) {
+      addMessage({
+        id: crypto.randomUUID(),
+        role: 'user',
+        content,
+        timestamp: new Date().toISOString(),
+      });
+    }
     setIsStreaming(true);
     clearStreamingContent();
     clearToolActivities();

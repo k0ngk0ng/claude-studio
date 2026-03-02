@@ -713,8 +713,9 @@ export function registerIpcHandlers(): void {
         })),
       };
     } catch (err: any) {
-      console.log('app', `Failed to check for updates: ${err?.message}`, err, 'error');
-      throw new Error(`Failed to check for updates: ${err?.message}`);
+      console.log('app', `Failed to check for updates: ${err?.message}`);
+      // Return null to indicate update check is unavailable rather than crashing
+      return null;
     }
   });
 

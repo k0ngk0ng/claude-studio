@@ -169,11 +169,11 @@ export default function App() {
 
   // Forward main process debug logs to renderer debug log store
   useEffect(() => {
-    const handleDebugLog = (data: { category: string; message: string; level: string }) => {
+    const handleDebugLog = (data: { category: string; message: string; detail?: string; level: string }) => {
       debugLog(
         data.category as any,
         data.message,
-        undefined,
+        data.detail,
         data.level as any,
       );
     };
@@ -424,11 +424,24 @@ export default function App() {
 
       // Start a new process if we don't have one
       if (!state.currentSession.processId) {
+        // Show user message and streaming state immediately (before spawn completes)
+        useAppStore.getState().addMessage({
+          id: crypto.randomUUID(),
+          role: 'user',
+          content,
+          timestamp: new Date().toISOString(),
+        });
+        useAppStore.getState().setIsStreaming(true);
+
         // Pass sessionId to resume if this session has a real UUID (not a temp "new-*" id)
         const rawId = state.currentSession.id || '';
         const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawId);
         const sessionId = isUUID ? rawId : undefined;
         await startSession(projectPath, sessionId, permissionMode, mcpServers);
+
+        // Message already added above, tell sendMessage to skip
+        await sendMessage(content, { skipAddMessage: true });
+        return;
       }
 
       await sendMessage(content);
