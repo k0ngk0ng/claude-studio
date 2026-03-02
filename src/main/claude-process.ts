@@ -83,6 +83,8 @@ interface ManagedSession {
   pendingControlResponses: Map<string, (response: any) => void>;
   permissionResolvers: Map<string, (result: PermissionResponse) => void>;
   messageCount: number; // Track messages sent to detect follow-ups
+  initResolver?: () => void; // Resolves when CLI is initialized
+  initFailed?: boolean; // Set if initialization failed
 }
 
 export interface PermissionResponse {
@@ -107,6 +109,12 @@ class ClaudeProcessManager extends EventEmitter {
 
     const processId = randomUUID();
 
+    // Create a promise that resolves when CLI initialization is complete
+    let initResolver: () => void;
+    const initPromise = new Promise<void>((resolve) => {
+      initResolver = resolve;
+    });
+
     const managed: ManagedSession = {
       cwd,
       sessionId,
@@ -117,13 +125,36 @@ class ClaudeProcessManager extends EventEmitter {
       pendingControlResponses: new Map(),
       permissionResolvers: new Map(),
       messageCount: 0,
+      initResolver,
     };
     this.sessions.set(processId, managed);
 
     // Start the CLI process in background
     this._runCli(processId, managed, permissionMode, mcpServers).catch((err) => {
       this.emit('error', processId, err?.message || String(err));
+      managed.initFailed = true;
+      initResolver(); // Resolve anyway to prevent hanging
     });
+
+    // Wait for initialization with a timeout (60 seconds should be plenty)
+    const timeoutMs = 60000;
+    const timeoutPromise = new Promise<void>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`CLI initialization timeout after ${timeoutMs}ms`));
+      }, timeoutMs);
+    });
+
+    try {
+      await Promise.race([initPromise, timeoutPromise]);
+      if (managed.initFailed) {
+        throw new Error('CLI initialization failed');
+      }
+      debugLog('CLI initialized successfully — processId:', processId);
+    } catch (err) {
+      // Clean up the session if initialization failed
+      this.sessions.delete(processId);
+      throw err;
+    }
 
     return processId;
   }
@@ -391,8 +422,11 @@ class ClaudeProcessManager extends EventEmitter {
         return;
       }
 
-      // Log all content messages for debugging
-      debugLog('message:', JSON.stringify(msg).slice(0, 500));
+      // Log content messages for debugging (skip high-frequency types)
+      const skipMessageTypes = ['stream_event', 'keep_alive', 'streamlined_text', 'streamlined_tool_use_summary'];
+      if (!skipMessageTypes.includes(msg.type)) {
+        debugLog('message:', JSON.stringify(msg).slice(0, 500));
+      }
 
       // Forward content messages to renderer
       this.emit('message', processId, msg);
@@ -402,6 +436,11 @@ class ClaudeProcessManager extends EventEmitter {
         managed.sessionId = msg.session_id;
         if (msg.tools && Array.isArray(msg.tools)) {
           debugLog('MCP tools available:', msg.tools.map((t: any) => t.name || t).join(', '));
+        }
+        // Notify that CLI initialization is complete
+        if (managed.initResolver) {
+          managed.initResolver();
+          managed.initResolver = undefined; // Only resolve once
         }
       }
 

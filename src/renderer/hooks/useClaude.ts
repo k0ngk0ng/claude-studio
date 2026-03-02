@@ -309,11 +309,17 @@ export function useClaude() {
       // Log all incoming events (except high-frequency content_block_delta)
       if (event.type === 'stream_event') {
         const evtType = event.event?.type || '';
-        if (evtType !== 'content_block_delta') {
+        // Only log important stream events, skip high-frequency ones
+        const importantEvents = ['message_start', 'message_stop', 'content_block_stop', 'message_delta'];
+        if (importantEvents.includes(evtType)) {
           debugLog('claude', `stream: ${evtType}${event.event?.content_block?.type ? ' [' + event.event.content_block.type + (event.event.content_block.name ? ':' + event.event.content_block.name : '') + ']' : ''}${event.event?.delta?.stop_reason ? ' stop=' + event.event.delta.stop_reason : ''}`);
         }
       } else {
-        debugLog('claude', `event: ${event.type}${event.subtype ? '/' + event.subtype : ''}`, event);
+        // Skip logging high-frequency message types
+        const skipTypes = ['keep_alive', 'streamlined_text', 'streamlined_tool_use_summary'];
+        if (!skipTypes.includes(event.type)) {
+          debugLog('claude', `event: ${event.type}${event.subtype ? '/' + event.subtype : ''}`, event);
+        }
       }
 
       const {
