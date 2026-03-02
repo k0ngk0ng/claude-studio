@@ -2,11 +2,11 @@ import { create } from 'zustand';
 import { useAppStore } from './appStore';
 
 export interface PermissionRequest {
-  id: string;          // Same as requestId from SDK — used to respond
+  id: string;          // Same as requestId from CLI — used to respond
   toolName: string;    // e.g. "Bash"
   command: string;     // e.g. "git add src/..."
   toolPattern: string; // e.g. "Bash(git add *)" — for display
-  input: Record<string, unknown>; // Original tool input from SDK
+  input: Record<string, unknown>; // Original tool input from CLI
   timestamp: number;
   status: 'pending' | 'approved' | 'denied';
 }
@@ -43,7 +43,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
       ),
     });
 
-    // Send approval to main process → SDK canUseTool resolver
+    // Send approval to main process → CLI permission resolver
     const processId = useAppStore.getState().currentSession.processId;
     if (processId) {
       window.api.claude.respondToPermission(processId, id, {
@@ -65,7 +65,7 @@ export const usePermissionStore = create<PermissionStore>((set, get) => ({
     const request = state.pendingRequests.find(r => r.id === id);
     if (!request || request.status !== 'pending') return;
 
-    // Send denial to main process → SDK canUseTool resolver
+    // Send denial to main process → CLI permission resolver
     const processId = useAppStore.getState().currentSession.processId;
     if (processId) {
       window.api.claude.respondToPermission(processId, id, {

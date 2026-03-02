@@ -224,7 +224,7 @@ export function registerIpcHandlers(): void {
     }
   });
 
-  // Permission request from SDK canUseTool → forward to renderer
+  // Permission request from CLI → forward to renderer
   claudeProcessManager.on('permission-request', (pid: string, request: unknown) => {
     const wc = getWebContents();
     if (wc) {
@@ -233,7 +233,7 @@ export function registerIpcHandlers(): void {
   });
 
   handle('claude:spawn', async (_event, cwd: string, sessionId?: string, permissionMode?: string, envVars?: Array<{ key: string; value: string; enabled: boolean }>, language?: string, mcpServers?: Array<{ id: string; name: string; command: string; args: string[]; env: Record<string, string>; enabled: boolean }>, includeCoAuthoredBy?: boolean) => {
-    // Log enabled MCP servers (don't write to file - pass directly to SDK for security)
+    // Log enabled MCP servers (don't write to file - pass directly to CLI for security)
     if (mcpServers && mcpServers.length > 0) {
       const enabledServers = mcpServers.filter(s => s.enabled);
       console.log('[mcp-manager] Enabled MCP servers:', enabledServers.map(s => s.name).join(', ') || 'none');
@@ -272,7 +272,7 @@ export function registerIpcHandlers(): void {
     return sleepBlockerId;
   });
 
-  // Permission response from renderer → forward to SDK canUseTool resolver
+  // Permission response from renderer → forward to CLI permission resolver
   handle('claude:permission-response', (_event, processId: string, requestId: string, response: { behavior: 'allow' | 'deny'; updatedInput?: Record<string, unknown>; message?: string }) => {
     return claudeProcessManager.respondToPermission(processId, requestId, response);
   });
@@ -498,7 +498,7 @@ export function registerIpcHandlers(): void {
   });
 
   handle('app:getClaudeCodeVersion', () => {
-    // Only detect the real Claude Code CLI — do NOT fall back to bundled SDK metadata
+    // Only detect the real Claude Code CLI binary
     try {
       const claudePath = getClaudeBinary();
       const raw = execSync(`${claudePath} --version`, {

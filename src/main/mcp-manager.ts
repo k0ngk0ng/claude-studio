@@ -36,7 +36,7 @@ class McpManager {
 
   /**
    * Start an MCP server process (for debugging purposes)
-   * Note: Claude Code SDK starts these automatically, but we keep this
+   * Note: Claude Code CLI manages these automatically via --mcp-config, but we keep this
    * for debugging and status tracking
    */
   startServer(server: McpServerConfig): string | null {

@@ -332,7 +332,7 @@ class ClaudeProcessManager extends EventEmitter {
     }
 
     // Build MCP server config — pass via --mcp-config CLI flag so CLI manages
-    // the MCP server processes directly (no sdkMcpServers / mcp_message relay needed)
+    // the MCP server processes directly (avoids mcp_message relay overhead)
     if (mcpServers && mcpServers.length > 0) {
       const enabledServers = mcpServers.filter((s) => s.enabled);
       if (enabledServers.length > 0) {
@@ -418,7 +418,7 @@ class ClaudeProcessManager extends EventEmitter {
         return;
       }
 
-      // Filter out noise (same as SDK does)
+      // Filter out non-essential CLI message types
       if (msg.type === 'keep_alive') return;
       if (msg.type === 'streamlined_text') return;
       if (msg.type === 'streamlined_tool_use_summary') return;

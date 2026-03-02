@@ -141,7 +141,7 @@ class SessionManager {
   /**
    * Clean up special tags from prompts:
    * - <ide_opened_file>...</ide_opened_file> and other IDE tags
-   * - <local-command-caveat>...</local-command-caveat> and other SDK command tags
+   * - <local-command-caveat>...</local-command-caveat> and other CLI command tags
    * - Any remaining XML-like tags (e.g. <command-name>, <command-message>, <command-args>)
    * Also handles unclosed/truncated tags.
    * Returns empty string if the entire content is tags with no meaningful text.
@@ -291,7 +291,7 @@ class SessionManager {
                   const textBlock = content.find((b: any) => b.type === 'text' && b.text);
                   if (textBlock) text = textBlock.text.slice(0, 200);
                 }
-                // Skip tag-only prompts (IDE tags, SDK command tags, etc.)
+                // Skip tag-only prompts (IDE tags, CLI command tags, etc.)
                 if (text && !text.startsWith('<')) {
                   firstPrompt = text;
                   break;
@@ -338,7 +338,7 @@ class SessionManager {
 
   /**
    * Read the first meaningful user prompt from a JSONL file (first 16KB).
-   * Strips XML tags (IDE tags, SDK command tags, etc.) from text blocks.
+   * Strips XML tags (IDE tags, CLI command tags, etc.) from text blocks.
    * If a message is entirely tags, continues to the next user message.
    */
   private readFirstPromptFromJsonl(jsonlPath: string): string {

@@ -10,21 +10,21 @@ export interface SlashItem {
   type?: 'md' | 'sh';
 }
 
-/** Commands handled entirely in the GUI (not sent to SDK) */
+/** Commands handled entirely in the GUI (not sent to CLI) */
 export const LOCAL_COMMANDS = new Set(['config', 'help', 'bug', 'doctor', 'init', 'login', 'logout', 'terminal-setup', 'vim']);
 
 /**
- * Commands that require an interactive terminal and can't work through the SDK.
+ * Commands that require an interactive terminal and can't work through the CLI.
  * These will show a hint to the user instead of being sent.
  */
 export const TERMINAL_ONLY_COMMANDS = new Set(['bug', 'doctor', 'init', 'login', 'logout', 'terminal-setup', 'vim']);
 
 /**
- * SDK slash commands that should only be sent when a process is already running.
+ * CLI slash commands that should only be sent when a process is already running.
  * If no process is running, they'll be intercepted with a helpful message
  * instead of spawning a throwaway session.
  */
-export const SDK_SESSION_COMMANDS = new Set(['clear', 'compact', 'context', 'cost', 'model', 'status', 'permissions', 'memory', 'add-dir', 'review']);
+export const CLI_SESSION_COMMANDS = new Set(['clear', 'compact', 'context', 'cost', 'model', 'status', 'permissions', 'memory', 'add-dir', 'review']);
 
 export const BUILTIN_COMMANDS: SlashItem[] = [
   { name: 'add-dir', description: 'Add additional directories to the current session context', argumentHint: '<directory>', source: 'builtin' },

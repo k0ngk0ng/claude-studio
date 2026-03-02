@@ -739,7 +739,7 @@ export function useClaude() {
             // Single-turn with no streaming text — try event.result as fallback
             let fallbackText = typeof event.result === 'string' ? event.result : '';
 
-            // SDK slash commands return XML-wrapped responses — parse them
+            // Slash commands return XML-wrapped responses — parse them
             if (fallbackText.includes('<local-command-caveat>') || fallbackText.includes('<command-name>')) {
               const cmdMatch = fallbackText.match(/<command-name>\/?([^<]+)<\/command-name>/);
               const msgMatch = fallbackText.match(/<command-message>([\s\S]*?)<\/command-message>/);
@@ -761,7 +761,7 @@ export function useClaude() {
 
             // Check if this is an error result (e.g. error_during_execution)
             if (event.subtype === 'error_during_execution' || event.is_error) {
-              // SDKResultError has errors: string[] with detailed error messages
+              // CLI error results have errors: string[] with detailed error messages
               const errorsArray = Array.isArray((event as any).errors) ? (event as any).errors as string[] : [];
               const errorMsg = errorsArray.length > 0
                 ? errorsArray.join('\n')
@@ -794,7 +794,7 @@ export function useClaude() {
           turnCountRef.current = 0;
           pendingToolResultsRef.current.clear();
 
-          // Mark process as done so follow-up messages spawn a new SDK process
+          // Mark process as done so follow-up messages spawn a new CLI process
           setProcessId(null);
           processIdRef.current = null;
 
@@ -914,7 +914,7 @@ export function useClaude() {
     };
   }, []);
 
-  // Listen for permission requests from the Agent SDK (via main process IPC)
+  // Listen for permission requests from the CLI (via main process IPC)
   // When canUseTool fires, the main process forwards the request here.
   // We show a prompt in the UI and send the response back via IPC.
   useEffect(() => {
@@ -974,7 +974,7 @@ export function useClaude() {
       const activeProfile = useSettingsStore.getState().getActiveProfile();
       const includeCoAuthoredBy = activeProfile?.includeCoAuthoredBy;
 
-      debugLog('claude', `spawning SDK session — cwd: ${cwd}${sessionId ? ', resume: ' + sessionId : ''}, mode: ${mode}, envVars: ${envVars.length}, mcpServers: ${mcpServers.filter(s => s.enabled).length}`, {
+      debugLog('claude', `spawning CLI session — cwd: ${cwd}${sessionId ? ', resume: ' + sessionId : ''}, mode: ${mode}, envVars: ${envVars.length}, mcpServers: ${mcpServers.filter(s => s.enabled).length}`, {
         cwd,
         sessionId,
         permissionMode: mode,

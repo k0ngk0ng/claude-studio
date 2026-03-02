@@ -254,7 +254,7 @@ export function registerRemoteIpcHandlers(): void {
 const processToDevice = new Map<string, string>();
 
 /**
- * Extract text content from a Claude SDK message for mobile display.
+ * Extract text content from a Claude CLI message for mobile display.
  */
 function extractMessageContent(message: any): { role: string; content: string } | null {
   if (!message?.message) return null;

@@ -19,7 +19,7 @@ import { Settings } from './components/Settings/Settings';
 import { LoginModal } from './components/Auth/LoginModal';
 import { LockOverlay } from './components/Remote/LockOverlay';
 import { initRemoteListeners } from './stores/remoteStore';
-import { LOCAL_COMMANDS, TERMINAL_ONLY_COMMANDS, SDK_SESSION_COMMANDS, BUILTIN_COMMANDS } from './components/InputBar/SlashCommandPopup';
+import { LOCAL_COMMANDS, TERMINAL_ONLY_COMMANDS, CLI_SESSION_COMMANDS, BUILTIN_COMMANDS } from './components/InputBar/SlashCommandPopup';
 import { initI18n } from './i18n';
 
 export default function App() {
@@ -355,7 +355,7 @@ export default function App() {
 
       const { addMessage } = useAppStore.getState();
 
-      // Terminal-only commands — show hint instead of sending to SDK
+      // Terminal-only commands — show hint instead of sending to CLI
       if (TERMINAL_ONLY_COMMANDS.has(cmd)) {
         addMessage({
           id: `local-${cmd}-${Date.now()}`,
@@ -407,11 +407,11 @@ export default function App() {
       const state = useAppStore.getState();
       const projectPath = state.currentSession.projectPath || currentProject.path;
 
-      // SDK slash commands need a running process — don't spawn a throwaway session
+      // CLI slash commands need a running process — don't spawn a throwaway session
       const trimmed = content.trim();
       if (trimmed.startsWith('/')) {
         const cmd = trimmed.slice(1).split(/\s+/)[0].toLowerCase();
-        if (SDK_SESSION_COMMANDS.has(cmd) && !state.currentSession.processId) {
+        if (CLI_SESSION_COMMANDS.has(cmd) && !state.currentSession.processId) {
           useAppStore.getState().addMessage({
             id: `local-${cmd}-${Date.now()}`,
             role: 'system',

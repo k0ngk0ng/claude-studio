@@ -371,7 +371,7 @@ export function AboutSection() {
 
         <div className="border-t border-border" />
 
-        {/* Version rows — ordered: App → SDK → Claude Code → Git */}
+        {/* Version rows — ordered: App → Claude Code CLI → Git */}
         <div className="space-y-3">
           <VersionRow
             label="App Version"
