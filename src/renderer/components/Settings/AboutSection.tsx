@@ -429,24 +429,7 @@ export function AboutSection() {
             />
           </div>
 
-          {/* Restart to update prompt (shown when update is downloaded) */}
-          {updateReady && updateStatus.state !== 'downloading' && updateStatus.state !== 'available' && (
-            <div className="mb-4 p-3 rounded-lg bg-success/10 border border-success/30">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-success">
-                  <CheckIcon />
-                  <span>Update downloaded — restart to install</span>
-                </div>
-                <button
-                  onClick={handleInstall}
-                  className="px-3 py-1.5 rounded-md bg-success text-white text-xs font-medium
-                             hover:bg-success/90 transition-colors"
-                >
-                  Restart Now
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Spacer removed — single "Install & Restart" button handles downloaded state */}
 
           {updateStatus.state === 'idle' && (
             <button

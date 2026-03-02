@@ -14,7 +14,7 @@ import { mcpManager } from './mcp-manager';
 import os from 'os';
 import path from 'path';
 import fs from 'fs';
-import { execFile, execSync } from 'child_process';
+import { execFile, execSync, spawn } from 'child_process';
 
 // CDN base URL for update downloads (set via environment or fallback)
 // Configure this to your Aliyun OSS CDN domain
@@ -90,93 +90,6 @@ let updateState: {
   autoDownloaded: false,
 };
 
-// Version comparison: returns 'major', 'minor', 'patch', or null (if same or older)
-function compareVersions(current: string, latest: string): 'major' | 'minor' | 'patch' | null {
-  const currentParts = current.replace(/^v/, '').split('.').map(Number);
-  const latestParts = latest.replace(/^v/, '').split('.').map(Number);
-
-  for (let i = 0; i < 3; i++) {
-    const curr = currentParts[i] || 0;
-    const late = latestParts[i] || 0;
-    if (late > curr) {
-      if (i === 0) return 'major';
-      if (i === 1) return 'minor';
-      if (i === 2) return 'patch';
-    }
-    if (late < curr) return null; // latest is older
-  }
-  return null; // same version
-}
-
-// Auto-update check on startup
-async function checkForUpdatesOnStartup(settings: {
-  autoUpdate: 'prompt' | 'auto-download' | 'off';
-  updateChannel: 'stable' | 'beta';
-  autoCheckOnStartup: boolean;
-}) {
-  if (!settings.autoCheckOnStartup || settings.autoUpdate === 'off') {
-    console.log('[auto-update] Auto-check disabled');
-    return;
-  }
-
-  console.log('[auto-update] Checking for updates on startup...');
-
-  try {
-    // Use electron-updater to check for updates
-    const checkResult = await autoUpdater.checkForUpdates();
-
-    if (!checkResult || !checkResult.updateInfo) {
-      console.log('[auto-update] No update available');
-      return;
-    }
-
-    const latestVersion = checkResult.updateInfo.version;
-    const currentVersion = app.getVersion();
-
-    updateState.latestVersion = latestVersion;
-    updateState.isUpdateAvailable = true;
-
-    const versionDiff = compareVersions(currentVersion, latestVersion);
-
-    console.log(`[auto-update] Current: ${currentVersion}, Latest: ${latestVersion}, Diff: ${versionDiff}`);
-
-    if (!versionDiff) {
-      console.log('[auto-update] Already on latest version');
-      return;
-    }
-
-    // For patch versions: auto-download if setting allows
-    if (versionDiff === 'patch' && settings.autoUpdate === 'auto-download') {
-      console.log('[auto-update] Patch update available, auto-downloading...');
-      try {
-        await autoUpdater.downloadUpdate();
-        updateState.autoDownloaded = true;
-        console.log('[auto-update] Update downloaded, will install on quit');
-      } catch (err) {
-        console.error('[auto-update] Auto-download failed:', err);
-      }
-    }
-    // For major/minor versions: just notify (don't auto-download)
-    else if (versionDiff === 'major' || versionDiff === 'minor') {
-      console.log(`[auto-update] ${versionDiff} update available, notifying user`);
-      // The 'update-available' event was already emitted by checkForUpdates
-    }
-  } catch (err) {
-    console.error('[auto-update] Check failed:', err);
-  }
-}
-
-// Initialize auto-update when settings are loaded
-export function initAutoUpdate(settings: {
-  autoUpdate: 'prompt' | 'auto-download' | 'off';
-  updateChannel: 'stable' | 'beta';
-  autoCheckOnStartup: boolean;
-}) {
-  // Delay check to not slow down startup
-  setTimeout(() => {
-    checkForUpdatesOnStartup(settings);
-  }, 5000); // 5 second delay
-}
 
 function getWebContents(): Electron.WebContents | null {
   const windows = BrowserWindow.getAllWindows();
@@ -493,9 +406,6 @@ export function registerIpcHandlers(): void {
     };
   });
 
-  handle('app:checkForUpdatesOnStartup', async (_event, settings) => {
-    await checkForUpdatesOnStartup(settings);
-  });
 
   handle('app:getClaudeCodeVersion', () => {
     // Only detect the real Claude Code CLI binary
@@ -915,14 +825,11 @@ export function registerIpcHandlers(): void {
       // macOS .dmg handling
       if (pendingPath.endsWith('.dmg')) {
         try {
-          // Mount the DMG
-          const { execSync } = require('child_process');
           const mountResult = execSync(`hdiutil attach "${pendingPath}" -nobrowse`, { encoding: 'utf-8' });
           const mountMatch = mountResult.match(/(\/Volumes\/[^\n]+)/);
 
           if (mountMatch) {
-            const mountPath = mountMatch[1];
-            // Find the .app bundle
+            const mountPath = mountMatch[1].trim();
             const apps = fs.readdirSync(mountPath).filter((f: string) => f.endsWith('.app'));
 
             if (apps.length > 0) {
@@ -932,33 +839,55 @@ export function registerIpcHandlers(): void {
 
               console.log('[app] Installing', appName, 'to', targetApp);
 
-              // Remove old app if exists
+              // Remove old app and copy new one
               if (fs.existsSync(targetApp)) {
                 execSync(`rm -rf "${targetApp}"`);
               }
-
-              // Copy new app
               execSync(`cp -R "${sourceApp}" "${targetApp}"`);
 
-              // Unmount DMG
-              execSync(`hdiutil detach "${mountPath}"`);
+              // Unmount DMG (best effort)
+              try { execSync(`hdiutil detach "${mountPath}" -quiet`); } catch { /* ignore */ }
 
-              // Launch new version and quit
-              execSync('open "/Applications/ClaudeStudio.app"');
+              // Schedule relaunch AFTER quit using a detached shell process
+              const child = spawn('sh', ['-c', `sleep 1 && open "${targetApp}"`], {
+                detached: true,
+                stdio: 'ignore',
+              });
+              child.unref();
+
               app.quit();
               return true;
             }
           }
         } catch (err) {
           console.error('[app] DMG install failed:', err);
-          // Fallback: just open the DMG for manual install
           shell.openPath(pendingPath);
           app.quit();
           return true;
         }
       }
 
-      // For other platforms, open the installer
+      // Windows .exe handling — run NSIS installer silently then relaunch
+      if (pendingPath.endsWith('.exe')) {
+        try {
+          // NSIS installers support /S for silent install and /D for install dir
+          const child = spawn('cmd.exe', ['/c', `"${pendingPath}" /S && timeout /t 2 /nobreak >nul && start "" "${process.execPath}"`], {
+            detached: true,
+            stdio: 'ignore',
+            shell: true,
+          });
+          child.unref();
+          app.quit();
+          return true;
+        } catch (err) {
+          console.error('[app] EXE install failed:', err);
+          shell.openPath(pendingPath);
+          app.quit();
+          return true;
+        }
+      }
+
+      // Other platforms — open the installer
       shell.openPath(pendingPath);
       app.quit();
       return true;
