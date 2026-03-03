@@ -147,6 +147,20 @@ export interface DependencyStatus {
   path?: string;
   version?: string;
   installHint: string;
+  npmAvailable?: boolean;
+}
+
+/**
+ * Check if npm is available on the system.
+ */
+export function isNpmAvailable(): boolean {
+  try {
+    const cmd = isWindows ? 'where npm.cmd' : 'which npm';
+    execSync(cmd, { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -154,6 +168,7 @@ export interface DependencyStatus {
  */
 export function checkDependencies(): DependencyStatus[] {
   const deps: DependencyStatus[] = [];
+  const npmAvailable = isNpmAvailable();
 
   // Check Claude Code CLI
   try {
@@ -171,10 +186,18 @@ export function checkDependencies(): DependencyStatus[] {
       installHint: 'npm install -g @anthropic-ai/claude-code',
     });
   } catch {
+    const installHint = npmAvailable
+      ? 'npm install -g @anthropic-ai/claude-code'
+      : isWindows
+        ? 'Install Node.js from https://nodejs.org first, then run: npm install -g @anthropic-ai/claude-code'
+        : isMac
+          ? 'Install Node.js first (brew install node or https://nodejs.org), then run: npm install -g @anthropic-ai/claude-code'
+          : 'Install Node.js first (sudo apt install nodejs npm or https://nodejs.org), then run: npm install -g @anthropic-ai/claude-code';
     deps.push({
       name: 'Claude Code CLI',
       found: false,
-      installHint: 'npm install -g @anthropic-ai/claude-code',
+      npmAvailable,
+      installHint,
     });
   }
 

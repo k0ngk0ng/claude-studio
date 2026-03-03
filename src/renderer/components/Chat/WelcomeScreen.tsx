@@ -137,7 +137,7 @@ export function WelcomeScreen() {
                   <div className="text-sm font-medium text-text-primary">
                     {dep.name} {t('welcome.notFound')}
                   </div>
-                  {dep.name === 'Claude Code CLI' ? (
+                  {dep.name === 'Claude Code CLI' && dep.npmAvailable !== false ? (
                     <div className="mt-2">
                       {claudeCodeInstall.status === 'idle' && (
                         <button

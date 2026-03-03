@@ -240,6 +240,7 @@ export interface DependencyStatus {
   path?: string;
   version?: string;
   installHint: string;
+  npmAvailable?: boolean;
 }
 
 declare global {

@@ -441,14 +441,23 @@ export function registerIpcHandlers(): void {
   });
 
   handle('app:installClaudeCode', async () => {
-    const platform = getPlatform();
     const wc = getWebContents();
     try {
-      const cmd = platform === 'windows'
-        ? 'npm install -g @anthropic-ai/claude-code'
-        : 'npm install -g @anthropic-ai/claude-code';
+      // Check if npm is available before attempting install
+      const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+      const whichCmd = process.platform === 'win32' ? 'where' : 'which';
+      try {
+        execSync(`${whichCmd} ${npmCmd}`, { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+      } catch {
+        const hint = process.platform === 'win32'
+          ? 'Please install Node.js from https://nodejs.org and restart the app.'
+          : process.platform === 'darwin'
+            ? 'Please install Node.js first: brew install node (or download from https://nodejs.org), then restart the app.'
+            : 'Please install Node.js first: sudo apt install nodejs npm (or download from https://nodejs.org), then restart the app.';
+        return { success: false, error: `npm is not installed. ${hint}` };
+      }
+
       await new Promise<void>((resolve, reject) => {
-        const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
         const child = execFile(npmCmd, ['install', '-g', '@anthropic-ai/claude-code'], {
           timeout: 120000,
           env: { ...process.env },
