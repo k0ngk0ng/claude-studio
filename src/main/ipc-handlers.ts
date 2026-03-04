@@ -15,6 +15,9 @@ import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import { execFile, execSync, spawn } from 'child_process';
+import { promisify } from 'util';
+
+const execFileAsync = promisify(execFile);
 
 // CDN base URL for update downloads (set via environment or fallback)
 // Configure this to your Aliyun OSS CDN domain
@@ -527,6 +530,85 @@ export function registerIpcHandlers(): void {
     }
   });
 
+  handle('app:getNodeVersion', () => {
+    try {
+      const raw = execSync('node --version', {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+      // Output is like "v22.14.0" — strip the leading "v"
+      return raw.startsWith('v') ? raw.slice(1) : raw;
+    } catch {
+      return 'not found';
+    }
+  });
+
+  handle('app:installNode', async () => {
+    const platform = getPlatform();
+    const wc = getWebContents();
+    try {
+      if (platform === 'mac') {
+        // macOS: try Homebrew first
+        try {
+          execSync('which brew', { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
+          await new Promise<void>((resolve, reject) => {
+            const child = execFile('brew', ['install', 'node@22'], { timeout: 300000 }, (err) => {
+              if (err) reject(err);
+              else resolve();
+            });
+            child.stdout?.on('data', (data: string) => {
+              if (wc) wc.send('app:install-output', data.toString());
+            });
+            child.stderr?.on('data', (data: string) => {
+              if (wc) wc.send('app:install-output', data.toString());
+            });
+          });
+          return { success: true, message: 'Node.js 22 LTS installed via Homebrew' };
+        } catch {
+          // Homebrew not available or install failed — open download page
+          await shell.openExternal('https://nodejs.org/en/download');
+          return { success: true, message: 'Download page opened. Please install Node.js 22 LTS.' };
+        }
+      } else if (platform === 'windows') {
+        await shell.openExternal('https://nodejs.org/en/download');
+        return { success: true, message: 'Download page opened. Please install Node.js 22 LTS.' };
+      } else {
+        // Linux: try common package managers with NodeSource setup for v22
+        const commands = [
+          { check: 'apt', cmd: 'sudo', args: ['apt', 'install', '-y', 'nodejs'] },
+          { check: 'dnf', cmd: 'sudo', args: ['dnf', 'install', '-y', 'nodejs'] },
+          { check: 'pacman', cmd: 'sudo', args: ['pacman', '-S', '--noconfirm', 'nodejs', 'npm'] },
+        ];
+        for (const c of commands) {
+          try {
+            execSync(`which ${c.check}`, { stdio: 'pipe' });
+            await new Promise<void>((resolve, reject) => {
+              const child = execFile(c.cmd, c.args, { timeout: 120000 }, (err) => {
+                if (err) reject(err);
+                else resolve();
+              });
+              child.stdout?.on('data', (data: string) => {
+                if (wc) wc.send('app:install-output', data.toString());
+              });
+              child.stderr?.on('data', (data: string) => {
+                if (wc) wc.send('app:install-output', data.toString());
+              });
+            });
+            return { success: true };
+          } catch {
+            continue;
+          }
+        }
+        // Fallback: open download page
+        await shell.openExternal('https://nodejs.org/en/download');
+        return { success: true, message: 'Download page opened. Please install Node.js 22 LTS manually.' };
+      }
+    } catch (err: any) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  });
+
   // Use electron-updater for auto-update functionality
   // Events are already forwarded to renderer via autoUpdater.on() listeners above
 
@@ -820,9 +902,17 @@ export function registerIpcHandlers(): void {
   });
 
   handle('app:installUpdate', async () => {
+    const sendInstalling = (step: string) => {
+      const wc = getWebContents();
+      if (wc) wc.send('app:update-status', { state: 'installing', message: step });
+    };
+
     // If electron-updater has downloaded an update, use it
     if (updateState.isDownloaded) {
       console.log('[app] Installing auto-downloaded update via electron-updater');
+      sendInstalling('Installing update…');
+      // Small delay so the renderer can show the spinner before quit
+      await new Promise(r => setTimeout(r, 100));
       autoUpdater.quitAndInstall(false, true);
       return true;
     }
@@ -831,10 +921,11 @@ export function registerIpcHandlers(): void {
     if (pendingPath && fs.existsSync(pendingPath)) {
       console.log('[app] Installing update from:', pendingPath);
 
-      // macOS .dmg handling
+      // macOS .dmg handling — async to avoid blocking the main process
       if (pendingPath.endsWith('.dmg')) {
         try {
-          const mountResult = execSync(`hdiutil attach "${pendingPath}" -nobrowse`, { encoding: 'utf-8' });
+          sendInstalling('Mounting disk image…');
+          const { stdout: mountResult } = await execFileAsync('hdiutil', ['attach', pendingPath, '-nobrowse']);
           const mountMatch = mountResult.match(/(\/Volumes\/[^\n]+)/);
 
           if (mountMatch) {
@@ -848,15 +939,18 @@ export function registerIpcHandlers(): void {
 
               console.log('[app] Installing', appName, 'to', targetApp);
 
+              sendInstalling('Copying app to Applications…');
               // Remove old app and copy new one
               if (fs.existsSync(targetApp)) {
-                execSync(`rm -rf "${targetApp}"`);
+                await execFileAsync('rm', ['-rf', targetApp]);
               }
-              execSync(`cp -R "${sourceApp}" "${targetApp}"`);
+              await execFileAsync('cp', ['-R', sourceApp, targetApp]);
 
+              sendInstalling('Cleaning up…');
               // Unmount DMG (best effort)
-              try { execSync(`hdiutil detach "${mountPath}" -quiet`); } catch { /* ignore */ }
+              try { await execFileAsync('hdiutil', ['detach', mountPath, '-quiet']); } catch { /* ignore */ }
 
+              sendInstalling('Restarting…');
               // Schedule relaunch AFTER quit using a detached shell process
               const child = spawn('sh', ['-c', `sleep 1 && open "${targetApp}"`], {
                 detached: true,
@@ -879,6 +973,7 @@ export function registerIpcHandlers(): void {
       // Windows .exe handling — run NSIS installer silently then relaunch
       if (pendingPath.endsWith('.exe')) {
         try {
+          sendInstalling('Running installer…');
           // NSIS installers support /S for silent install and /D for install dir
           const child = spawn('cmd.exe', ['/c', `"${pendingPath}" /S && timeout /t 2 /nobreak >nul && start "" "${process.execPath}"`], {
             detached: true,
@@ -897,6 +992,7 @@ export function registerIpcHandlers(): void {
       }
 
       // Other platforms — open the installer
+      sendInstalling('Opening installer…');
       shell.openPath(pendingPath);
       app.quit();
       return true;

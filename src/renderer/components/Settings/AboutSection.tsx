@@ -161,6 +161,7 @@ export function AboutSection() {
   const [version, setVersion] = useState('');
   const [claudeCodeVersion, setClaudeCodeVersion] = useState('');
   const [gitVersion, setGitVersion] = useState('');
+  const [nodeVersion, setNodeVersion] = useState('');
   const [platform, setPlatform] = useState('');
   const [updateReady, setUpdateReady] = useState(false);  // Track if update is ready to install
 
@@ -181,11 +182,17 @@ export function AboutSection() {
     error?: string;
     message?: string;
   }>({ status: 'idle' });
+  const [nodeInstall, setNodeInstall] = useState<{
+    status: InstallStatus;
+    error?: string;
+    message?: string;
+  }>({ status: 'idle' });
 
   useEffect(() => {
     window.api.app.getVersion().then(setVersion).catch(() => {});
     window.api.app.getClaudeCodeVersion().then(setClaudeCodeVersion).catch(() => {});
     window.api.app.getGitVersion().then(setGitVersion).catch(() => {});
+    window.api.app.getNodeVersion().then(setNodeVersion).catch(() => {});
     window.api.app.getPlatform().then(setPlatform).catch(() => {});
 
     // Check if there's already an update downloaded (from auto-download)
@@ -227,6 +234,9 @@ export function AboutSection() {
         case 'downloaded':
           setUpdateStatus({ state: 'downloaded' });
           setUpdateReady(true);
+          break;
+        case 'installing':
+          setUpdateStatus({ state: 'installing', step: data.message });
           break;
         case 'error':
           setUpdateStatus({ state: 'error', message: data.message || 'Update failed' });
@@ -290,8 +300,15 @@ export function AboutSection() {
   const handleInstall = useCallback(async () => {
     // Allow install if update is downloaded or ready to install
     if (updateStatus.state !== 'downloaded' && !updateReady) return;
+    // Show immediate feedback before the async IPC call
+    setUpdateStatus({ state: 'installing', step: 'Preparing…' });
     // Quit and install - electron-updater will replace the app and restart
-    await window.api.app.installUpdate();
+    try {
+      await window.api.app.installUpdate();
+    } catch (err: any) {
+      debugLog('app', `Install failed: ${err?.message}`, err, 'error');
+      setUpdateStatus({ state: 'error', message: err?.message || 'Install failed' });
+    }
   }, [updateStatus, updateReady]);
 
   const handleInstallClaudeCode = useCallback(async () => {
@@ -341,6 +358,31 @@ export function AboutSection() {
     }
   }, [platform]);
 
+  const handleInstallNode = useCallback(async () => {
+    setNodeInstall({ status: 'installing' });
+    debugLog('app', `Installing Node.js (${platform})...`);
+    try {
+      const result = await window.api.app.installNode();
+      if (result.success) {
+        debugLog('app', 'Node.js install triggered', result);
+        if (result.message) {
+          setNodeInstall({ status: 'success', message: result.message });
+        } else {
+          setNodeInstall({ status: 'success', message: 'Installed' });
+        }
+        // Re-check version
+        const ver = await window.api.app.getNodeVersion();
+        setNodeVersion(ver);
+      } else {
+        debugLog('app', `Node.js install failed: ${result.error}`, result, 'error');
+        setNodeInstall({ status: 'error', error: result.error });
+      }
+    } catch (err: any) {
+      debugLog('app', `Node.js install error: ${err?.message}`, err, 'error');
+      setNodeInstall({ status: 'error', error: err?.message || 'Install failed' });
+    }
+  }, [platform]);
+
   return (
     <div>
       <h2 className="text-lg font-semibold text-text-primary mb-1">About</h2>
@@ -371,7 +413,7 @@ export function AboutSection() {
 
         <div className="border-t border-border" />
 
-        {/* Version rows — ordered: App → Claude Code CLI → Git */}
+        {/* Version rows — ordered: App → Claude Code CLI → Git → Node.js */}
         <div className="space-y-3">
           <VersionRow
             label="App Version"
@@ -399,6 +441,17 @@ export function AboutSection() {
             installError={gitInstall.error}
             installMessage={gitInstall.message}
             onInstall={handleInstallGit}
+          />
+
+          <VersionRow
+            label="Node.js"
+            sublabel={platform === 'mac' ? 'Homebrew / nodejs.org' : 'nodejs.org'}
+            version={nodeVersion}
+            notFoundLabel="Not installed (v22 LTS recommended)"
+            installStatus={nodeInstall.status}
+            installError={nodeInstall.error}
+            installMessage={nodeInstall.message}
+            onInstall={handleInstallNode}
           />
         </div>
 
@@ -535,6 +588,18 @@ export function AboutSection() {
               >
                 Install & Restart
               </button>
+            </div>
+          )}
+
+          {updateStatus.state === 'installing' && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-text-muted">
+                <Spinner />
+                {updateStatus.step || 'Installing…'}
+              </div>
+              <div className="text-xs text-text-muted">
+                The app will restart automatically.
+              </div>
             </div>
           )}
 

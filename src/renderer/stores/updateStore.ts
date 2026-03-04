@@ -16,6 +16,7 @@ export type UpdateStatus =
   | { state: 'available'; release: ReleaseInfo }
   | { state: 'downloading'; progress: number; downloaded: number; totalSize: number }
   | { state: 'downloaded' }
+  | { state: 'installing'; step?: string }
   | { state: 'error'; message: string };
 
 interface UpdateStore {
