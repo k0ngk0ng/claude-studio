@@ -353,10 +353,14 @@ class ClaudeProcessManager extends EventEmitter {
     consoleLog('CLI binary:', claudeBinary, 'args:', args.join(' '), 'cwd:', managed.cwd);
 
     // Spawn the CLI process
+    // On Windows, .cmd/.bat files cannot be spawned directly — they require
+    // a shell wrapper.  Setting shell: true lets Node use cmd.exe under the
+    // hood, which handles .cmd resolution and argument quoting automatically.
     const child = spawn(claudeBinary, args, {
       cwd: managed.cwd,
       env: childEnv as NodeJS.ProcessEnv,
       stdio: ['pipe', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
     });
     managed.childProcess = child;
 
