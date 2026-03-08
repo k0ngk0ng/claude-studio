@@ -10,6 +10,7 @@ type InstallStatus = 'idle' | 'installing' | 'success' | 'error';
 export function WelcomeScreen() {
   const { t } = useTranslation();
   const { currentProject } = useAppStore();
+  const settingsOpen = useSettingsStore((s) => s.isOpen);
   const [missingDeps, setMissingDeps] = useState<DependencyStatus[]>([]);
   const [claudeCodeInstall, setClaudeCodeInstall] = useState<{
     status: InstallStatus;
@@ -45,6 +46,13 @@ export function WelcomeScreen() {
       clearTimeout(retryTimer);
     };
   }, []);
+
+  // Re-check dependencies when Settings modal closes (user may have installed something)
+  useEffect(() => {
+    if (!settingsOpen) {
+      recheckDeps();
+    }
+  }, [settingsOpen, recheckDeps]);
 
   const handleInstallClaudeCode = useCallback(async () => {
     setClaudeCodeInstall({ status: 'installing' });
