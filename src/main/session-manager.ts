@@ -138,6 +138,10 @@ class SessionManager {
 
   constructor() {
     this.sessionsDir = getSessionsDir();
+    // Ensure sessions directory exists so fs.watch() works even on first launch
+    if (!fs.existsSync(this.sessionsDir)) {
+      fs.mkdirSync(this.sessionsDir, { recursive: true });
+    }
   }
 
   /**
