@@ -19,6 +19,81 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * Refresh process.env.PATH to pick up newly installed tools (e.g. Node.js).
+ * On Windows: re-reads PATH from registry (system + user).
+ * On macOS/Linux: re-sources the user's login shell.
+ */
+function refreshPath() {
+  const homeDir = os.homedir();
+  if (process.platform === 'win32') {
+    try {
+      // Read system PATH from registry
+      let sysPathStr = '';
+      try {
+        const sysPathRaw = execSync(
+          'reg query "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment" /v Path',
+          { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }
+        );
+        const sysMatch = sysPathRaw.match(/Path\s+REG_(?:EXPAND_)?SZ\s+(.*)/i);
+        if (sysMatch) sysPathStr = sysMatch[1].trim();
+      } catch { /* system PATH read failed */ }
+
+      // Read user PATH from registry
+      let userPathStr = '';
+      try {
+        const userPathRaw = execSync(
+          'reg query "HKCU\\Environment" /v Path',
+          { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }
+        );
+        const userMatch = userPathRaw.match(/Path\s+REG_(?:EXPAND_)?SZ\s+(.*)/i);
+        if (userMatch) userPathStr = userMatch[1].trim();
+      } catch { /* user PATH may not exist */ }
+
+      const newPath = [
+        sysPathStr,
+        userPathStr,
+        path.join(homeDir, 'AppData', 'Roaming', 'npm'),
+        path.join(homeDir, '.local', 'bin'),
+      ].filter(Boolean).join(';');
+      if (newPath) process.env.PATH = newPath;
+    } catch {
+      // Fallback: just add common Node.js paths
+      const extraPaths = [
+        'C:\\Program Files\\nodejs',
+        'C:\\Program Files (x86)\\nodejs',
+        path.join(homeDir, 'AppData', 'Roaming', 'npm'),
+      ];
+      const currentPath = process.env.PATH || '';
+      for (const p of extraPaths) {
+        if (!currentPath.includes(p)) {
+          process.env.PATH = `${currentPath};${p}`;
+        }
+      }
+    }
+  } else {
+    // macOS / Linux: re-source login shell
+    try {
+      const shell = process.env.SHELL || '/bin/zsh';
+      const fullPath = execSync(`${shell} -ilc 'echo $PATH'`, {
+        encoding: 'utf-8',
+        timeout: 5000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+      if (fullPath) {
+        process.env.PATH = fullPath;
+      }
+    } catch {
+      // Fallback: add common paths
+      const extraPaths = ['/usr/local/bin', '/opt/homebrew/bin', path.join(homeDir, '.local', 'bin')];
+      const currentPath = process.env.PATH || '';
+      const pathSet = new Set(currentPath.split(':'));
+      for (const p of extraPaths) pathSet.add(p);
+      process.env.PATH = Array.from(pathSet).join(':');
+    }
+  }
+}
+
 // CDN base URL for update downloads (set via environment or fallback)
 // Configure this to your Aliyun OSS CDN domain
 const CDN_BASE_URL = process.env.ALIYUN_OSS_CDN_URL || process.env.CLAUDE_STUDIO_CDN_URL || '';
@@ -446,6 +521,9 @@ export function registerIpcHandlers(): void {
   handle('app:installClaudeCode', async () => {
     const wc = getWebContents();
     try {
+      // Refresh PATH in case Node.js was just installed
+      refreshPath();
+
       // Check if npm is available before attempting install
       const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
       const whichCmd = process.platform === 'win32' ? 'where' : 'which';
@@ -464,6 +542,7 @@ export function registerIpcHandlers(): void {
         const child = execFile(npmCmd, ['install', '-g', '@anthropic-ai/claude-code'], {
           timeout: 120000,
           env: { ...process.env },
+          shell: process.platform === 'win32',
         }, (err) => {
           if (err) reject(err);
           else resolve();
@@ -658,10 +737,12 @@ export function registerIpcHandlers(): void {
             else resolve();
           });
         });
+        // Refresh PATH so node/npm are immediately available
+        refreshPath();
       } else {
-        // Windows: msiexec silent install
+        // Windows: msiexec install with passive UI (shows progress, auto-elevates via UAC)
         await new Promise<void>((resolve, reject) => {
-          execFile('msiexec', ['/i', destPath, '/qn', '/norestart'], { timeout: 300000 }, (err) => {
+          execFile('msiexec', ['/i', destPath, '/passive', '/norestart'], { timeout: 300000 }, (err) => {
             if (err) reject(err);
             else resolve();
           });
@@ -670,6 +751,9 @@ export function registerIpcHandlers(): void {
 
       // Step 5: Cleanup temp file
       fs.unlink(destPath, () => {});
+
+      // Step 6: Refresh PATH so node/npm are immediately available
+      refreshPath();
 
       sendProgress({ phase: 'done' });
       return { success: true, message: `Node.js ${nodeVer} installed successfully` };
