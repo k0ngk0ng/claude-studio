@@ -18,11 +18,13 @@ function decodePath(encoded: string): string {
 
   if (isWindows) {
     // Windows: first part might be drive letter
+    // C:\ encodes as C-- (colon→hyphen, backslash→hyphen), producing empty segments after split
     if (parts.length >= 2 && parts[0].length === 1 && /^[A-Za-z]$/.test(parts[0])) {
       const drive = parts[0] + ':\\';
-      return drive + resolveSegments(parts.slice(1), drive);
+      const remaining = parts.slice(1).filter(p => p !== '');
+      return drive + resolveSegments(remaining, drive);
     }
-    return '\\' + resolveSegments(parts, '\\');
+    return '\\' + resolveSegments(parts.filter(p => p !== ''), '\\');
   }
 
   return '/' + resolveSegments(parts, '/');
@@ -200,8 +202,14 @@ class SessionManager {
   }
 
   listSessions(encodedOrPath: string): SessionIndexEntry[] {
-    // If it looks like an encoded path (starts with -), use directly; otherwise encode it
-    const encoded = encodedOrPath.startsWith('-')
+    // Detect if input is already an encoded directory name:
+    // - macOS/Linux: starts with - (e.g., -Users-foo-project)
+    // - Windows: starts with drive letter + - (e.g., C--Users-foo-project)
+    // - Or check if the directory exists directly under sessionsDir
+    const isEncoded = encodedOrPath.startsWith('-')
+      || (isWindows && /^[A-Za-z]-/.test(encodedOrPath))
+      || fs.existsSync(path.join(this.sessionsDir, encodedOrPath));
+    const encoded = isEncoded
       ? encodedOrPath
       : encodePath(encodedOrPath);
     const projectDir = path.join(this.sessionsDir, encoded);

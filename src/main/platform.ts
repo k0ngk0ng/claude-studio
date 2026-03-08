@@ -44,7 +44,8 @@ export function getClaudeBinary(): string {
 }
 
 export function getSessionsDir(): string {
-  return path.join(os.homedir(), '.claude', 'projects');
+  const configDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+  return path.join(configDir, 'projects');
 }
 
 export function getArchivedSessionsDir(): string {

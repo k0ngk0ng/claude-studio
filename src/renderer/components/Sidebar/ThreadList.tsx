@@ -101,7 +101,7 @@ export function ThreadList({ collapseAllKey, expandAllKey }: { collapseAllKey: n
       );
       if (!exists) {
         // Create a temporary group for this project
-        const name = untitledProjectPath.split('/').filter(Boolean).pop() || untitledProjectPath;
+        const name = untitledProjectPath.replace(/[\\/]+$/, '').split(/[\\/]/).filter(Boolean).pop() || untitledProjectPath;
         groups.unshift({
           projectName: name,
           projectPath: untitledProjectPath,

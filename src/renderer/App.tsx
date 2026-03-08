@@ -108,7 +108,7 @@ export default function App() {
         debugLog('app', `initialized — platform: ${platform}, cwd: ${projectPath}`);
         setPlatform(platform);
 
-        const projectName = projectPath.split('/').pop() || projectPath;
+        const projectName = projectPath.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || projectPath;
         setCurrentProject({ path: projectPath, name: projectName });
 
         // Load existing sessions
