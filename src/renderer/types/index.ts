@@ -103,6 +103,8 @@ export interface AppAPI {
   installRuntimeDeps: () => Promise<{ success: boolean; installed: string[]; error?: string }>;
   onInstallProgress: (callback: (data: string) => void) => void;
   removeInstallProgressListener: (callback: (data: string) => void) => void;
+  onNodeInstallProgress: (callback: (data: NodeInstallProgress) => void) => void;
+  removeNodeInstallProgressListener: (callback: (data: NodeInstallProgress) => void) => void;
   toggleDevTools: () => Promise<void>;
   showItemInFolder: (fullPath: string) => Promise<boolean>;
   openFile: (fullPath: string) => Promise<boolean>;
@@ -235,6 +237,12 @@ export interface WindowAPI {
   remote: RemoteAPI;
   mcp: McpAPI;
 }
+
+export type NodeInstallProgress =
+  | { phase: 'downloading'; progress: number; downloaded: number; total: number }
+  | { phase: 'installing' }
+  | { phase: 'done' }
+  | { phase: 'error'; message: string };
 
 export interface DependencyStatus {
   name: string;

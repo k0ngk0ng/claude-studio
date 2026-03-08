@@ -160,7 +160,7 @@ export function Sidebar({ onNewThread }: SidebarProps) {
       {/* Settings link */}
       <div className="px-3 py-3 border-t border-border">
         <button
-          onClick={openSettings}
+          onClick={() => openSettings()}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg
                      text-text-secondary hover:text-text-primary hover:bg-surface
                      text-sm transition-colors duration-150 titlebar-no-drag"

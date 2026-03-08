@@ -281,7 +281,7 @@ interface SettingsStore {
   settings: AppSettings;
 
   // Navigation
-  openSettings: () => void;
+  openSettings: (tab?: SettingsTab) => void;
   closeSettings: () => void;
   setActiveTab: (tab: SettingsTab) => void;
 
@@ -330,7 +330,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => ({
   activeTab: 'general',
   settings: { ...defaultSettings },
 
-  openSettings: () => set({ isOpen: true, activeTab: 'general' }),
+  openSettings: (tab?: SettingsTab) => set({ isOpen: true, activeTab: tab || 'general' }),
   closeSettings: () => set({ isOpen: false }),
   setActiveTab: (tab) => set({ activeTab: tab }),
 

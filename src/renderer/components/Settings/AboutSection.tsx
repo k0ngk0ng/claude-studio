@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { debugLog } from '../../stores/debugLogStore';
 import { useUpdateStore } from '../../stores/updateStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import type { UpdateStatus } from '../../stores/updateStore';
+import type { NodeInstallProgress } from '../../types';
 import { SettingsSelect } from './controls/SettingsSelect';
 import { SettingsToggle } from './controls/SettingsToggle';
 
@@ -83,6 +84,7 @@ interface VersionRowProps {
   installStatus?: InstallStatus;
   installError?: string;
   installMessage?: string;
+  installProgress?: NodeInstallProgress | null;
   onInstall?: () => void;
 }
 
@@ -94,65 +96,103 @@ function VersionRow({
   installStatus,
   installError,
   installMessage,
+  installProgress,
   onInstall,
 }: VersionRowProps) {
   const isNotFound = version === 'not found' || version === 'not installed';
   const isLoading = !version;
 
   return (
-    <div className="flex items-center justify-between py-1">
-      <div className="flex-1 min-w-0">
-        <div className="text-sm font-medium text-text-primary">{label}</div>
-        <div className="text-xs text-text-muted mt-0.5">{sublabel}</div>
+    <div className="py-1">
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium text-text-primary">{label}</div>
+          <div className="text-xs text-text-muted mt-0.5">{sublabel}</div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {isLoading ? (
+            <span className="text-sm font-mono text-text-muted">…</span>
+          ) : isNotFound ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-warning">{notFoundLabel || 'Not installed'}</span>
+              {onInstall && installStatus === 'idle' && (
+                <button
+                  onClick={onInstall}
+                  className="px-2.5 py-1 rounded-md bg-accent text-white text-xs font-medium
+                             hover:bg-accent/90 transition-colors"
+                >
+                  Install
+                </button>
+              )}
+              {installStatus === 'installing' && !installProgress && (
+                <div className="flex items-center gap-1.5 text-xs text-text-muted">
+                  <Spinner />
+                  <span>Installing…</span>
+                </div>
+              )}
+              {installStatus === 'success' && (
+                <div className="flex items-center gap-1.5 text-xs text-success">
+                  <CheckIcon />
+                  <span>{installMessage || 'Installed'}</span>
+                </div>
+              )}
+              {installStatus === 'error' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-error truncate max-w-[200px]" title={installError}>
+                    {installError || 'Failed'}
+                  </span>
+                  {onInstall && (
+                    <button
+                      onClick={onInstall}
+                      className="px-2 py-0.5 rounded text-xs text-text-muted hover:text-text-primary
+                                 border border-border hover:border-border-light transition-colors"
+                    >
+                      Retry
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm font-mono text-text-muted">{version}</span>
+          )}
+        </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {isLoading ? (
-          <span className="text-sm font-mono text-text-muted">…</span>
-        ) : isNotFound ? (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-warning">{notFoundLabel || 'Not installed'}</span>
-            {onInstall && installStatus === 'idle' && (
-              <button
-                onClick={onInstall}
-                className="px-2.5 py-1 rounded-md bg-accent text-white text-xs font-medium
-                           hover:bg-accent/90 transition-colors"
-              >
-                Install
-              </button>
-            )}
-            {installStatus === 'installing' && (
+      {/* Progress bar for downloading/installing */}
+      {installStatus === 'installing' && installProgress && (
+        <div className="mt-2">
+          {installProgress.phase === 'downloading' && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs text-text-muted">
+                <span>Downloading…</span>
+                <span className="font-mono">
+                  {installProgress.total > 0
+                    ? `${formatBytes(installProgress.downloaded)} / ${formatBytes(installProgress.total)}`
+                    : formatBytes(installProgress.downloaded)}
+                </span>
+              </div>
+              <div className="w-full h-1.5 rounded-full bg-surface overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-accent transition-all duration-300"
+                  style={{ width: `${installProgress.progress}%` }}
+                />
+              </div>
+              <div className="text-[11px] text-text-muted text-right">{Math.floor(installProgress.progress)}%</div>
+            </div>
+          )}
+          {installProgress.phase === 'installing' && (
+            <div className="space-y-1">
               <div className="flex items-center gap-1.5 text-xs text-text-muted">
                 <Spinner />
                 <span>Installing…</span>
               </div>
-            )}
-            {installStatus === 'success' && (
-              <div className="flex items-center gap-1.5 text-xs text-success">
-                <CheckIcon />
-                <span>{installMessage || 'Installed'}</span>
+              <div className="w-full h-1.5 rounded-full bg-surface overflow-hidden">
+                <div className="h-full w-1/4 rounded-full bg-accent animate-indeterminate" />
               </div>
-            )}
-            {installStatus === 'error' && (
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs text-error truncate max-w-[200px]" title={installError}>
-                  {installError || 'Failed'}
-                </span>
-                {onInstall && (
-                  <button
-                    onClick={onInstall}
-                    className="px-2 py-0.5 rounded text-xs text-text-muted hover:text-text-primary
-                               border border-border hover:border-border-light transition-colors"
-                  >
-                    Retry
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ) : (
-          <span className="text-sm font-mono text-text-muted">{version}</span>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -187,6 +227,8 @@ export function AboutSection() {
     error?: string;
     message?: string;
   }>({ status: 'idle' });
+  const [nodeInstallProgress, setNodeInstallProgress] = useState<NodeInstallProgress | null>(null);
+  const nodeProgressCallbackRef = useRef<((data: NodeInstallProgress) => void) | null>(null);
 
   useEffect(() => {
     window.api.app.getVersion().then(setVersion).catch(() => {});
@@ -360,7 +402,16 @@ export function AboutSection() {
 
   const handleInstallNode = useCallback(async () => {
     setNodeInstall({ status: 'installing' });
+    setNodeInstallProgress(null);
     debugLog('app', `Installing Node.js (${platform})...`);
+
+    // Register progress listener
+    const progressCallback = (data: NodeInstallProgress) => {
+      setNodeInstallProgress(data);
+    };
+    nodeProgressCallbackRef.current = progressCallback;
+    window.api.app.onNodeInstallProgress(progressCallback);
+
     try {
       const result = await window.api.app.installNode();
       if (result.success) {
@@ -380,6 +431,13 @@ export function AboutSection() {
     } catch (err: any) {
       debugLog('app', `Node.js install error: ${err?.message}`, err, 'error');
       setNodeInstall({ status: 'error', error: err?.message || 'Install failed' });
+    } finally {
+      // Cleanup progress listener
+      if (nodeProgressCallbackRef.current) {
+        window.api.app.removeNodeInstallProgressListener(nodeProgressCallbackRef.current);
+        nodeProgressCallbackRef.current = null;
+      }
+      setNodeInstallProgress(null);
     }
   }, [platform]);
 
@@ -445,12 +503,13 @@ export function AboutSection() {
 
           <VersionRow
             label="Node.js"
-            sublabel={platform === 'mac' ? 'Homebrew / nodejs.org' : 'nodejs.org'}
+            sublabel={platform === 'mac' ? 'nodejs.org' : 'nodejs.org'}
             version={nodeVersion}
             notFoundLabel="Not installed (v22 LTS recommended)"
             installStatus={nodeInstall.status}
             installError={nodeInstall.error}
             installMessage={nodeInstall.message}
+            installProgress={nodeInstallProgress}
             onInstall={handleInstallNode}
           />
         </div>

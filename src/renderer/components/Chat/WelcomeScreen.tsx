@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAppStore } from '../../stores/appStore';
+import { useSettingsStore } from '../../stores/settingsStore';
 import { SuggestionCards } from './SuggestionCards';
 import type { DependencyStatus } from '../../types';
 
@@ -182,8 +183,17 @@ export function WelcomeScreen() {
                       )}
                     </div>
                   ) : (
-                    <div className="text-xs text-text-muted mt-0.5">
-                      {t('welcome.install')}: <code className="px-1.5 py-0.5 rounded bg-surface text-text-secondary font-mono text-[11px]">{dep.installHint}</code>
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        onClick={() => useSettingsStore.getState().openSettings('about')}
+                        className="px-3 py-1.5 rounded-md bg-accent text-white text-xs font-medium
+                                   hover:bg-accent/90 transition-colors"
+                      >
+                        {t('welcome.goToSettings', 'Install in Settings')}
+                      </button>
+                      <span className="text-xs text-text-muted">
+                        {dep.installHint}
+                      </span>
                     </div>
                   )}
                 </div>

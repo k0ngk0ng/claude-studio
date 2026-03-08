@@ -547,39 +547,20 @@ export function registerIpcHandlers(): void {
   handle('app:installNode', async () => {
     const platform = getPlatform();
     const wc = getWebContents();
+
+    const sendProgress = (data: any) => {
+      if (wc) wc.send('app:node-install-progress', data);
+    };
+
     try {
-      if (platform === 'mac') {
-        // macOS: try Homebrew first
-        try {
-          execSync('which brew', { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] });
-          await new Promise<void>((resolve, reject) => {
-            const child = execFile('brew', ['install', 'node@22'], { timeout: 300000 }, (err) => {
-              if (err) reject(err);
-              else resolve();
-            });
-            child.stdout?.on('data', (data: string) => {
-              if (wc) wc.send('app:install-output', data.toString());
-            });
-            child.stderr?.on('data', (data: string) => {
-              if (wc) wc.send('app:install-output', data.toString());
-            });
-          });
-          return { success: true, message: 'Node.js 22 LTS installed via Homebrew' };
-        } catch {
-          // Homebrew not available or install failed — open download page
-          await shell.openExternal('https://nodejs.org/en/download');
-          return { success: true, message: 'Download page opened. Please install Node.js 22 LTS.' };
-        }
-      } else if (platform === 'windows') {
-        await shell.openExternal('https://nodejs.org/en/download');
-        return { success: true, message: 'Download page opened. Please install Node.js 22 LTS.' };
-      } else {
-        // Linux: try common package managers with NodeSource setup for v22
+      if (platform === 'linux') {
+        // Linux: keep existing package manager logic
         const commands = [
           { check: 'apt', cmd: 'sudo', args: ['apt', 'install', '-y', 'nodejs'] },
           { check: 'dnf', cmd: 'sudo', args: ['dnf', 'install', '-y', 'nodejs'] },
           { check: 'pacman', cmd: 'sudo', args: ['pacman', '-S', '--noconfirm', 'nodejs', 'npm'] },
         ];
+        sendProgress({ phase: 'installing' });
         for (const c of commands) {
           try {
             execSync(`which ${c.check}`, { stdio: 'pipe' });
@@ -595,6 +576,7 @@ export function registerIpcHandlers(): void {
                 if (wc) wc.send('app:install-output', data.toString());
               });
             });
+            sendProgress({ phase: 'done' });
             return { success: true };
           } catch {
             continue;
@@ -602,9 +584,97 @@ export function registerIpcHandlers(): void {
         }
         // Fallback: open download page
         await shell.openExternal('https://nodejs.org/en/download');
+        sendProgress({ phase: 'done' });
         return { success: true, message: 'Download page opened. Please install Node.js 22 LTS manually.' };
       }
+
+      // macOS and Windows: download official installer and run silently
+      // Step 1: Fetch latest v22 LTS version from nodejs.org
+      sendProgress({ phase: 'downloading', progress: 0, downloaded: 0, total: 0 });
+      const distIndex: Array<{ version: string; lts: string | false }> = await fetchJson('https://nodejs.org/dist/index.json');
+      const v22Entry = distIndex.find(e => typeof e.lts === 'string' && e.version.startsWith('v22.'));
+      if (!v22Entry) {
+        sendProgress({ phase: 'error', message: 'Could not find Node.js 22 LTS release' });
+        return { success: false, error: 'Could not find Node.js 22 LTS release' };
+      }
+      const nodeVer = v22Entry.version; // e.g. 'v22.14.0'
+
+      // Step 2: Build download URL
+      let fileName: string;
+      if (platform === 'mac') {
+        fileName = `node-${nodeVer}.pkg`;
+      } else {
+        // Windows
+        const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
+        fileName = `node-${nodeVer}-${arch}.msi`;
+      }
+      const downloadUrl = `https://nodejs.org/dist/${nodeVer}/${fileName}`;
+      const tempDir = app.getPath('temp');
+      const destPath = path.join(tempDir, fileName);
+
+      // Step 3: Download with progress
+      await new Promise<void>((resolve, reject) => {
+        const download = (url: string) => {
+          https.get(url, (res) => {
+            // Handle redirects
+            if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+              download(res.headers.location);
+              return;
+            }
+            if (res.statusCode !== 200) {
+              reject(new Error(`Download failed: HTTP ${res.statusCode}`));
+              return;
+            }
+            const totalSize = parseInt(res.headers['content-length'] || '0', 10);
+            let downloaded = 0;
+            const fileStream = fs.createWriteStream(destPath);
+            res.on('data', (chunk: Buffer) => {
+              downloaded += chunk.length;
+              const progress = totalSize > 0 ? Math.floor((downloaded / totalSize) * 100) : 0;
+              sendProgress({ phase: 'downloading', progress, downloaded, total: totalSize });
+            });
+            res.pipe(fileStream);
+            fileStream.on('finish', () => {
+              fileStream.close();
+              resolve();
+            });
+            fileStream.on('error', (err) => {
+              fs.unlink(destPath, () => {});
+              reject(err);
+            });
+          }).on('error', reject);
+        };
+        download(downloadUrl);
+      });
+
+      // Step 4: Silent install
+      sendProgress({ phase: 'installing' });
+      if (platform === 'mac') {
+        // macOS: use osascript for admin privileges
+        const script = `do shell script "installer -pkg '${destPath}' -target /" with administrator privileges`;
+        await new Promise<void>((resolve, reject) => {
+          execFile('osascript', ['-e', script], { timeout: 300000 }, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      } else {
+        // Windows: msiexec silent install
+        await new Promise<void>((resolve, reject) => {
+          execFile('msiexec', ['/i', destPath, '/qn', '/norestart'], { timeout: 300000 }, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
+        });
+      }
+
+      // Step 5: Cleanup temp file
+      fs.unlink(destPath, () => {});
+
+      sendProgress({ phase: 'done' });
+      return { success: true, message: `Node.js ${nodeVer} installed successfully` };
     } catch (err: any) {
+      sendProgress({ phase: 'error', message: err?.message || String(err) });
       return { success: false, error: err?.message || String(err) };
     }
   });

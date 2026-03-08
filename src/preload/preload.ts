@@ -186,6 +186,8 @@ export interface AppAPI {
   installRuntimeDeps: () => Promise<{ success: boolean; installed: string[]; error?: string }>;
   onInstallProgress: (callback: (data: string) => void) => void;
   removeInstallProgressListener: (callback: (data: string) => void) => void;
+  onNodeInstallProgress: (callback: (data: any) => void) => void;
+  removeNodeInstallProgressListener: (callback: (data: any) => void) => void;
   toggleDevTools: () => Promise<void>;
   showItemInFolder: (fullPath: string) => Promise<boolean>;
   openFile: (fullPath: string) => Promise<boolean>;
@@ -220,6 +222,7 @@ const debugLogListeners = new Map<Function, (...args: any[]) => void>();
 const terminalDataListeners = new Map<Function, (...args: any[]) => void>();
 const terminalExitListeners = new Map<Function, (...args: any[]) => void>();
 const installProgressListeners = new Map<Function, (...args: any[]) => void>();
+const nodeInstallProgressListeners = new Map<Function, (...args: any[]) => void>();
 const downloadProgressListeners = new Map<Function, (...args: any[]) => void>();
 const updateStatusListeners = new Map<Function, (...args: any[]) => void>();
 const sessionsChangedListeners = new Map<Function, (...args: any[]) => void>();
@@ -413,6 +416,20 @@ contextBridge.exposeInMainWorld('api', {
       if (wrappedCallback) {
         ipcRenderer.removeListener('app:install-progress', wrappedCallback);
         installProgressListeners.delete(callback);
+      }
+    },
+    onNodeInstallProgress: (callback: (data: any) => void) => {
+      const wrappedCallback = (_event: Electron.IpcRendererEvent, data: any) => {
+        callback(data);
+      };
+      nodeInstallProgressListeners.set(callback, wrappedCallback);
+      ipcRenderer.on('app:node-install-progress', wrappedCallback);
+    },
+    removeNodeInstallProgressListener: (callback: (data: any) => void) => {
+      const wrappedCallback = nodeInstallProgressListeners.get(callback);
+      if (wrappedCallback) {
+        ipcRenderer.removeListener('app:node-install-progress', wrappedCallback);
+        nodeInstallProgressListeners.delete(callback);
       }
     },
     toggleDevTools: () => ipcRenderer.invoke('app:toggleDevTools'),
