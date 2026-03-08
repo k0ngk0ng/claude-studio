@@ -229,6 +229,7 @@ export function AboutSection() {
   }>({ status: 'idle' });
   const [nodeInstallProgress, setNodeInstallProgress] = useState<NodeInstallProgress | null>(null);
   const nodeProgressCallbackRef = useRef<((data: NodeInstallProgress) => void) | null>(null);
+  const lastReleaseRef = useRef<ReleaseInfo | null>(null);
 
   useEffect(() => {
     window.api.app.getVersion().then(setVersion).catch(() => {});
@@ -246,6 +247,13 @@ export function AboutSection() {
   }, []);
 
   // Update status listener — receives events from electron-updater via main process
+  useEffect(() => {
+    // Remember release info so we can show a manual download link on error
+    if (updateStatus.state === 'available' && updateStatus.release) {
+      lastReleaseRef.current = updateStatus.release;
+    }
+  }, [updateStatus]);
+
   useEffect(() => {
     const handleUpdateStatus = (data: {
       state: string;
@@ -671,12 +679,26 @@ export function AboutSection() {
                 </svg>
                 {updateStatus.message}
               </div>
-              <button
-                onClick={handleCheckForUpdates}
-                className="text-xs text-text-muted hover:text-text-primary transition-colors"
-              >
-                Try again
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleCheckForUpdates}
+                  className="text-xs text-text-muted hover:text-text-primary transition-colors"
+                >
+                  Try again
+                </button>
+                <a
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const url = lastReleaseRef.current?.htmlUrl
+                      || 'https://github.com/k0ngk0ng/claude-studio/releases/latest';
+                    window.api.app.openExternal(url);
+                  }}
+                  className="text-xs text-text-muted hover:text-accent transition-colors"
+                >
+                  Manual download →
+                </a>
+              </div>
             </div>
           )}
         </div>
