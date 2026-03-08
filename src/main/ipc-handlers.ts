@@ -1124,13 +1124,30 @@ export function registerIpcHandlers(): void {
         }
       }
 
-      // Windows .exe handling — run NSIS installer silently then relaunch
+      // Windows .exe handling — write a temp batch script to run NSIS installer
+      // silently, wait for it to finish, then relaunch the app.
+      // Using a batch file avoids cmd.exe inline-command quoting issues and
+      // windowsHide prevents the console window from flashing on screen.
       if (pendingPath.endsWith('.exe')) {
         try {
           sendInstalling('Running installer…');
-          // NSIS installers support /S for silent install and /D for install dir
-          // windowsHide prevents cmd.exe console window from flashing during silent update
-          const child = spawn('cmd.exe', ['/c', `"${pendingPath}" /S && timeout /t 2 /nobreak >nul && start "" "${process.execPath}"`], {
+          const batchPath = path.join(app.getPath('temp'), 'claude-studio-update.cmd');
+          const batchContent = [
+            '@echo off',
+            'rem Wait for the app to fully exit',
+            'timeout /t 3 /nobreak >nul',
+            'rem Run NSIS installer silently',
+            `"${pendingPath}" /S`,
+            'rem Wait for installation to complete',
+            'timeout /t 2 /nobreak >nul',
+            'rem Relaunch the updated app',
+            `start "" "${process.execPath}"`,
+            'rem Self-cleanup',
+            'del "%~f0"',
+          ].join('\r\n');
+          fs.writeFileSync(batchPath, batchContent, 'utf-8');
+
+          const child = spawn('cmd.exe', ['/c', batchPath], {
             detached: true,
             stdio: 'ignore',
             windowsHide: true,
