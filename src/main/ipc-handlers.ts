@@ -975,10 +975,11 @@ export function registerIpcHandlers(): void {
         try {
           sendInstalling('Running installer…');
           // NSIS installers support /S for silent install and /D for install dir
+          // windowsHide prevents cmd.exe console window from flashing during silent update
           const child = spawn('cmd.exe', ['/c', `"${pendingPath}" /S && timeout /t 2 /nobreak >nul && start "" "${process.execPath}"`], {
             detached: true,
             stdio: 'ignore',
-            shell: true,
+            windowsHide: true,
           });
           child.unref();
           app.quit();
