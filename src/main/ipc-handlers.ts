@@ -554,6 +554,8 @@ export function registerIpcHandlers(): void {
           if (wc) wc.send('app:install-output', data.toString());
         });
       });
+      // Refresh PATH after install so subsequent version checks find the new binary
+      refreshPath();
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || String(err) };
