@@ -28,16 +28,29 @@ export function getClaudeBinary(): string {
     }
   }
 
-  // macOS / Linux
-  const localPath = path.join(homeDir, '.local', 'bin', 'claude');
+  // macOS / Linux — check well-known locations first, then fall back to which
+  const candidates = [
+    path.join(homeDir, '.local', 'bin', 'claude'),
+  ];
+  // Also check npm global prefix bin (handles custom npm prefix)
   try {
-    const stat = require('fs').statSync(localPath);
-    if (stat.isFile()) return localPath;
-  } catch {
-    // fall through
+    const npmPrefix = execSync('npm prefix -g', {
+      encoding: 'utf-8',
+      timeout: 5000,
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }).trim();
+    if (npmPrefix) {
+      candidates.push(path.join(npmPrefix, 'bin', 'claude'));
+    }
+  } catch { /* ignore */ }
+
+  for (const p of candidates) {
+    try {
+      if (fs.statSync(p).isFile()) return p;
+    } catch { /* skip */ }
   }
   try {
-    return execSync('which claude', { encoding: 'utf-8' }).trim();
+    return execSync('which claude', { encoding: 'utf-8', timeout: 5000, stdio: ['pipe', 'pipe', 'pipe'] }).trim();
   } catch {
     return 'claude';
   }

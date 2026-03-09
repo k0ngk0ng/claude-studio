@@ -110,7 +110,9 @@ function VersionRow({
           <span className="text-sm font-mono text-text-muted">…</span>
         ) : isNotFound ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-warning">{notFoundLabel || 'Not installed'}</span>
+            {installStatus !== 'success' && (
+              <span className="text-xs text-warning">{notFoundLabel || 'Not installed'}</span>
+            )}
             {onInstall && installStatus === 'idle' && (
               <button
                 onClick={onInstall}

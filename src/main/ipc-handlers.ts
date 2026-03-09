@@ -553,6 +553,22 @@ export function registerIpcHandlers(): void {
           if (wc) wc.send('app:install-output', data.toString());
         });
       });
+      // Refresh PATH to include npm global bin so subsequent detection works
+      try {
+        const npmCmd = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+        const npmPrefix = execSync(`${npmCmd} prefix -g`, {
+          encoding: 'utf-8',
+          timeout: 5000,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }).trim();
+        if (npmPrefix) {
+          const binDir = process.platform === 'win32' ? npmPrefix : path.join(npmPrefix, 'bin');
+          const sep = path.delimiter;
+          if (!process.env.PATH?.split(sep).includes(binDir)) {
+            process.env.PATH = `${binDir}${sep}${process.env.PATH || ''}`;
+          }
+        }
+      } catch { /* ignore */ }
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || String(err) };
